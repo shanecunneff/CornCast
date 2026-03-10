@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CornCast 🌽 v23_new_</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<script>
+(function(){
+  var s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+  s.onload=function(){window._leafletReady=true;if(window._leafletCallback)window._leafletCallback();};
+  s.onerror=function(){var s2=document.createElement('script');s2.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s2.onload=function(){window._leafletReady=true;if(window._leafletCallback)window._leafletCallback();};document.head.appendChild(s2);};
+  document.head.appendChild(s);
+})();
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#0d1b2a;--navy2:#1a2d42;--navy3:#243b55;--teal:#00d4aa;--gold:#ffd166;--text:#e8f4f8;--muted:#7aa5be;--red:#ff4757;--green:#2ed573;--orange:#ffa502;--cornblue:#5db8f0}
+html,body{height:100%;background:var(--navy);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
+h1{font-size:1.35rem;font-weight:700;letter-spacing:.04em}
+h2{font-size:.88rem;font-weight:600;color:var(--teal);margin-bottom:.6rem;text-transform:uppercase;letter-spacing:.08em}
+header{background:var(--navy2);padding:.85rem 1.1rem;display:flex;align-items:center;gap:.7rem;border-bottom:2px solid var(--teal);position:sticky;top:0;z-index:1000;height:54px}
+.logo{font-size:1.6rem}.subtitle{font-size:.7rem;color:var(--muted);margin-top:.1rem}
+.tab-bar{display:flex;background:var(--navy2);border-bottom:1px solid var(--navy3);position:sticky;top:54px;z-index:999;height:38px}
+.tab{flex:1;padding:.5rem .3rem;text-align:center;font-size:.7rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.04em}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.panel{display:none;padding:.85rem}.panel.active{display:block}
+/* Map panel special: fills remaining viewport */
+#tab-map.active{display:flex;flex-direction:column;padding:.6rem .85rem;height:calc(100dvh - 54px - 38px);overflow:hidden}
+#tab-map.active .map-scroll{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#map-wrap{flex:1;border-radius:12px;overflow:hidden;border:1px solid var(--navy3);min-height:0}
+#leaflet-map{height:100%;width:100%;background:#0b1e2e}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.field{display:flex;flex-direction:column;gap:.22rem}.field.full{grid-column:1/-1}
+label{font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+input[type=number],select{background:var(--navy3);border:1px solid #2e4a60;color:var(--text);border-radius:8px;padding:.48rem .62rem;font-size:.88rem;width:100%;outline:none;transition:border .2s;-webkit-appearance:none;appearance:none}
+input[type=number]:focus,select:focus{border-color:var(--teal)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--navy3);border-radius:8px;padding:.5rem .68rem}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider-t{position:absolute;inset:0;background:#2e4a60;border-radius:12px;cursor:pointer;transition:.3s}
+.slider-t:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:var(--muted);border-radius:50%;transition:.3s}
+input:checked+.slider-t{background:var(--teal)}input:checked+.slider-t:before{transform:translateX(20px);background:#fff}
+.btn{width:100%;padding:.78rem;background:var(--teal);color:var(--navy);border:none;border-radius:10px;font-size:.93rem;font-weight:700;cursor:pointer;margin-top:.5rem;transition:opacity .2s}
+.btn:hover{opacity:.85}
+.btn-sm{width:auto;padding:.42rem .8rem;font-size:.78rem;border-radius:8px;background:var(--navy3);color:var(--text);border:1px solid #3a5a74;cursor:pointer;margin-top:.5rem}
+.depart-card{background:linear-gradient(135deg,#0d2a22,#0d1f2a);border-radius:12px;padding:1rem 1.1rem;margin-bottom:.7rem;border:1px solid var(--teal)}
+.big-time{font-size:2.4rem;font-weight:700;color:var(--gold);letter-spacing:.03em;line-height:1}
+.big-label{font-size:.68rem;color:var(--muted);margin-top:.18rem;text-transform:uppercase;letter-spacing:.06em}
+.depart-window{display:flex;gap:.8rem;margin-top:.6rem;flex-wrap:wrap}
+.dw-item{background:rgba(0,0,0,0.25);border-radius:8px;padding:.4rem .65rem;text-align:center}
+.dw-val{font-size:1.05rem;font-weight:700;color:var(--gold)}
+.dw-key{font-size:.62rem;color:var(--muted);text-transform:uppercase}
+.approach-detail{font-size:.74rem;color:var(--muted);margin-top:.5rem;background:rgba(0,0,0,0.2);border-radius:6px;padding:.38rem .6rem;line-height:1.5}
+.result-card{background:var(--navy2);border-radius:12px;padding:.95rem;margin-bottom:.65rem;border:1px solid var(--navy3)}
+.metric{background:var(--navy3);border-radius:8px;padding:.38rem .62rem;flex:1;min-width:64px;text-align:center}
+.metric-val{font-size:1.0rem;font-weight:700}
+.metric-key{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:.1rem}
+.wbar{background:var(--navy3);border-radius:6px;height:9px;margin:.45rem 0;overflow:hidden}
+.wfill{height:100%;border-radius:6px}
+.info-msg{font-size:.78rem;color:var(--muted);margin:.28rem 0;line-height:1.4}
+.alert{background:rgba(255,71,87,.12);border:1px solid var(--red);border-radius:8px;padding:.48rem .68rem;font-size:.76rem;color:#ff8a95;margin-bottom:.58rem}
+.asp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.38rem;margin:.42rem 0}
+.asp-btn{background:var(--navy3);border:2px solid transparent;color:var(--muted);border-radius:8px;padding:.4rem 0;font-size:.8rem;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
+.asp-btn.active{border-color:var(--teal);color:var(--teal);background:#0d2a22}
+.asp-btn:disabled{opacity:.25;cursor:not-allowed}
+.tl{display:flex;flex-direction:column;gap:.26rem}
+.tlr{display:flex;align-items:center;gap:.38rem;font-size:.74rem}
+.tlt{color:var(--muted);width:3.8rem;flex-shrink:0;font-weight:600}
+.tlbw{flex:1;background:var(--navy3);border-radius:4px;height:15px;overflow:hidden}
+.tlb{height:100%;border-radius:4px}
+.tll{font-size:.68rem;white-space:nowrap;width:86px}
+.asp-table{width:100%;border-collapse:collapse;font-size:.74rem;margin-top:.42rem}
+.asp-table th{color:var(--muted);font-weight:600;text-align:left;padding:.26rem .48rem;border-bottom:1px solid var(--navy3)}
+.asp-table td{padding:.3rem .48rem;border-bottom:1px solid rgba(36,59,85,.4)}
+.asp-table tr:hover td{background:rgba(36,59,85,.35)}
+.driver-card{background:var(--navy2);border-radius:12px;padding:.95rem;margin-bottom:.65rem;border:1px solid var(--navy3)}
+.driver-row{display:flex;align-items:flex-start;gap:.55rem;padding:.32rem 0;border-bottom:1px solid rgba(36,59,85,.3);font-size:.78rem;line-height:1.45}
+.driver-row:last-child{border-bottom:none}
+.driver-icon{font-size:1.0rem;flex-shrink:0;margin-top:.05rem}
+.driver-pos{color:#a8e6cf}.driver-neg{color:#ffb3b3}.driver-neu{color:var(--muted)}
+.driver-step-head{display:flex;align-items:center;gap:.5rem;margin:.6rem 0 .1rem;padding:.22rem .5rem;background:rgba(0,212,170,0.06);border-left:2px solid rgba(0,212,170,0.4);border-radius:0 5px 5px 0;font-size:.65rem;font-weight:700;color:rgba(0,212,170,0.7);text-transform:uppercase;letter-spacing:.07em}
+.driver-step-head:first-child{margin-top:0}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;flex-shrink:0}
+.ldot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.li{display:flex;align-items:center;gap:.28rem;font-size:.68rem;color:var(--muted)}
+#popup{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy2);border-top:2px solid var(--teal);border-radius:18px 18px 0 0;padding:1.1rem 1rem 2rem;z-index:2000;max-height:70vh;overflow-y:auto}
+#pcls{position:absolute;top:.85rem;right:.85rem;background:var(--navy3);border:none;color:var(--text);width:28px;height:28px;border-radius:50%;font-size:.9rem;cursor:pointer}
+.ppeak{font-size:1.0rem;font-weight:700;margin-bottom:.12rem}
+.nodata{color:var(--muted);font-size:.84rem;text-align:center;padding:1.4rem;background:var(--navy2);border-radius:12px}
+.asec{background:var(--navy2);border-radius:12px;padding:.9rem;margin-bottom:.62rem}
+.asec h2{margin-bottom:.5rem}
+.asec p,.asec li{font-size:.79rem;color:var(--muted);line-height:1.65}
+.asec ul{margin:.4rem 0 0 1rem}.asec ol{margin:.4rem 0 0 1.2rem}
+.eb{display:inline-block;background:var(--navy3);padding:.1rem .38rem;border-radius:4px;font-size:.65rem;color:var(--teal);font-weight:600}
+.formula-box{background:var(--navy3);border-radius:8px;padding:.6rem .8rem;margin:.4rem 0;font-family:monospace;font-size:.76rem;color:#b8d8e8;line-height:1.6}
+.sdiv{height:1px;background:var(--navy3);margin:.6rem 0;grid-column:1/-1}
+.corn-marker{background:none!important;border:none!important;}
+/* Physics pipeline */
+.pipe-step{position:relative;margin:.45rem 0;border-radius:10px;background:var(--navy2);border:1px solid var(--navy3);border-left:3px solid var(--teal);padding:.7rem .85rem}
+.pipe-step.output-step{border-left-color:var(--gold);background:linear-gradient(135deg,rgba(0,24,16,0.85),rgba(13,27,42,0.85))}
+.pipe-step.final-step{border-left-color:var(--teal);background:linear-gradient(135deg,rgba(0,30,22,0.9),rgba(13,27,42,0.9))}
+.pipe-header{display:flex;align-items:center;gap:.42rem;margin-bottom:.32rem}
+.pipe-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--teal);color:var(--navy);border-radius:50%;font-size:.73rem;font-weight:700;flex-shrink:0}
+.pipe-num.gold{background:var(--gold)}
+.pipe-title{font-size:.88rem;font-weight:700;color:var(--text)}
+.pipe-explain{font-size:.77rem;color:var(--muted);line-height:1.67;margin-bottom:.35rem}
+.pipe-ref{font-size:.63rem;color:#456a82;font-style:italic;margin-top:.2rem;line-height:1.5}
+.pipe-feeds{font-size:.65rem;color:var(--teal);font-weight:600;margin-top:.3rem;padding-top:.25rem;border-top:1px solid rgba(0,212,170,0.14)}
+.pipe-output{background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.25);border-radius:7px;padding:.32rem .55rem;margin-top:.3rem;font-size:.72rem;color:var(--gold);font-weight:600}
+.pipe-connector{text-align:center;padding:.12rem 0;color:#2e4a60;font-size:1.1rem;line-height:1;user-select:none}
+.pipe-modifier{margin:.22rem 0 .22rem 1.1rem;border-left:2px dashed #2a4a62;padding:.45rem .65rem;background:rgba(15,32,48,0.7);border-radius:0 9px 9px 0}
+.pipe-mod-tag{display:inline-block;background:rgba(255,209,102,0.12);border:1px solid rgba(255,209,102,0.28);color:var(--gold);font-size:.59rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border-radius:4px;padding:.06rem .3rem;margin-bottom:.22rem}
+.pipe-mod-title{font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.22rem}
+/* v12 PackRipeness / weather timeline */
+input[type=date]{background:var(--navy3);border:1px solid #2e4a60;color:var(--text);border-radius:8px;padding:.48rem .62rem;font-size:.88rem;width:100%;outline:none;transition:border .2s;-webkit-appearance:none;appearance:none;color-scheme:dark}
+input[type=date]:focus{border-color:var(--teal)}
+.autofill{border-color:var(--teal)!important;background:rgba(0,212,170,0.06)!important}
+.wx-strip-wrap{background:var(--navy2);border-radius:10px;padding:.55rem .6rem;margin-bottom:.5rem;border:1px solid var(--navy3)}
+.wx-strip-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.38rem;font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.wx-strip{display:flex;gap:3px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.wx-strip::-webkit-scrollbar{height:3px}.wx-strip::-webkit-scrollbar-thumb{background:var(--navy3);border-radius:2px}
+.wx-tile{flex-shrink:0;width:52px;border-radius:6px;padding:.28rem .22rem;text-align:center;font-size:.58rem;cursor:default;transition:opacity .15s;border:2px solid transparent}
+.wx-tile.target{border-color:var(--teal)}
+.wx-tile.today-marker{border-color:var(--gold)}
+.wx-tile-day{font-weight:700;color:rgba(255,255,255,0.85);margin-bottom:.05rem;font-size:.6rem}
+.wx-tile-hi{font-weight:700;font-size:.68rem}
+.wx-tile-lo{font-size:.6rem;color:rgba(160,200,230,0.8);margin-top:-.05rem}
+.wx-tile-ico{font-size:.7rem;line-height:1.1;margin-top:.08rem}
+.wx-tile-detail{font-size:.55rem;color:rgba(160,200,220,0.7);margin-top:.04rem;line-height:1.2}
+.wx-spinner{display:flex;align-items:center;gap:.5rem;font-size:.76rem;color:var(--muted);padding:.5rem 0}
+.wx-spinner-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:wxpulse 1.2s ease-in-out infinite}
+.wx-spinner-dot:nth-child(2){animation-delay:.2s}.wx-spinner-dot:nth-child(3){animation-delay:.4s}
+@keyframes wxpulse{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.wx-warn{font-size:.72rem;color:var(--gold);padding:.3rem 0;display:flex;align-items:center;gap:.35rem}
+.pack-row{display:flex;align-items:center;gap:.55rem;padding:.32rem 0;border-bottom:1px solid rgba(36,59,85,.3);font-size:.78rem;line-height:1.45}
+.pack-bar-wrap{flex:1;background:var(--navy3);border-radius:4px;height:7px;overflow:hidden;margin:0 .3rem}
+.pack-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,#1a3a5c,var(--teal))}
+.pr-bar-wrap{flex:1;background:var(--navy3);border-radius:4px;height:7px;overflow:hidden;margin:0 .3rem;display:inline-block;min-width:60px;vertical-align:middle}
+.pr-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,#1a5c9c,#ff6040)}
+/* Ripeness chart */
+.ripeness-chart-wrap{margin-top:.75rem;padding-top:.65rem;border-top:1px solid rgba(36,59,85,.4);max-width:960px}
+.ripeness-chart-wrap h3{font-size:.7rem;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+#ripeness-canvas{display:block;min-width:100%;border-radius:8px;background:rgba(0,0,0,0.2)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🌽</div>
+  <div><h1>CornCast</h1><div class="subtitle">Spring Corn · Indian Peaks &amp; RMNP</div></div>
+</header>
+<div class="tab-bar">
+  <div class="tab active" onclick="ST('plan')">Plan</div>
+  <div class="tab" onclick="ST('result')">Result</div>
+  <div class="tab" onclick="ST('map')">Map</div>
+  <div class="tab" onclick="ST('about')">About</div>
+</div>
+
+<!-- PLAN -->
+<div id="tab-plan" class="panel active">
+  <h2>Tour Planning</h2>
+  <div class="form-grid">
+    <div class="field full"><label>Target Peak</label><select id="sel-peak" onchange="onPeakChange()"></select></div>
+    <div class="field full"><label>Target Aspect</label><div class="asp-grid" id="asp-grid"></div></div>
+    <div class="sdiv"></div>
+    <div class="field full">
+      <label>🗓 Target Date</label>
+      <input type="date" id="sel-date" onchange="onDateChange()">
+      <div style="font-size:.67rem;color:var(--muted);margin-top:.22rem">Mar 1 – Jun 30 · fetches archive from Jan 1 (column cold model) + 16-day forecast</div>
+    </div>
+    <select id="sel-month" style="display:none"><option value="3">March</option><option value="4" selected>April</option><option value="5">May</option><option value="6">June</option></select>
+    <div class="sdiv"></div>
+    <!-- v12: weather timeline strip -->
+    <div class="field full" id="wx-strip-container" style="display:none">
+      <div class="wx-strip-wrap">
+        <div class="wx-strip-head">
+          <span>📡 Season Archive + Forecast</span>
+          <span id="wx-strip-label" style="color:var(--teal)"></span>
+        </div>
+        <div id="wx-strip-tiles" class="wx-strip"></div>
+      </div>
+    </div>
+    <div id="wx-spinner-row" class="field full" style="display:none">
+      <div class="wx-spinner"><div class="wx-spinner-dot"></div><div class="wx-spinner-dot"></div><div class="wx-spinner-dot"></div><span>Fetching weather from Open-Meteo…</span></div>
+    </div>
+    <div id="wx-warn-row" class="field full" style="display:none">
+      <div class="wx-warn">⚠️ Weather data unavailable — using seasonal defaults.</div>
+    </div>
+    <div class="sdiv"></div>
+    <div class="field full">
+      <label>Live Snowpack (NRCS SNOTEL)</label>
+      <div id="swe-panel" style="background:var(--navy3);border-radius:8px;padding:.6rem .7rem;font-size:.78rem;color:var(--muted)">Select a peak above to load basin snowpack data...</div>
+    </div>
+    <div class="sdiv"></div>
+    <div class="field full" style="background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.25);border-radius:8px;padding:.6rem .7rem">
+      <div style="font-size:.72rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem">📡 Weather Input Guide</div>
+      <div style="font-size:.74rem;color:var(--muted);line-height:1.55">
+        Fields marked <span style="color:var(--teal);font-weight:600">auto</span> are pre-filled from Open-Meteo when a date and peak are selected — override any value manually if local conditions differ.<br>
+        <strong style="color:var(--text)">Dawn Temp:</strong> exact 6 AM hourly if target is within 15 days of today; otherwise estimated as overnight low +2°F (typical pre-dawn offset). <strong style="color:var(--text)">Clouds:</strong> Overnight = midnight–5 AM · Morning = 6 AM–noon. <strong style="color:var(--text)">Snow depth/days</strong> = estimated from gridded snowfall (verify against SNOTEL or OpenSnow). Tile strip icons: 🧊≤18° 🧊great freeze / ❄️≤25° good / 🌡️≤29° marginal / 💧≤32° weak / 🔴no freeze.
+      </div>
+    </div>
+    <div class="field"><label>Overnight Low °F</label><input type="number" id="flo" value="22" min="-10" max="45"></div>
+    <div class="field"><label>Dawn Temp °F <span id="fda-auto-tag" style="color:var(--teal);font-weight:400;text-transform:none;font-size:.62rem;display:none">auto</span></label><input type="number" id="fda" value="28" min="-10" max="50"></div>
+    <div class="field"><label>Daytime High °F</label><input type="number" id="fhi" value="46" min="25" max="75"></div>
+    <div class="field"><label>Wind at Elevation mph</label><input type="number" id="fwi" value="15" min="0" max="80"></div>
+    <div class="field"><label>Overnight Clouds %</label><input type="number" id="fcn" value="10" min="0" max="100"></div>
+    <div class="field"><label>Morning Clouds %</label><input type="number" id="fcm" value="20" min="0" max="100"></div>
+    <div class="sdiv"></div>
+    <!-- NEW: snow depth + days -->
+    <div class="field full" style="background:rgba(0,212,170,0.04);border:1px solid rgba(0,212,170,0.18);border-radius:8px;padding:.55rem .7rem">
+      <div style="font-size:.72rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.28rem">🌨️ Recent Snowfall <span id="snow-source-label" style="color:var(--muted);font-weight:400;text-transform:none;font-size:.65rem">— auto-filled when date is set</span></div>
+      <div style="font-size:.73rem;color:var(--muted);line-height:1.5;margin-bottom:.4rem">Depth and recency both matter. Override if local conditions differ from the forecast grid.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+        <div class="field"><label>Snow Depth (inches)</label><input type="number" id="fsdp" value="6" min="0" max="60" step="1"></div>
+        <div class="field"><label>Days Since Snowfall</label><input type="number" id="fds" value="4" min="0" max="60"></div>
+      </div>
+      <div id="crust-prev" style="font-size:.72rem;color:var(--muted);margin-top:.38rem;padding:.32rem .5rem;background:rgba(0,0,0,0.2);border-radius:6px">—</div>
+      <div id="snow-source-note" style="font-size:.62rem;color:#456a82;margin-top:.22rem;display:none"></div>
+    </div>
+    <div class="sdiv"></div>
+    <div class="field full"><div class="toggle-row"><span style="font-size:.84rem">Wind Slab Risk</span><label class="toggle"><input type="checkbox" id="fsl"><span class="slider-t"></span></label></div></div>
+    <div class="sdiv"></div>
+    <div class="field"><label>Approach Distance mi</label><input type="number" id="fdi" value="5" min="0.5" max="20" step="0.5"></div>
+    <div class="field"><label>Elevation Gain ft</label><input type="number" id="fga" value="2800" min="200" max="6000" step="100"></div>
+    <div class="field"><label>Buffer Time min</label><input type="number" id="fbuf" value="30" min="0" max="120" step="5"></div>
+    <div class="field">
+      <label id="grade-lbl">Grade: —%</label>
+      <div id="pace-prev" style="font-size:.73rem;color:var(--muted);padding:.48rem .62rem;background:var(--navy3);border-radius:8px">Enter distance &amp; gain</div>
+    </div>
+  </div>
+  <button class="btn" onclick="CA()">🌽 Compute Corn Window</button>
+</div>
+
+<!-- RESULT -->
+<div id="tab-result" class="panel">
+  <h2>Corn Window</h2>
+  <div id="result-out"><div class="nodata">Set objective and forecast on Plan tab, then compute.</div></div>
+</div>
+
+<!-- MAP -->
+<div id="tab-map" class="panel">
+  <h2 style="flex-shrink:0">Peak Map — Tap a marker for details</h2>
+  <div class="map-scroll">
+    <div id="map-wrap"><div id="leaflet-map"></div></div>
+    <div class="legend">
+      <div class="li"><div class="ldot" style="background:#2ed573"></div>Excellent 75+</div>
+      <div class="li"><div class="ldot" style="background:#ffd166"></div>Good 50+</div>
+      <div class="li"><div class="ldot" style="background:#ffa502"></div>Marginal 25+</div>
+      <div class="li"><div class="ldot" style="background:#ff4757"></div>Poor</div>
+      <div class="li"><div class="ldot" style="background:#4a8ab0"></div>No data</div>
+    </div>
+    <p style="font-size:.62rem;color:var(--muted);margin-top:.3rem;flex-shrink:0">Map © <a href="https://openstreetmap.org" style="color:var(--muted)">OpenStreetMap</a> · USGS The National Map</p>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<div id="tab-about" class="panel">
+  <h2>About CornCast</h2>
+
+  <div class="asec">
+    <p>CornCast is a departure-time calculator for spring corn snow ski touring in the Indian Peaks Wilderness and Rocky Mountain National Park. Select a peak and aspect, enter your overnight forecast and route details, and CornCast tells you when to leave the trailhead to arrive during the corn window — and when to expect it to turn to slush.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="asec">
+    <h2>What Is Corn Snow?</h2>
+    <p>Corn snow is a spring surface condition, not a crystal type. It forms through a diurnal cycle: overnight temperatures drop below 32°F and refreeze the free water at the snow surface into a continuous ice matrix. The following morning, solar radiation melts that crust — but for a brief window of typically one to three hours, the surface passes through an intermediate state where every grain is rounded, separated, and lightly lubricated. That's corn: predictable, forgiving, and consistent from turn to turn.</p>
+    <p style="margin-top:.55rem">Outside that window the surface is either too hard (icy morning crust) or too soft (afternoon slush). The entire model exists to find the edges of that window for a specific face on a specific day.</p>
+    <p style="margin-top:.55rem">Corn is a spring phenomenon because it requires free water to be present at the surface before the overnight freeze. In deep winter, the snow surface is already frozen solid — there is nothing to refreeze into a crust. As the season progresses and the snowpack warms toward 32°F, the daily freeze-thaw cycle becomes possible and eventually predictable.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="asec">
+    <h2>The Physics Pipeline</h2>
+    <p style="font-size:.79rem;color:var(--muted);line-height:1.65;margin-bottom:.75rem">CornCast chains seven physical processes together to compute the corn window. Each stage feeds into the next — change one input and the effect ripples downstream. Three modifier layers adjust values mid-chain. Two stages produce time outputs (corn opens, corn closes). The rest are quality and quantity variables that shape those times.</p>
+
+    <!-- ── STEP 1 ── -->
+    <div class="pipe-step">
+      <div class="pipe-header"><span class="pipe-num">1</span><span class="pipe-title">Overnight Freeze Quality</span></div>
+      <div class="pipe-explain">
+        The overnight freeze is the engine of everything. When air temperature drops below 32°F, free water at the snow surface refreezes into a continuous ice matrix — the crust the morning sun must melt before corn can form. The colder the night, the thicker and harder this matrix. A 10°F night builds something close to reinforced concrete at the surface. A 29°F night barely skins it.<br><br>
+        <strong>Sky clarity matters as much as temperature.</strong> On clear nights, the snow surface radiates heat directly to a cold sky and receives very little back — so the snow surface can be 2–5°F colder than the air thermometer reads. Clouds reverse this: they act as a warm blanket, radiating heat back down. A clear 22°F night builds a meaningfully deeper crust than a cloudy 22°F night even though the thermometer reads the same. CornCast applies up to a 2× effective freeze bonus for a clear sky versus fully overcast.<br><br>
+        <strong>Elevation compounds the cold.</strong> Air temperature drops roughly 3–4°F per 1,000' of elevation gain. The app lapse-corrects all weather data to the peak's actual elevation — a face at 13,500' refreezes harder than one at 12,000' even when the forecast originates from the same grid point.
+      </div>
+      <div class="formula-box">rawFQ = (30 − overnightLow) / 22 + elevBonus<br>effectiveFQ = rawFQ × (0.50 + 0.50 × clearSkyFraction) − windScour<br><br>clearSkyFraction = (100 − overnightCloudPct) / 100<br>elevBonus ≈ +0.18 per 1,800' above 11,500'<br>→ Colder + clearer + higher = deeper, harder freeze</div>
+      <div class="pipe-ref">Male &amp; Granger (1981), Water Resources Research 17(3) — snow surface energy exchange and longwave radiative balance; Pomeroy &amp; Brun (2001), Snow Ecology, Cambridge — physical properties of snow</div>
+      <div class="pipe-feeds">↓ Sets the thermal debt that solar energy must repay before corn can open (Step 4)</div>
+    </div>
+
+    <!-- modifier: Seasonal Snowpack Maturity -->
+    <div class="pipe-modifier">
+      <div class="pipe-mod-tag">⟳ Modifier — adjusts Steps 1, 4 &amp; 5</div>
+      <div class="pipe-mod-title">Seasonal Snowpack Maturity</div>
+      <div class="pipe-explain" style="margin-bottom:.32rem">
+        The same overnight cold does not produce the same crust in March and in June. The difference is grain metamorphism — a continuous structural change driven by the repeated daily freeze-thaw cycle.<br><br>
+        In March, the snowpack surface is composed of sharp, angular crystals with enormous surface area. They bond tightly when frozen and produce an excellent, hard crust. Over the following months, those crystals round and enlarge through a process called <em>equilibrium metamorphism</em>. Grains grow from 0.1–0.5mm needles into 1–4mm rounded spheres. Rounded grains have far less contact area with their neighbors — they bond weakly when refrozen, producing a thinner, more fragile crust from the same overnight temperature.<br><br>
+        There is a second effect: the <em>thermal state</em> of the full snowpack column also degrades through the season. A March snowpack at 12,000' is cold all the way to the bottom — the overnight freeze can penetrate 30–50cm, creating a deep structural crust. By late May or June, the entire column is often <em>isothermal</em> — uniformly at 32°F with no cold reserve. The overnight freeze can now only penetrate 5–10cm into the surface, creating a thin veneer regardless of how cold it got. The corn window still opens, but it opens faster and closes sooner.<br><br>
+        CornCast applies both effects as graduated monthly penalties.
+      </div>
+      <div class="formula-box">         March  April  May    June<br>Grain rounding penalty:    0%     6%    14%    22%   → weakens freeze and crust bonds<br>Isothermal probability:    5%    15%    40%    70%   → thins crust, accelerates onset</div>
+      <div class="pipe-ref">Colbeck (1987), IAHS 162 — crystal metamorphism in seasonal snow; Armstrong &amp; Brun (2008), Snow and Climate, Cambridge; Clow et al. (2012), JGR Atmospheres — Front Range snowpack trends at elevation</div>
+    </div>
+
+    <!-- modifier: Wind Scour -->
+    <div class="pipe-modifier">
+      <div class="pipe-mod-tag">⟳ Modifier — adjusts Step 1 &amp; Step 6</div>
+      <div class="pipe-mod-title">Wind Scour</div>
+      <div class="pipe-explain" style="margin-bottom:.32rem">
+        While overnight cold builds the refreeze crust, wind is simultaneously trying to erode it — physically breaking fragile ice bonds before they can consolidate. This effect is most significant on west and northwest-facing terrain, which bears the full brunt of Colorado's prevailing westerly flow. East and southeast faces are typically sheltered by the terrain behind them.<br><br>
+        The model applies a wind scour penalty above about 12 mph. That penalty is scaled by two factors: the compass direction of the face (west is most exposed, southeast least) and a per-face micro-terrain rating that distinguishes a sheltered cirque bowl from an exposed ridge crest. The wind threshold is higher when computing window duration (18 mph) than when computing freeze quality (12 mph) — the corn surface, once formed, is less fragile than the crust forming overnight.
+      </div>
+      <div class="formula-box">Aspect wind exposure: W=1.00 · NW=0.90 · SW=0.72 · N=0.55 · S=0.50 · NE=0.45 · E=0.35 · SE=0.28</div>
+    </div>
+
+    <!-- modifier: Two-Layer Snowpack Ripeness -->
+    <div class="pipe-modifier">
+      <div class="pipe-mod-tag">⟳ Modifier — adjusts Steps 4, 5 &amp; 6</div>
+      <div class="pipe-mod-title">Two-Layer Snowpack Ripeness</div>
+      <div class="pipe-explain" style="margin-bottom:.32rem">
+        The snowpack's readiness to produce corn depends on two physically distinct layers operating on entirely different timescales. Understanding the difference between them explains a lot about why some days produce great corn and others don't — even with similar overnight forecasts.<br><br>
+        <strong>The surface layer (top ~30cm)</strong> responds to the past two weeks of weather. This is the zone that refreezes overnight, thaws each morning, and directly produces the corn surface you ski on. Warm days, above-freezing nights, rain, and solar loading all erode its refreeze potential. Cold nights and fresh snowfall restore it. The surface layer is reactive — a week of warm weather degrades it noticeably, and a cold snap with a storm can restore it within a few days. CornCast scores this layer using the past 14 days of actual weather data pulled from the ERA5 archive.<br><br>
+        <strong>The column layer (30cm to full depth)</strong> responds to the entire season from March 1 onward. The deep snowpack accumulates cold content over months, and it releases that cold slowly — roughly 4.5 times slower than the surface. A cold March and April builds a substantial cold reserve that resists the deep pack going isothermal, even during warm mid-April weeks. Research at Niwot Ridge (11,500', just below the Indian Peaks ski zone) found that non-zero column cold content delayed snowmelt onset by up to 5.7 hours compared to a fully isothermal pack. A deep, cold column is what keeps a corn window open deep into a warm afternoon instead of collapsing to slush by 10 AM.<br><br>
+        <strong>Why SWE matters here:</strong> A high snow-water-equivalent year means a deeper pack. More depth means more total cold stored in the column, and a pack that resists going isothermal longer into the spring. This is why SNOTEL SWE feeds directly into the column calculation — it's a meaningful physical link, not a simple background adjustment.<br><br>
+        The two layers combine into a single ripeness score: the surface layer carries 60% of the weight (it governs whether overnight refreeze happens at all) and the column layer carries 40% (it governs how fast the window collapses). This combined score flows through Steps 4, 5, and 6 wherever the isothermal state of the pack matters.
+      </div>
+      <div class="formula-box">Surface ripeness: scored from 14-day weather history. Warm days erode. Cold nights restore.<br>Column cold content: scored from full season (Mar 1 → target). Warms ~4.5× slower than surface.<br><br>Combined ripeness = surface × 0.60 + column ripeness × 0.40<br><br>High surface + cold column  →  long window, opens on time, slow slush transition<br>High surface + warm column  →  good corn, shorter window before slush collapse<br>Low surface + any column    →  poor corn regardless — no overnight freeze = no crust</div>
+      <div class="pipe-ref">Jennings et al. (2018), The Cryosphere 12 — column cold content and melt onset timing at alpine sites; Fierz (2011), Encyclopedia of Snow, Ice and Glaciers — thermal attenuation of heat waves with snowpack depth; DeWalle &amp; Rango (2008), Principles of Snow Hydrology — cold content definition and seasonal accumulation; Sturm &amp; Holmgren (1998), JGR — thermal conductivity and depth attenuation in natural snowpacks</div>
+    </div>
+
+    <div class="pipe-connector">▼</div>
+
+    <!-- ── STEP 2 ── -->
+    <div class="pipe-step">
+      <div class="pipe-header"><span class="pipe-num">2</span><span class="pipe-title">Solar Radiation by Aspect</span></div>
+      <div class="pipe-explain">
+        The sun's energy reaches a tilted slope most intensely when its rays strike nearly head-on. A south-facing slope in March catches the low noontime sun almost perpendicularly — maximum energy per square foot. A west face at the same time gets sunlight at a shallow angle, spread across a much larger area, delivering far less energy to the same patch of snow.<br><br>
+        This geometry shifts dramatically through the season. In March, the noon sun sits only ~50° above the horizon. By June it climbs to ~73° — high enough that it actually overshoots south-facing terrain, reducing the SE and S solar advantage. Meanwhile, north and northeast faces gain dramatically in June because the sun rises so far north of east that it can directly illuminate terrain that was almost entirely in shadow all winter. This is the physical reason June NE corn is achievable at all when March NE corn almost never works.<br><br>
+        Morning clouds reduce effective radiation proportionally. A 60% cloud-cover morning cuts available melt energy nearly in half.
+      </div>
+      <div class="formula-box">April radiation multipliers (relative to flat ground):<br>S: 1.38 · SE: 1.25 · SW: 1.20 · E: 0.88 · W: 0.72 · NE: 0.55 · NW: 0.30 · N: 0.18<br><br>June shifts: S loses ~18% · N and NE gain 50–60% (sun rises far north of east)</div>
+      <div class="pipe-ref">Iqbal (1983), An Introduction to Solar Radiation, Academic Press — solar geometry and slope irradiance</div>
+      <div class="pipe-feeds">↓ Controls how fast the thermal debt is repaid (Step 4) and how long the window lasts (Step 6)</div>
+    </div>
+
+    <div class="pipe-connector">▼</div>
+
+    <!-- ── STEP 3 ── -->
+    <div class="pipe-step">
+      <div class="pipe-header"><span class="pipe-num">3</span><span class="pipe-title">When the Sun First Hits the Face</span></div>
+      <div class="pipe-explain">
+        The melt clock doesn't start until direct sunlight reaches the snow surface. An east face gets direct sun as soon as the sun clears the horizon — around 6:45–7:00 AM in April. A south face must wait while the sun rotates around through the northeastern sky; it typically isn't illuminating a south face until around 9:30 AM. A west face waits until early afternoon.<br><br>
+        Local terrain introduces an additional delay that pure solar geometry can't predict. A ridge to the east can block morning light on an otherwise east-facing bowl by 20–60 minutes. Apache Peak's northeast bowl, for example, sits behind a ridge crest that delays direct sun until approximately 8:30 AM in April — over 40 minutes later than the solar geometry alone would suggest. These terrain shade delays are hand-coded from field observation for each face in the model.
+      </div>
+      <div class="formula-box">April sun-hit times at 40°N:<br>E ~6:54 AM · NE ~7:48 AM · SE ~7:18 AM · S ~9:30 AM · SW ~12:00 PM · W ~1:30 PM<br>+ per-face terrain shade delay (Apache NE: +24 min · Longs NE Trough: +42 min)</div>
+      <div class="pipe-feeds">↓ Sets the earliest possible corn open time — the melt clock starts here (Step 4)</div>
+    </div>
+
+    <div class="pipe-connector">▼</div>
+
+    <!-- ── STEP 4 ── -->
+    <div class="pipe-step output-step">
+      <div class="pipe-header"><span class="pipe-num gold">4</span><span class="pipe-title">Melt Onset → 🌽 Corn Opens</span></div>
+      <div class="pipe-explain">
+        When the sun hits the face, the surface doesn't immediately become corn — it is still frozen solid. The snow must absorb enough solar energy to melt the overnight ice bonds before the corn state is reached. Think of the overnight freeze as a thermal debt: the colder the night and the harder the freeze, the more energy must be repaid before the surface softens.<br><br>
+        The rate at which that debt is repaid depends on two things: how much solar energy is arriving at the surface (driven by aspect, cloud cover, and the radiation calculations in Steps 2–3) and how quickly the morning air is warming (dawn temperature to afternoon high). A bright, sunny aspect on a clear morning with rapidly rising temperatures pays off the debt quickly. A heavily clouded northeast face in March may never pay it off during reasonable skiing hours — the model caps melt delay at 4.5 hours for exactly this reason.<br><br>
+        One notable interaction: a snowpack that is already isothermal actually speeds up corn onset. Because the pack had no cold reserve, the overnight crust was thinner to begin with, so the thermal debt is smaller. The corn opens sooner — but the same thin crust means the window will close sooner too.
+      </div>
+      <div class="formula-box">meltDelay = (freezeQuality × degrees below freezing at dawn)<br>           ÷ (solar radiation × morning warm-up rate)<br><br>→ Capped at 4.5 hours<br>→ cornOpens = sunHitTime + meltDelay</div>
+      <div class="pipe-output">📍 OUTPUT A: Corn Opens = sun hits face + melt delay</div>
+      <div class="pipe-ref">Kustas &amp; Rango (1994), Water Resources Research 30(5) — simplified energy budget for snowmelt onset</div>
+      <div class="pipe-feeds">↓ Subtract your approach time from Corn Opens to get your trailhead departure time</div>
+    </div>
+
+    <div class="pipe-connector">▼</div>
+
+    <!-- ── STEP 5 ── -->
+    <div class="pipe-step">
+      <div class="pipe-header"><span class="pipe-num">5</span><span class="pipe-title">Crust Quality</span></div>
+      <div class="pipe-explain">
+        Two faces can have identical temperatures, sun angles, and cloud cover — but if the snow surfaces are different, the corn quality will be different. Crust quality is determined by how much refreeze material is available and how well it can bond.<br><br>
+        <strong>Storm snow (less than ~10 days old)</strong> is the best raw material. Fresh angular grains have enormous surface area and bond tightly when frozen. This quality fades rapidly — grain rounding begins within hours of deposition, and by day 7 the crust potential has dropped to roughly half of what it was fresh. A 1" dusting ages out within 24–48 hours. A deep 10–12" storm retains useful crust potential for a week or more, because deeper snow takes longer to metamorphose all the way through.<br><br>
+        <strong>Consolidated spring pack (more than ~10 days since the last storm)</strong> behaves differently. Once grains have rounded and stabilized into large melt-freeze polycrystals, the aging process essentially stops — grain size no longer changes. What matters then is whether there is enough surface material to refreeze at all, and whether the seasonal maturity penalties have weakened the bonds. A deep consolidated April pack still produces real corn. A thin consolidated June pack produces marginal corn regardless of how cold the night was.<br><br>
+        The model takes whichever score is higher — the fresh storm calculation or the consolidated pack floor.
+      </div>
+      <div class="formula-box">Storm layer:  crustQ = (depth÷8) × exp(−days×0.10) × seasonal_scale<br>              [8" is full potential; halves every 7 days; scaled by month]<br><br>Consolidated: crustQ = 0.35 × (depth÷8) × seasonal_scale<br>              [floor for aged pack — grain size stable, bonds still real]<br><br>Result = whichever is higher (minimum 0.05)<br><br>Snow Surface % in results = this value — answers "how much good snow material<br>is available to refreeze?" Not a holistic quality score by itself.</div>
+      <div class="pipe-ref">Fierz et al. (2009), UNESCO-IHP — International Classification for Seasonal Snow, melt-freeze grain classification; Colbeck (1986), Acta Metallurgica 34 — grain coarsening in wet snow; Colbeck (1979), J. Colloid Interface Science — ice-to-ice bond strength; Colbeck (1997), CRREL Report 97-10 — sintering and grain equilibrium</div>
+      <div class="pipe-feeds">↓ Primary driver of window duration (Step 6) and contributes directly to final score</div>
+    </div>
+
+    <!-- modifier: SWE -->
+    <div class="pipe-modifier">
+      <div class="pipe-mod-tag">⟳ Modifier — adjusts Steps 5 &amp; 6</div>
+      <div class="pipe-mod-title">Basin Snowpack — Live NRCS SNOTEL SWE</div>
+      <div class="pipe-explain" style="margin-bottom:.32rem">
+        The NRCS SNOTEL network measures total snow water equivalent at stations throughout the range. CornCast uses SWE as a percentage of the 1991–2020 median for that date, because raw SWE numbers vary enormously by elevation and time of year — percent of median is directly comparable across dates and stations.<br><br>
+        A below-normal snowpack year means the surface has been through more melt-freeze cycles relative to the calendar date. The snow is more fatigued and coarser than it would be in a normal year. An above-normal year tends to have deeper, fresher surface material and a column with more cold content reserve — because a thicker snowpack stores more cold and yields it more slowly. This is why SWE feeds directly into the column cold content calculation (see Two-Layer Ripeness modifier above) rather than acting as a simple surface modifier.<br><br>
+        The effect is intentionally modest. A cold, clear night on a 75% SWE year can still produce excellent corn. SWE is a background nudge, not a threshold. Stations are weighted by elevation proximity to the ~12,000' ski zone.
+      </div>
+      <div class="formula-box">Stations: Niwot Ridge #663 · University Camp #838 · Sawtooth #1251 · Wild Basin #1042 · Bear Lake #322 · Joe Wright #551<br>Elevation weight: closer to 12,000' = more weight<br>Effect range: roughly ±10% on crust quality, ±15 minutes on window duration</div>
+      <div class="pipe-ref">USDA Natural Resources Conservation Service — SNOTEL Data &amp; Products; station SWE % of 1991–2020 median</div>
+    </div>
+
+    <div class="pipe-connector">▼</div>
+
+    <!-- ── STEP 6 ── -->
+    <div class="pipe-step output-step">
+      <div class="pipe-header"><span class="pipe-num gold">6</span><span class="pipe-title">Window Duration → 🌽 Corn Closes</span></div>
+      <div class="pipe-explain">
+        Once corn opens, how long does it last? The window closes when free water content in the surface layer exceeds roughly 8–12% by volume — at that point every grain is floating in liquid rather than lightly bonded to its neighbors, and the surface becomes saturated slush. The crust must melt completely through before this happens.<br><br>
+        <strong>Crust thickness is the dominant term.</strong> A deep, hard freeze from a very cold night takes far longer to fully melt through than a thin veneer. This is why a 5°F night produces a longer skiing window than a 28°F night, even when corn opens at the same time — there is simply more crust thickness to sustain the condition.<br><br>
+        <strong>A counterintuitive result:</strong> higher-radiation aspects (SE, S) tend to produce slightly longer windows than lower-radiation aspects for the same crust quality. Intense, uniform solar loading melts the surface consistently across the whole face — every square meter enters the corn state at the same time. Low-radiation faces melt patchily, creating inconsistent micro-conditions across the slope even though the aggregate window technically hasn't closed.<br><br>
+        A warm afternoon high accelerates the transition to slush: a 55°F day burns through a corn window faster than a 42°F day. Wind above about 18 mph mechanically disrupts the softened surface and shortens the window.
+      </div>
+      <div class="formula-box">duration = crust quality × 1.6   [dominant — deeper crust = longer window]<br>         + radiation × 1.4       [uniform melt = consistent corn across face]<br>         + temp above 32°F × 0.065  [warmer afternoon = faster slush transition]<br>         − wind penalty           [above 18 mph disrupts softened surface]<br>         ± SWE and column bonus<br><br>→ Clamped 0.2 – 4.0 hours<br>→ cornCloses = cornOpens + duration</div>
+      <div class="pipe-output">📍 OUTPUT B: Corn Closes = corn opens + duration</div>
+      <div class="pipe-feeds">↓ Corn Opens and Corn Closes together define the window; your arrival must fall between them</div>
+    </div>
+
+    <div class="pipe-connector">▼</div>
+
+    <!-- ── STEP 7 ── -->
+    <div class="pipe-step">
+      <div class="pipe-header"><span class="pipe-num">7</span><span class="pipe-title">Terrain Factor</span></div>
+      <div class="pipe-explain">
+        Two southeast faces at 12,500' with identical forecasts can produce dramatically different corn. One is a clean 35° apron with six feet of consolidated snow, sheltered from prevailing winds, and uniform sun exposure across the slope. The other is a rocky broken face with thin patchy coverage, sits on a wind-scoured ridge, and has cliff ribs that keep portions in shadow well into mid-morning. The physics model, run identically on both, gives them the same raw score. The terrain factor is how CornCast accounts for this difference.<br><br>
+        Three components rate each face on a 1–3 scale. <strong>Snow Retention:</strong> does this face reliably hold a deep continuous snowpack through spring, or is it wind-stripped and rocky? <strong>Aspect Purity:</strong> does the entire face receive uniform solar input at the same time, so the corn window opens consistently across the slope rather than in patchy zones? <strong>Wind Shelter:</strong> is the refreeze surface protected from overnight scour?<br><br>
+        These ratings are based on published route descriptions and first-hand field knowledge — a deliberate human judgment layer on top of the physics, and a known source of subjectivity in the model.
+      </div>
+      <div class="formula-box">q = (SnowRetention + AspectPurity + WindShelter) / 9    [range: 0.33 – 1.00]<br>score = physicsScore × (0.50 + q × 0.50)<br><br>Worst terrain (q=0.33): preserves 67% of physics score<br>Best terrain  (q=1.00): passes 100% of physics score through<br>Terrain scales the signal — it never eliminates it entirely</div>
+      <div class="pipe-ref">Roach (2001), Colorado's Indian Peaks Wilderness, Fulcrum Publishing; frontrangeskimo.com trip reports; first-hand field observation. Not GIS-derived — a known model limitation.</div>
+      <div class="pipe-feeds">↓ Final multiplier on the physics score → produces the 0–100 output</div>
+    </div>
+
+    <div class="pipe-connector">▼</div>
+
+    <!-- ── FINAL SCORE ── -->
+    <div class="pipe-step final-step">
+      <div class="pipe-header"><span class="pipe-num">✓</span><span class="pipe-title">Final Score (0–100)</span></div>
+      <div class="pipe-explain">All pipeline outputs combine into a single score. The raw number is normalized so that the range's benchmark corn objective — South Arapaho Peak's SE couloir in March under near-perfect conditions — scores 100. That peak and aspect was chosen because it is widely regarded as the premier spring corn objective in the Indian Peaks: a clean, well-sheltered SE couloir with reliable coverage and consistent solar exposure from first light through mid-morning. A score of 80 means conditions are strongly in your favor. A score of 30 means you might find corn in sheltered pockets but shouldn't plan your day around it.</div>
+      <div class="formula-box">Score bands:<br>  75–100  Excellent — deep uniform freeze, 2+ hr window, classic spring skiing<br>  50–74   Good — reliable corn, 1–2 hr window, may vary slightly across face<br>  25–49   Marginal — short window, thin crust, or patchy; worth checking<br>  0–24    Poor — theoretical window only; too short to plan around<br><br>Three metrics shown in results:<br>  Terrain %    — mountain quality (snow retention × aspect purity × wind shelter)<br>  Freeze %     — overnight cold strength (how hard the crust bonded)<br>  Snow Surface % — depth &amp; freshness of snow available to refreeze<br>  These are the three physical inputs; the score combines all of them.<br><br>Benchmark: S. Arapaho SE · March · 2°F overnight · clear sky · 3 mph wind · 10" snow / 1 day old</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="asec">
+    <h2>Approach Time</h2>
+    <p>CornCast uses a linear regression fit to personal backcountry skinning pace data. Speed decreases linearly with slope grade. At 0% grade (flat travel) the default pace is about 2.45 mph; at 15% grade it drops to about 1.28 mph.</p>
+    <div class="formula-box">speed (mph) = −7.8085 × grade + 2.4481<br>grade = elevation gain (ft) ÷ (distance (mi) × 5280)<br>total time = distance ÷ speed + buffer minutes ÷ 60</div>
+    <p style="margin-top:.45rem">This is one person's regression data. Individual pace varies significantly with fitness, pack weight, skin conditions, and acclimatization. Use the buffer field to account for your pace relative to this default — a conservative skier or heavy pack warrants 45–60 minutes of buffer; a fast skier on light gear may only need 15.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="asec">
+    <h2>Weather Data</h2>
+    <p>CornCast automatically fetches weather from two Open-Meteo endpoints when you select a peak and target date.</p>
+    <p style="margin-top:.45rem">The <strong>ERA5 archive</strong> covers March 1 of the current season through yesterday. ERA5 is the European Centre for Medium-Range Weather Forecasts global reanalysis — finalized, high-quality gridded data that is more accurate than rolling model forecasts. All temperatures are lapse-corrected to the peak's actual elevation using a standard environmental lapse rate.</p>
+    <p style="margin-top:.45rem">The <strong>16-day forecast</strong> covers today through roughly two weeks out, using the best available global model for the region. Archive and forecast data are merged into a single timeline: the ripeness trajectory chart spans the full season from March 1, and the weather tile strip always shows the 10 days leading into your target date — whether those days are past (archive data) or future (forecast), or a mix of both.</p>
+    <p style="margin-top:.45rem">Dawn temperature is pulled from the 6 AM hourly forecast if the target date falls within the 16-day forecast window. For target dates in the past (or beyond the forecast range), dawn temperature is estimated as the overnight low plus 2°F, which closely tracks the typical pre-dawn temperature in dry mountain spring air.</p>
+    <p style="margin-top:.45rem">If the archive fetch fails, the model runs in surface-only mode — using forecast data where available and seasonal baseline estimates for the column cold content. The interface labels this condition clearly.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="asec">
+    <h2>Peaks Covered</h2>
+    <ul id="peak-list-about" style="columns:2;gap:1rem;line-height:1.9"></ul>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="asec">
+    <h2>Known Limitations</h2>
+    <p>CornCast is a planning tool, not a sensor. Several things it cannot fully account for:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>Terrain factor is hand-coded</strong>, not derived from GIS or DEM analysis. The snow retention, aspect purity, and wind shelter ratings are informed judgments — treat them as a strong starting point, especially for faces you haven't skied before.</li>
+      <li><strong>Single-aspect computation.</strong> A long descent often spans multiple aspects — N to E to SE — each with different opening and closing times. CornCast scores only the aspect you select.</li>
+      <li><strong>No dust-on-snow modeling.</strong> Dust layers on the surface lower albedo and can accelerate corn onset by 20–45 minutes while compressing the window. Check the Desert Dust page at CAIC or OpenSnow for dust events.</li>
+      <li><strong>Column cold content is calibrated, not validated.</strong> The coefficients governing how quickly the deep snowpack gains and loses cold content are physically motivated estimates — they have not been validated against observational data from Niwot Ridge or other Front Range alpine sites at ski-zone elevations.</li>
+      <li><strong>Isothermal probability is a seasonal estimate.</strong> A drought year can isothermalize the pack 2–4 weeks earlier than the monthly baseline. A high-SWE cold spring may stay cold-core well into June. The model adjusts for SWE but cannot detect true isothermal state without real-time temperature sensors in the snowpack.</li>
+      <li><strong>SNOTEL via proxy.</strong> The NRCS data server does not allow direct browser requests. CornCast routes through public CORS proxies, which occasionally fail. The model runs without SWE adjustment if all proxies fail — results are labeled accordingly.</li>
+      <li><strong>Forecast uncertainty grows fast.</strong> Beyond 5–7 days, GFS and ECMWF model skill drops sharply in mountain terrain. Use CornCast for planning direction at long range, not precision timing.</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="asec">
+    <h2>⚠️ Disclaimer</h2>
+    <p>CornCast is a planning aid only. Always check the <strong>Colorado Avalanche Information Center (CAIC)</strong> forecast before any backcountry tour. Spring conditions change rapidly, corn skiing terrain is frequently avalanche terrain, and no model replaces field judgment. Turn around if something feels wrong.</p>
+  </div>
+
+</div>
+
+<!-- POPUP -->
+<div id="popup"><button id="pcls" onclick="CP()">✕</button><div id="pc"></div></div>
+
+<script>
+(function(){
+"use strict";
+var RAW_MAX=66.85;
+function tq(sr,ap,we){return{sr:sr,ap:ap,we:we,q:(sr+ap+we)/9};}
+
+// ── PEAKS — coordinates verified against USGS summit data ────────────────
+var PK=[
+  // Brainard Lake cluster — coords from USGS National Map summit layer
+  {n:"Mt. Toll",          la:40.0883,lo:-105.6339,el:12979,
+   asp:{N:{t:tq(1,2,2),wx:.65,sh:0,ez:12700,note:"N face icy"},NE:{t:tq(2,2,2),wx:.58,sh:.2,ez:12400,note:"NE aspect moderate"},E:{t:tq(3,3,3),wx:.52,sh:0,ez:12300,note:"E face, good morning corn"},SE:{t:tq(3,3,3),wx:.48,sh:0,ez:12100,note:"SE couloir, quality line"}}},
+  // Pawnee: summit is east of Pawnee Lake, on the ridge at ~-105.6394
+  {n:"Pawnee Peak",       la:40.0813,lo:-105.6329,el:12943,
+   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12700,note:"N face limited"},NE:{t:tq(2,2,2),wx:.58,sh:.2,ez:12300,note:"NE bowl"},E:{t:tq(3,3,3),wx:.55,sh:0,ez:12200,note:"E face, accessible corn"},SE:{t:tq(3,3,3),wx:.50,sh:0,ez:12100,note:"SE — popular spring objective"}}},
+  // Audubon: summit on east side of ridge, confirmed USGS
+  {n:"Mt. Audubon",       la:40.0994,lo:-105.6256,el:13233,
+   asp:{N:{t:tq(1,2,2),wx:.70,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12700,note:"Broad E face, consistent"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12500,note:"SE face, classic Audubon corn"},S:{t:tq(2,3,2),wx:.52,sh:0,ez:12400,note:"S face, early window"},W:{t:tq(2,2,1),wx:.62,sh:0,ez:12500,note:"W face, afternoon"}}},
+  // Paiute: summit on divide west of Paiute Lake
+  {n:"Paiute Peak",       la:40.0980,lo:-105.6332,el:13088,
+   asp:{E:{t:tq(3,2,3),wx:.55,sh:0,ez:12300,note:"E face, lower elev melts earlier"},SE:{t:tq(3,3,3),wx:.50,sh:0,ez:12100,note:"SE, good but shorter window"},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12000,note:"S face, very early window"},SW:{t:tq(2,2,1),wx:.65,sh:0,ez:12000,note:"SW, afternoon"},W:{t:tq(1,2,1),wx:.70,sh:0,ez:12100,note:"W, late afternoon"}}},
+  // Isabelle Glacier cluster
+  {n:"Arikaree Peak",     la:40.0464,lo:-105.6383,el:13146,
+   asp:{N:{t:tq(1,1,2),wx:.75,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,2),wx:.58,sh:0,ez:12500,note:"E face, good corn potential"},SE:{t:tq(3,3,2),wx:.52,sh:0,ez:12400,note:"SE aspect, solid when frozen"},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12300,note:"S face moderate"}}},
+  {n:"Kiowa Peak",        la:40.0480,lo:-105.6242,el:13276,
+   asp:{NE:{t:tq(2,2,2),wx:.65,sh:.2,ez:12700,note:"NE bowl, moderate quality"},E:{t:tq(3,2,2),wx:.60,sh:0,ez:12600,note:"E face, decent corn"},SE:{t:tq(3,3,2),wx:.55,sh:0,ez:12500,note:"SE, reliable window"},S:{t:tq(2,2,2),wx:.62,sh:0,ez:12300,note:"S face"}}},
+  {n:"Mt. Albion",        la:40.0392,lo:-105.6172,el:12609,
+   asp:{E:{t:tq(3,3,3),wx:.52,sh:0,ez:12000,note:"E face decent, accessible"},SE:{t:tq(3,3,3),wx:.48,sh:0,ez:11800,note:"SE aspect, good beginner corn"},N:{t:tq(1,1,2),wx:.65,sh:0,ez:12300,note:"N face very limited"}}},
+  {n:"N. Arapaho Peak",   la:40.0267,lo:-105.6500,el:13502,
+   asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N glacier, rarely skiable"},NW:{t:tq(2,2,1),wx:.85,sh:0,ez:12900,note:"NW bowl, wind-loaded"},W:{t:tq(2,2,1),wx:.80,sh:0,ez:12800,note:"W face, afternoon corn"},SW:{t:tq(2,2,2),wx:.72,sh:0,ez:12700,note:"SW, afternoon option"}}},
+  {n:"S. Arapaho Peak",   la:40.0200,lo:-105.6497,el:13397,
+   asp:{E:{t:tq(3,3,3),wx:.50,sh:0,ez:12700,note:"E face, reliable morning corn"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12600,note:"Classic SE couloir — premier corn face"},S:{t:tq(3,3,2),wx:.52,sh:0,ez:12500,note:"S face, watch window timing"},SW:{t:tq(2,2,2),wx:.57,sh:0,ez:12500,note:"SW, afternoon window"}}},
+  {n:"Navajo Peak",       la:40.0533,lo:-105.6467,el:13409,
+   asp:{N:{t:tq(1,1,1),wx:.90,sh:0,ez:13100,note:"Very exposed, icy N face"},NE:{t:tq(2,1,1),wx:.85,sh:0,ez:12900,note:"Airplane Gully — high wind, variable crust"},E:{t:tq(2,2,2),wx:.75,sh:0,ez:12700,note:"Rocky E face, patchy snow"},S:{t:tq(2,2,2),wx:.70,sh:0,ez:12500,note:"S face, melts fast"},SW:{t:tq(1,2,1),wx:.82,sh:0,ez:12500,note:"Exposed SW, slab prone"}}},
+  {n:"Apache Peak",       la:40.0583,lo:-105.6513,el:13441,
+   asp:{N:{t:tq(1,2,2),wx:.50,sh:.5,ez:13000,note:"N face, very late window"},NE:{t:tq(3,3,3),wx:.38,sh:.4,ez:12800,note:"Sheltered NE bowl — excellent corn above Isabelle Glacier"},E:{t:tq(3,3,3),wx:.36,sh:0,ez:12700,note:"Prime E face, best in the range"},SE:{t:tq(3,3,3),wx:.40,sh:0,ez:12600,note:"SE couloir, top-tier when frozen"}}},
+  // Shoshoni: summit east of Lake Isabelle on the divide
+  {n:"Shoshoni Peak",     la:40.0672,lo:-105.6389,el:12967,
+   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12600,note:"N face marginal"},NE:{t:tq(3,3,3),wx:.55,sh:.3,ez:12400,note:"NE couloir / Shoshoni Bowl — classic lower-angle spring line"},SE:{t:tq(3,3,2),wx:.50,sh:0,ez:12100,note:"SE, short but quality window"},S:{t:tq(1,2,2),wx:.55,sh:0,ez:12000,note:"Sheer S face, near-vertical"}}},
+  {n:"Ogalalla Peak",     la:40.1703,lo:-105.6667,el:13333,
+   asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N very exposed"},NE:{t:tq(2,2,1),wx:.72,sh:.3,ez:12800,note:"NE, high wind exposure"},E:{t:tq(3,2,2),wx:.62,sh:0,ez:12700,note:"E face, moderate quality"},SE:{t:tq(3,3,2),wx:.58,sh:0,ez:12500,note:"SE aspect"}}},
+  // Western cluster
+  {n:"Mt. Neva",          la:40.0186,lo:-105.6694,el:12814,
+   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12300,note:"NE aspect, moderate"},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12200,note:"E face, decent lower-angle corn"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12000,note:"SE couloir, popular objective"},N:{t:tq(1,1,2),wx:.58,sh:0,ez:12600,note:"N face minimal"}}},
+  {n:"Jasper Peak",       la:39.9945,lo:-105.6833,el:12923,
+   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12300,note:"NE bowl, moderate"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12200,note:"E face, decent corn"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12000,note:"SE couloir, known ski line"},N:{t:tq(1,1,2),wx:.60,sh:0,ez:12600,note:"N face very limited"}}},
+  {n:"Lone Eagle Peak",   la:40.0714,lo:-105.6603,el:11940,
+   asp:{E:{t:tq(2,3,3),wx:.42,sh:0,ez:11400,note:"E face, low elevation — early season only"},SE:{t:tq(3,3,3),wx:.38,sh:0,ez:11200,note:"SE, popular early spring objective"},S:{t:tq(2,3,2),wx:.45,sh:0,ez:11100,note:"S face, very early melt"}}},
+  // RMNP / North cluster
+  {n:"Sawtooth Mtn",      la:40.1269,lo:-105.6252,el:12304,
+   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11900,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.42,sh:0,ez:11700,note:"SE aspect, wide open"},S:{t:tq(2,3,2),wx:.48,sh:0,ez:11600,note:"S face, early melt"},SW:{t:tq(2,2,1),wx:.52,sh:0,ez:11600,note:"SW afternoon"}}},
+  {n:"Red Deer Mtn",      la:40.1120,lo:-105.6320,el:12375,
+   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12100,note:"NE aspect"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face moderate"},SE:{t:tq(3,3,3),wx:.45,sh:0,ez:11900,note:"SE couloir — ski line from Buchanan Pass"},S:{t:tq(2,2,2),wx:.50,sh:0,ez:11700,note:"S face"}}},
+  {n:"St. Vrain Mtn",     la:40.1613,lo:-105.5851,el:12162,
+   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11700,note:"E face, accessible lower terrain"},SE:{t:tq(3,3,3),wx:.42,sh:0,ez:11500,note:"SE, widest window at this elevation"},S:{t:tq(2,2,2),wx:.48,sh:0,ez:11400,note:"S face very early melt"},W:{t:tq(1,2,1),wx:.55,sh:0,ez:11600,note:"W face"}}},
+  {n:"Terra Tomah",       la:40.3097,lo:-105.6619,el:12718,
+   asp:{E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:11800,note:"SE, wide open approach"},S:{t:tq(2,3,2),wx:.50,sh:0,ez:11700,note:"S face early melt"},SW:{t:tq(2,2,1),wx:.54,sh:0,ez:11700,note:"SW afternoon"},W:{t:tq(1,2,1),wx:.60,sh:0,ez:11900,note:"W late afternoon"}}},
+  // Longs Peak area
+  {n:"Longs Peak",        la:40.2550,lo:-105.6153,el:14259,
+   asp:{N:{t:tq(1,1,1),wx:.95,sh:0,ez:13800,note:"Diamond face — technical, rarely skied"},NE:{t:tq(3,3,2),wx:.58,sh:.7,ez:13400,note:"NE Trough — stays frozen late, classic line"},E:{t:tq(3,3,2),wx:.62,sh:0,ez:13300,note:"E lobe, high quality"},SE:{t:tq(3,3,2),wx:.60,sh:0,ez:13200,note:"SE bowl"},W:{t:tq(1,1,1),wx:.90,sh:0,ez:13500,note:"W face very exposed"},NW:{t:tq(1,1,1),wx:.92,sh:0,ez:13600,note:"NW wind-scoured"}}},
+  {n:"Mt. Meeker",        la:40.2456,lo:-105.6061,el:13911,
+   asp:{N:{t:tq(1,1,1),wx:.85,sh:0,ez:13500,note:"N face icy and technical"},NE:{t:tq(3,3,2),wx:.62,sh:.5,ez:13100,note:"NE face, high quality when frozen"},E:{t:tq(3,3,2),wx:.56,sh:0,ez:13000,note:"E face excellent corn"},S:{t:tq(3,3,3),wx:.54,sh:0,ez:12700,note:"The Loft — top-tier when it works"},SW:{t:tq(2,2,2),wx:.65,sh:0,ez:12800,note:"Loft SW approach"}}},
+  {n:"Chiefs Head",       la:40.2308,lo:-105.6381,el:13579,
+   asp:{NE:{t:tq(3,3,3),wx:.44,sh:.5,ez:13000,note:"Premier NE face — remote but excellent"},E:{t:tq(3,3,3),wx:.46,sh:0,ez:12900,note:"E bowl, consistently best corn"},S:{t:tq(2,3,2),wx:.55,sh:0,ez:12700,note:"S face moderate quality"},SW:{t:tq(2,2,2),wx:.60,sh:0,ez:12600,note:"SW afternoon window"},NW:{t:tq(1,1,1),wx:.72,sh:0,ez:13200,note:"NW exposed ridge"}}},
+  {n:"Pagoda Mtn",        la:40.2431,lo:-105.6281,el:13497,
+   asp:{N:{t:tq(1,1,2),wx:.75,sh:0,ez:13100,note:"N face minimal sun"},E:{t:tq(2,3,2),wx:.60,sh:0,ez:12900,note:"E face moderate quality"},SE:{t:tq(3,3,2),wx:.56,sh:0,ez:12700,note:"SE, reliable but not standout"},W:{t:tq(1,2,1),wx:.72,sh:0,ez:12900,note:"W face afternoon"}}},
+];
+
+var AZ={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
+var BASE_RAD={N:0.18,NE:0.55,E:0.88,SE:1.25,S:1.38,SW:1.20,W:0.72,NW:0.30};
+var BASE_SUN={N:null,NE:7.8,E:6.9,SE:7.3,S:9.5,SW:12.0,W:13.5,NW:15.2};
+var WIND_ASP={N:0.55,NE:0.45,E:0.35,SE:0.28,S:0.50,SW:0.72,W:1.00,NW:0.90};
+var MONTH_ADJ={
+  3:{radBoost:{N:.60,NE:.75,E:.90,SE:1.10,S:1.18,SW:1.08,W:.85,NW:.55},sunShift:{N:0,NE:.8,E:.5,SE:.3,S:-.2,SW:-.3,W:-.3,NW:.5},winFactor:1.1,freezeBonus:.08,maturityPenalty:0.00,isothermProb:0.05},
+  4:{radBoost:{N:1,NE:1,E:1,SE:1,S:1,SW:1,W:1,NW:1},sunShift:{N:0,NE:0,E:0,SE:0,S:0,SW:0,W:0,NW:0},winFactor:1.0,freezeBonus:.00,maturityPenalty:0.06,isothermProb:0.15},
+  5:{radBoost:{N:1.30,NE:1.25,E:1.10,SE:.95,S:.90,SW:.92,W:1.05,NW:1.15},sunShift:{N:0,NE:-.5,E:-.4,SE:-.2,S:.3,SW:.5,W:.4,NW:-.3},winFactor:.9,freezeBonus:-.05,maturityPenalty:0.14,isothermProb:0.40},
+  6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},winFactor:.8,freezeBonus:-.12,maturityPenalty:0.22,isothermProb:0.70},
+};
+
+var selectedPeak=0,selectedAsp=null,allResults=[],leafletMap=null,pkMarkers=[];
+
+// ── SNOTEL ────────────────────────────────────────────────────────────────
+// Wild Basin corrected to 9,410' (verified NRCS). Copeland Lake removed (too low).
+var BASIN_CFG={
+  'boulder':{name:'Boulder Creek',color:'#7ab8e8',
+    stations:[{id:'663',name:'Niwot',elev:11480},{id:'838',name:'University Camp',elev:10300}]},
+  'stvrain':{name:'St. Vrain',color:'#a8d8a8',
+    stations:[{id:'1251',name:'Sawtooth',elev:9640},{id:'1042',name:'Wild Basin',elev:9410}]},
+  'bigthompson':{name:'Big Thompson',color:'#f0c070',
+    stations:[{id:'322',name:'Bear Lake',elev:9475},{id:'551',name:'Joe Wright',elev:10020}]},
+};
+function getPeakBasin(n){
+  var b=['N. Arapaho Peak','S. Arapaho Peak','Navajo Peak','Mt. Albion','Ogalalla Peak','Mt. Neva','Jasper Peak','Lone Eagle Peak','Arikaree Peak','Kiowa Peak','Shoshoni Peak'];
+  var s=['Apache Peak','Pawnee Peak','Mt. Toll','Mt. Audubon','Paiute Peak','Sawtooth Mtn','Red Deer Mtn','St. Vrain Mtn','Longs Peak','Mt. Meeker','Chiefs Head','Pagoda Mtn'];
+  if(b.indexOf(n)>=0)return'boulder';if(s.indexOf(n)>=0)return'stvrain';return'bigthompson';
+}
+var sweCache={};
+
+// NRCS URL builder — try both with and without the name token for problematic stations
+function nrcsUrl(id,alt){
+  var base='https://wcc.sc.egov.usda.gov/reportGenerator/view_csv/customSingleStationReport/daily/';
+  if(alt) return base+id+':CO:SNTL/-1,0/WTEQ::value,WTEQ::median_1991,WTEQ::pctOfMedian_1991';
+  return base+id+':CO:SNTL|id=""|name/-1,0/WTEQ::value,WTEQ::median_1991,WTEQ::pctOfMedian_1991';
+}
+function parseNrcsCSV(csv){
+  var lines=csv.split('\n').filter(function(l){return l.trim()&&!l.startsWith('#');});
+  var dl=null;
+  for(var i=lines.length-1;i>=0;i--){if(lines[i].trim()&&!lines[i].startsWith('"Date')&&!lines[i].startsWith('Date')){dl=lines[i].trim();break;}}
+  if(!dl)throw new Error('No data');
+  var c=dl.split(','),swe=parseFloat(c[1]),med=parseFloat(c[2]),pct=parseFloat(c[3]);
+  if(isNaN(pct)||isNaN(swe))throw new Error('Parse fail: '+dl);
+  return{swe:swe,median:med,pct:pct};
+}
+
+// NRCS SNWD URL — 30-day snow depth history for storm detection
+function nrcsSnwdUrl(id, alt) {
+  var base = 'https://wcc.sc.egov.usda.gov/reportGenerator/view_csv/customSingleStationReport/daily/';
+  if(alt) return base + id + ':CO:SNTL/-30,0/SNWD::value';
+  return base + id + ':CO:SNTL|id=""|name/-30,0/SNWD::value';
+}
+
+// Parse multi-row SNWD CSV → [{date, depthIn}] sorted oldest→newest
+function parseSnwdCSV(csv) {
+  var lines = csv.split('\n');
+  var result = [];
+  var headerPassed = false;
+  for(var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if(!line || line.startsWith('#')) continue;
+    if(line.startsWith('"Date') || line.startsWith('Date')) { headerPassed = true; continue; }
+    if(!headerPassed) continue;
+    var parts = line.split(',');
+    if(parts.length < 2) continue;
+    var dateStr = parts[0].replace(/"/g,'').trim();
+    var depth = parseFloat(parts[1]);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(depth) && depth >= 0) {
+      result.push({ date: dateStr, depthIn: depth });
+    }
+  }
+  return result;
+}
+var PROXIES=['https://api.allorigins.win/raw?url=','https://corsproxy.io/?url=','https://api.codetabs.com/v1/proxy?quest=','https://thingproxy.freeboard.io/fetch/','direct'];
+function doFetch(url,timeout,cb){
+  var tryNext=function(pi,altUrl){
+    var urls=altUrl?[url,altUrl]:[url];
+    var u=PROXIES[pi]==='direct'?urls[0]:PROXIES[pi]+encodeURIComponent(urls[0]);
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var timer=ctrl?setTimeout(function(){ctrl.abort();},timeout):null;
+    fetch(u,ctrl?{signal:ctrl.signal}:{})
+      .then(function(r){if(timer)clearTimeout(timer);if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+      .then(function(t){cb(t,null);})
+      .catch(function(){
+        // Try alt URL format before next proxy
+        if(altUrl&&pi<PROXIES.length){
+          var u2=PROXIES[pi]==='direct'?altUrl:PROXIES[pi]+encodeURIComponent(altUrl);
+          fetch(u2,{}).then(function(r){return r.text();}).then(function(t){cb(t,null);}).catch(function(){tryNext(pi+1,altUrl);});
+        } else { tryNext(pi+1,altUrl); }
+      });
+  };
+  tryNext(0,null);
+}
+function fetchStation(st,cb){
+  // Try primary URL format; if it fails, try alt format without name token
+  var primaryUrl=nrcsUrl(st.id,false);
+  var altUrl=nrcsUrl(st.id,true);
+  var tried=false;
+  function attempt(url){
+    doFetch(url,7000,function(text,err){
+      if(err||!text){
+        if(!tried){tried=true;attempt(altUrl);}else{cb(null);} return;
+      }
+      try{var d=parseNrcsCSV(text);cb({swe:d.swe,median:d.median,pct:d.pct,name:st.name,elev:st.elev,id:st.id});}
+      catch(e){if(!tried){tried=true;attempt(altUrl);}else{cb(null);}}
+    });
+  }
+  attempt(primaryUrl);
+}
+function elevWeight(e){return 1/(1+Math.abs(e-12000)/1000);}
+function loadSWE(basinKey,cb){
+  if(sweCache[basinKey]&&sweCache[basinKey].loaded){cb(sweCache[basinKey]);return;}
+  var cfg=BASIN_CFG[basinKey];if(!cfg){cb({error:'Unknown basin',loaded:true});return;}
+  var today=new Date(),ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var stations=cfg.stations,results=[],pending=stations.length;
+  stations.forEach(function(st){
+    fetchStation(st,function(d){
+      if(d)results.push(d);
+      if(--pending===0){
+        var res={loaded:true,date:ds,basin:basinKey,cfg:cfg,stations:results};
+        if(!results.length){res.error='No stations responded';res.pct=null;}
+        else{
+          var wS=0,pS=0,sS=0,mS=0;
+          results.forEach(function(r){var w=elevWeight(r.elev);wS+=w;pS+=r.pct*w;sS+=r.swe*w;mS+=r.median*w;});
+          res.pct=Math.round(pS/wS);res.swe=Math.round(sS/wS*10)/10;res.median=Math.round(mS/wS*10)/10;res.stationCount=results.length;
+        }
+        sweCache[basinKey]=res;cb(res);
+      }
+    });
+  });
+}
+var currentSWEData=null;
+
+// ── SNOTEL SNWD: 30-day snow depth for storm detection ──────────────────
+// Uses highest-elevation station per basin as primary; falls back down the list.
+// Data covers past dates only; future storm detection uses Open-Meteo + OROG_MULT.
+var snwdCache={};
+var currentSNWDData=null;
+
+function loadSNWD(basinKey, cb) {
+  if(snwdCache[basinKey] && snwdCache[basinKey].loaded) { cb(snwdCache[basinKey]); return; }
+  var cfg = BASIN_CFG[basinKey];
+  if(!cfg) { cb(null); return; }
+  // Highest-elevation station = best alpine snowfall proxy
+  var sorted = cfg.stations.slice().sort(function(a,b){ return b.elev - a.elev; });
+  var idx = 0;
+  function tryStation() {
+    if(idx >= sorted.length) {
+      snwdCache[basinKey] = { loaded: true, error: true };
+      cb(snwdCache[basinKey]); return;
+    }
+    var st = sorted[idx++];
+    var url = nrcsSnwdUrl(st.id, false);
+    var alt = nrcsSnwdUrl(st.id, true);
+    var tried = false;
+    function attempt(u) {
+      doFetch(u, 8000, function(text, err) {
+        if(err || !text) { if(!tried){tried=true;attempt(alt);}else{tryStation();} return; }
+        try {
+          var days = parseSnwdCSV(text);
+          if(days.length < 2) throw new Error('insufficient data');
+          snwdCache[basinKey] = { loaded: true, days: days,
+            stationName: st.name, stationElev: st.elev, stationId: st.id };
+          cb(snwdCache[basinKey]);
+        } catch(e) { if(!tried){tried=true;attempt(alt);}else{tryStation();} }
+      });
+    }
+    attempt(url);
+  }
+  tryStation();
+}
+function sweBarColor(p){return p>=100?'#2ed573':p>=85?'#7ae87a':p>=70?'#ffd166':p>=50?'#ffa502':'#ff4757';}
+function sweLabel(p){return p>=120?'Well Above Normal':p>=100?'Above Normal':p>=90?'Near Normal':p>=75?'Below Normal':p>=50?'Well Below Normal':'Critically Low';}
+function updateSWEPanel(pkIdx){
+  var pk=PK[pkIdx],bk=getPeakBasin(pk.n),cfg=BASIN_CFG[bk],el=document.getElementById('swe-panel');
+  if(!el)return;
+  el.innerHTML='<span style="color:var(--muted)">⏳ Loading '+cfg.name+' — querying '+cfg.stations.length+' station'+(cfg.stations.length>1?'s':'')+'...</span>';
+  loadSWE(bk,function(d){
+    currentSWEData=d;
+    if(d.error||!d.pct){
+      var links=cfg.stations.map(function(s){return'<a href="https://wcc.sc.egov.usda.gov/nwcc/site?sitenum='+s.id+'" target="_blank" style="color:var(--teal)">'+s.name+'</a>';}).join(' · ');
+      el.innerHTML='<div style="font-size:.75rem;color:var(--muted)">⚠️ NRCS live data unavailable — model running without SWE adjustment.<br>Check manually: '+links+'</div>';
+      return;
+    }
+    var pct=d.pct,col=sweBarColor(pct),lbl=sweLabel(pct),h='';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.28rem"><span style="font-weight:700;color:var(--text)">'+cfg.name+' Basin</span><span style="color:'+col+';font-weight:700;font-size:.95rem">'+pct+'% <span style="font-size:.68rem;font-weight:400;color:var(--muted)">of median</span></span></div>';
+    h+='<div style="background:var(--navy2);border-radius:4px;height:8px;margin-bottom:.3rem;overflow:hidden"><div style="width:'+Math.min(100,pct)+'%;height:100%;background:'+col+';border-radius:4px"></div></div>';
+    h+='<div style="display:flex;justify-content:space-between;font-size:.7rem;margin-bottom:.22rem"><span style="color:'+col+'">'+lbl+'</span><span style="color:var(--muted)">Wtd SWE: '+d.swe+'" (med '+d.median+'")</span></div>';
+    if(d.stations&&d.stations.length>1){h+='<div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.1rem">';d.stations.forEach(function(s){var sc=sweBarColor(s.pct);h+='<span style="background:var(--navy2);border-radius:4px;padding:.12rem .38rem;font-size:.64rem;color:'+sc+'">'+s.name+' '+s.pct+'%</span>';});h+='</div>';}
+    h+='<div style="font-size:.62rem;color:var(--muted);margin-top:.22rem">'+d.stationCount+' station'+(d.stationCount>1?'s':'')+' · elevation-weighted · '+d.date+' · <a href="https://www.nrcs.usda.gov/resources/data-and-reports/snow-and-water-interactive-map" target="_blank" style="color:var(--muted)">NRCS ↗</a></div>';
+    el.innerHTML=h;
+  });
+}
+
+// ── CRUST PREVIEW ─────────────────────────────────────────────────────────
+function crustPreview(){
+  var dep=+document.getElementById('fsdp').value||0;
+  var ds=+document.getElementById('fds').value||0;
+  if(dep<=0){document.getElementById('crust-prev').textContent='No recent snowfall — surface is fully aged.';return;}
+  var df=Math.min(1.0,dep/8.0);
+  var af=Math.exp(-ds*0.10);
+  var cq=df*af;
+  var desc=cq>=0.75?'Excellent crust potential':cq>=0.50?'Good crust potential':cq>=0.30?'Moderate — aging reducing quality':cq>=0.15?'Weak — thin or old snow':'Very weak — minimal refreeze crust expected';
+  var col=cq>=0.75?'#2ed573':cq>=0.50?'#ffd166':cq>=0.30?'#ffa502':'#ff4757';
+  document.getElementById('crust-prev').innerHTML='<span style="color:'+col+';font-weight:600">'+desc+'</span> <span style="color:var(--muted);font-size:.68rem">(depth factor '+df.toFixed(2)+' × age factor '+af.toFixed(2)+' = '+cq.toFixed(2)+')</span>';
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────
+function buildUI(){
+  // Set default date to tomorrow, clamped to Mar–Jun
+  var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  var tY=tomorrow.getFullYear(),tM=tomorrow.getMonth()+1,tD=tomorrow.getDate();
+  var clampM=Math.max(3,Math.min(6,tM));
+  var defDate=tY+'-'+String(clampM).padStart(2,'0')+'-'+String(tD).padStart(2,'0');
+  var minDate=tY+'-03-01',maxDate=tY+'-06-30';
+  var dateEl=document.getElementById('sel-date');
+  dateEl.value=defDate;dateEl.min=minDate;dateEl.max=maxDate;
+  var sel=document.getElementById('sel-peak');
+  PK.forEach(function(pk,i){var o=document.createElement('option');o.value=i;o.textContent=pk.n+" ("+pk.el.toLocaleString()+"')";sel.appendChild(o);});
+  var ul=document.getElementById('peak-list-about');
+  PK.forEach(function(pk){var li=document.createElement('li');li.innerHTML=pk.n+' <span class="eb">'+pk.el.toLocaleString()+"'</span>";ul.appendChild(li);});
+  onPeakChange();
+  ['fdi','fga'].forEach(function(id){document.getElementById(id).addEventListener('input',updatePacePreview);});
+  ['fsdp','fds'].forEach(function(id){document.getElementById(id).addEventListener('input',crustPreview);});
+  updatePacePreview();crustPreview();
+}
+window.onDateChange=function(){ triggerWeatherFetch(); };
+window.onPeakChange=function(){selectedPeak=+document.getElementById('sel-peak').value;selectedAsp=null;buildAspGrid(selectedPeak);updateSWEPanel(selectedPeak);triggerWeatherFetch();};
+function buildAspGrid(i){
+  var pk=PK[i],g=document.getElementById('asp-grid');g.innerHTML='';
+  ['N','NE','E','SE','S','SW','W','NW'].forEach(function(asp){
+    var b=document.createElement('button');b.className='asp-btn';b.textContent=asp;
+    if(!pk.asp[asp])b.disabled=true;
+    else b.onclick=function(){selectedAsp=asp;document.querySelectorAll('.asp-btn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');};
+    g.appendChild(b);
+  });
+}
+function updatePacePreview(){
+  var d=+document.getElementById('fdi').value||0,g=+document.getElementById('fga').value||0;
+  if(d<0.1||g<10){document.getElementById('pace-prev').textContent='—';return;}
+  var r=calcApproach(d,g,0);
+  document.getElementById('grade-lbl').textContent='Grade: '+r.gradePct+'%';
+  document.getElementById('pace-prev').textContent=r.speedMph+' mph → '+r.skinHrs+' hrs skin';
+}
+function calcApproach(dist,gain,buf){
+  var grade=gain/(dist*5280),speed=Math.max(0.5,-7.8085*grade+2.4481),skinHrs=dist/speed,tot=skinHrs+buf/60;
+  return{grade:grade,gradePct:(grade*100).toFixed(1),speedMph:speed.toFixed(2),skinHrs:skinHrs.toFixed(2),timeHrs:tot.toFixed(2),timeHrsRaw:tot};
+}
+
+// ── OPEN-METEO / TWO-LAYER PACK MODEL (v13) ──────────────────────────────
+var weatherData = null;
+var LAPSE_RATE_F_PER_1000FT = 3.5;
+var GRID_ELEV_FT = 10500;
+// Orographic uplift factor: Open-Meteo grid (~10,000') underestimates snowfall at
+// alpine ski terrain (~12,000'+). Conservative 1.5× applied to forecast snowfall only.
+// SNOTEL SNWD observations override this for past dates entirely.
+var OROG_MULT = 1.5;
+
+function elevCorrectTemp(rawF, peakElevFt, gridElevFt) {
+  var gElev = (gridElevFt !== undefined && gridElevFt !== null) ? gridElevFt : GRID_ELEV_FT;
+  var delta = (peakElevFt - gElev) / 1000 * LAPSE_RATE_F_PER_1000FT;
+  return rawF - delta;
+}
+
+// ── Layer 1: Surface ripeness — 14-day window (recalibrated from v12's 10-day) ──
+function computeSurfaceRipeness(days14, month) {
+  var MONTH_BASELINE = {3:0.05, 4:0.15, 5:0.40, 6:0.70};
+  var ripeness = MONTH_BASELINE[month] || 0.40;
+  days14.forEach(function(d, i) {
+    var weight = 0.45 + i * 0.04; // 0.45→0.97 over 14 days (recalibrated from v12's 0.60→0.96 over 10)
+    var heatLoad = Math.max(0, d.tmax - 38) * 0.018 * weight;
+    ripeness += heatLoad;
+    if (d.tmin > 32) ripeness += 0.08 * weight;
+    if (d.precip > 1.0) ripeness -= 0.10;
+    var coldRecovery = Math.max(0, 28 - d.tmin) * 0.006 * weight;
+    ripeness -= coldRecovery;
+  });
+  return Math.max(0.03, Math.min(0.95, ripeness));
+}
+
+// ── Layer 2: Column cold content — full season history (March 1 → day before target) ──
+// CCC 0.0–1.0: 1.0 = maximum cold reserve, 0.0 = fully isothermal column
+// Ref: Jennings et al. (2018) The Cryosphere 12; DeWalle & Rango (2008); Fierz (2011)
+function computeColumnColdContent(seasonDays, swePct, month) {
+  var SEASONAL_BASELINE = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
+  // If seasonDays begins in Jan or Feb, start from near-peak cold reserve (deep winter).
+  // If only Mar+ data is available (archive fallback), use the month-specific baseline.
+  var hasPreSeason = seasonDays.length > 0 &&
+    new Date(seasonDays[0].date + 'T12:00:00').getMonth() < 2; // month index 0=Jan, 1=Feb
+  var ccc = hasPreSeason ? 0.95 : (SEASONAL_BASELINE[month] || 0.35);
+  var N = seasonDays.length;
+  seasonDays.forEach(function(d, i) {
+    var ageFactor = 0.3 + (i / Math.max(N - 1, 1)) * 0.70; // older 0.30, recent 1.00
+    // Column warms ~4.5× slower than surface; threshold 40°F vs 38°F for surface
+    var colHeat = Math.max(0, d.tmax - 40) * 0.004 * ageFactor;
+    ccc -= colHeat;
+    if (d.tmin > 32) ccc -= 0.015 * ageFactor; // sustained warm nights penetrate column
+    var colCold = Math.max(0, 25 - d.tmax) * 0.003 * ageFactor; // cold days rebuild reserve
+    if (d.date >= d.date.slice(0,4) + '-03-01') {
+      ccc += colCold;
+      if (d.snowfall > 1.0) ccc += 0.04 * ageFactor;
+    }// fresh snow insulates, adds cold to column top
+  });
+  // SWE boost: higher SWE = more column mass = more cold content reserve
+  if (swePct !== null && swePct !== undefined) {
+    var sweBoost = (swePct - 100) / 1000; // ±0.05 at ±50% deviation — intentionally modest
+    ccc += sweBoost;
+  }
+  return Math.max(0.05, Math.min(0.95, ccc));
+}
+
+// ── Combined effective isothermal probability ──
+// Surface governs overnight refreeze (60%); Column governs window collapse speed (40%)
+function effectiveIsoPrbFn(surfaceRipeness, columnColdContent) {
+  var columnRipeness = 1.0 - columnColdContent; // invert: low CCC = high column ripeness
+  return surfaceRipeness * 0.60 + columnRipeness * 0.40;
+}
+
+// ── Dual-endpoint fetch: archive (season) + forecast (16-day forward) ──
+function fmtDate(d) {
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function fetchJsonWithTimeout(url, timeoutMs) {
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ctrl.abort();}, timeoutMs) : null;
+  return fetch(url, ctrl ? {signal:ctrl.signal} : {})
+    .then(function(r){ if(timer)clearTimeout(timer); if(!r.ok)throw new Error('HTTP '+r.status); return r.json(); })
+    .catch(function(e){ if(timer)clearTimeout(timer); throw e; });
+}
+
+function parseDailyJson(json, pk) {
+  if(!json || !json.daily || !json.daily.time || !json.daily.time.length) return [];
+  // Open-Meteo returns json.elevation (meters) for the actual grid cell.
+  // Use it for lapse correction instead of the hardcoded fallback.
+  var gridElevFt = (json.elevation != null) ? json.elevation * 3.28084 : GRID_ELEV_FT;
+  var d = json.daily;
+  var days = [];
+  for(var i=0;i<d.time.length;i++){
+    var rawMin = d.temperature_2m_min[i], rawMax = d.temperature_2m_max[i];
+    if(rawMin===null||rawMax===null) continue;
+    days.push({
+      date: d.time[i],
+      tmin: elevCorrectTemp(rawMin, pk.el, gridElevFt),
+      tmax: elevCorrectTemp(rawMax, pk.el, gridElevFt),
+      precip: d.precipitation_sum[i]||0,
+      snowfall: (d.snowfall_sum[i]||0) * 0.3937, // cm→in: Open-Meteo snowfall_sum is always cm regardless of precipitation_unit
+      wind: d.windspeed_10m_max[i]||0,
+      cloud: d.cloudcover_mean[i]||0
+    });
+  }
+  return days;
+}
+
+function fetchWeatherData(pk, targetDate, swePct, cb) {
+  var tgt = new Date(targetDate + 'T12:00:00');
+  var year = tgt.getFullYear();
+  var cccStart    = year + '-01-01'; // Jan 1: full cold history for column model
+  var seasonStart = year + '-03-01'; // Mar 1: display / strip / surface-ripeness anchor
+  var today = new Date();
+  var yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  var todayStr = fmtDate(today);
+  var yesterdayStr = fmtDate(yesterday);
+
+  // Cap forecast at today+15 — Open-Meteo free tier limit; never exceed it
+  var maxFcastEnd = new Date(today); maxFcastEnd.setDate(today.getDate() + 15);
+  var fcastEnd = maxFcastEnd;
+
+  var archiveUrl = 'https://archive-api.open-meteo.com/v1/archive'
+    +'?latitude='+pk.la+'&longitude='+pk.lo
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean'
+    +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
+    +'&timezone=America%2FDenver'
+    +'&start_date='+cccStart+'&end_date='+yesterdayStr;
+
+  var forecastUrl = 'https://api.open-meteo.com/v1/forecast'
+    +'?latitude='+pk.la+'&longitude='+pk.lo
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean'
+    +'&hourly=temperature_2m'
+    +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
+    +'&timezone=America%2FDenver'
+    +'&start_date='+todayStr+'&end_date='+fmtDate(fcastEnd)
+    +'&models=best_match';
+
+  var archiveP = fetchJsonWithTimeout(archiveUrl, 12000).catch(function(){return null;});
+  var forecastP = fetchJsonWithTimeout(forecastUrl, 10000).catch(function(){return null;});
+  // Load SNOTEL SNWD in parallel — real snow depth sensors at mountain elevation
+  var snwdP = new Promise(function(resolve) {
+    loadSNWD(getPeakBasin(pk.n), function(result) {
+      resolve((result && !result.error && result.days) ? result : null);
+    });
+  });
+
+  Promise.all([archiveP, forecastP, snwdP]).then(function(results) {
+    var archiveJson = results[0];
+    var forecastJson = results[1];
+    var snwdData = results[2];
+    processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb);
+  });
+}
+
+function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb) {
+  var tgt = new Date(targetDate + 'T12:00:00');
+  var month = tgt.getMonth() + 1;
+  var archiveFailed = !archiveJson;
+  var forecastFailed = !forecastJson;
+
+  var archiveDays = parseDailyJson(archiveJson, pk);   // Jan 1 → yesterday (extended for CCC)
+  var forecastDays = parseDailyJson(forecastJson, pk); // today → today+15
+
+  // If both failed, bail
+  if(!archiveDays.length && !forecastDays.length){ cb(null); return; }
+
+  // Split archive: pre-season (Jan/Feb) goes only to CCC; display stays anchored to Mar 1
+  var marchFirst = tgt.getFullYear() + '-03-01';
+  var preCCCDays      = archiveDays.filter(function(d){ return d.date < marchFirst; });
+  var seasonArchiveDays = archiveDays.filter(function(d){ return d.date >= marchFirst; });
+
+  // Merge: build date map from Mar 1 onward; forecast takes precedence for overlap
+  var dayMap = {};
+  seasonArchiveDays.forEach(function(d){ dayMap[d.date] = {day:d, isForecast:false}; });
+  forecastDays.forEach(function(d){ dayMap[d.date] = {day:d, isForecast:true}; });
+
+  var sortedEntries = Object.keys(dayMap).sort().map(function(k){ return dayMap[k]; });
+  // Preserve isForecast on each day — needed for orographic multiplier in storm detection
+  var allDays = sortedEntries.map(function(e){
+    var d = Object.assign({}, e.day);
+    d.isForecast = e.isForecast;
+    return d;
+  });
+  if(!allDays.length){ cb(null); return; }
+
+  // Find target day
+  var tgtIdx = -1;
+  for(var i=0;i<allDays.length;i++){ if(allDays[i].date===targetDate){tgtIdx=i;break;} }
+  // If target date not in allDays, use last available
+  if(tgtIdx < 0){ tgtIdx = allDays.length - 1; }
+  var targetDay = allDays[tgtIdx];
+
+  // histDays14 = up to 14 days before target
+  var histStart = Math.max(0, tgtIdx - 14);
+  var histDays14 = allDays.slice(histStart, tgtIdx);
+
+  // seasonDaysForCCC = Jan 1 pre-season days + all Mar-onward days up to target
+  // Pre-season Jan/Feb data captures real warm-year depletion of column cold content
+  var seasonDaysForCCC = preCCCDays.concat(allDays.slice(0, tgtIdx));
+
+  // Two-layer model
+  var surfaceRipeness, columnColdContent, effIsoPrb;
+  if(!archiveFailed) {
+    surfaceRipeness = computeSurfaceRipeness(histDays14, month);
+    columnColdContent = computeColumnColdContent(seasonDaysForCCC, swePct, month);
+    effIsoPrb = effectiveIsoPrbFn(surfaceRipeness, columnColdContent);
+  } else {
+    // Archive failed: surface-only mode using forecast backfill (graceful fallback)
+    surfaceRipeness = computeSurfaceRipeness(histDays14, month);
+    // Fall back to seasonal baseline for column
+    var SB = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
+    columnColdContent = SB[month] || 0.35;
+    effIsoPrb = surfaceRipeness; // surface model only, per spec
+  }
+
+  // Dawn temp: try hourly forecast first (available today→today+15), then estimate
+  var dawnTemp = null;
+  var fcastGridElevFt = (forecastJson && forecastJson.elevation != null)
+    ? forecastJson.elevation * 3.28084 : GRID_ELEV_FT;
+  if(forecastJson && forecastJson.hourly && forecastJson.hourly.time) {
+    var h = forecastJson.hourly;
+    var dawnKey = targetDate + 'T06:00';
+    var hi = h.time.indexOf(dawnKey);
+    if(hi >= 0 && h.temperature_2m[hi] !== null) {
+      dawnTemp = elevCorrectTemp(h.temperature_2m[hi], pk.el, fcastGridElevFt);
+    }
+  }
+  // Fallback: if target date is in archive range (past) or beyond forecast window,
+  // estimate 6 AM temp as overnight low + 2°F (typical pre-dawn offset in spring)
+  if(dawnTemp === null && targetDay) {
+    dawnTemp = targetDay.tmin + 2;
+  }
+
+  // Snowfall storm detection — Open-Meteo baseline with orographic uplift for forecast days.
+  // Forecast snowfall from gridded model (~10,000' effective elevation) underestimates
+  // alpine snowfall at 12,000'+ terrain; OROG_MULT applies only to forecast days.
+  // For past target dates this entire block is then overridden by SNOTEL SNWD below.
+  var snowDaysSince = null, snowDepthEst = null;
+  var snowSource = 'Open-Meteo';
+  var stormEnd = -1, stormSum = 0;
+  for(var si = histDays14.length - 1; si >= 0; si--) {
+    var effectiveSnow = histDays14[si].isForecast
+      ? histDays14[si].snowfall * OROG_MULT   // forecast: apply orographic uplift
+      : histDays14[si].snowfall;              // archive: already cm→in (v19), no uplift
+    if(effectiveSnow >= 0.5){
+      if(stormEnd < 0) stormEnd = si;
+      stormSum += effectiveSnow;
+    } else if(stormEnd >= 0){ break; }
+  }
+  if(stormEnd >= 0) {
+    snowDaysSince = (histDays14.length - 1 - stormEnd) + 1;
+    snowDepthEst = Math.round(stormSum * 10) / 10;
+  }
+
+  // SNOTEL SNWD override — past target dates only.
+  // SNWD (snow depth) daily deltas from real sensors at 9,400–11,480' elevation are
+  // more reliable than lapse-corrected gridded snowfall for storm detection.
+  // Future target dates remain on Open-Meteo + OROG_MULT (no future SNWD data).
+  if(snwdData && snwdData.days && snwdData.days.length >= 2 && targetDate <= todayStr) {
+    var snwdDays = snwdData.days;
+    // Find last SNWD observation at or before target date
+    var snwdTgtIdx = -1;
+    for(var sni = snwdDays.length - 1; sni >= 0; sni--) {
+      if(snwdDays[sni].date <= targetDate) { snwdTgtIdx = sni; break; }
+    }
+    if(snwdTgtIdx >= 1) {
+      // Build daily depth-change array over 14-day lookback
+      var lookback = Math.min(snwdTgtIdx, 14);
+      var snwdDeltas = [];
+      for(var di = snwdTgtIdx - lookback + 1; di <= snwdTgtIdx; di++) {
+        if(di < 1) continue;
+        snwdDeltas.push({ date: snwdDays[di].date, delta: snwdDays[di].depthIn - snwdDays[di-1].depthIn });
+      }
+      // Scan backwards for most recent accumulation event
+      var sEnd = -1, sSum = 0;
+      for(var ri = snwdDeltas.length - 1; ri >= 0; ri--) {
+        if(snwdDeltas[ri].delta >= 0.5) {
+          if(sEnd < 0) sEnd = ri;
+          sSum += snwdDeltas[ri].delta;
+        } else if(sEnd >= 0) { break; }
+      }
+      if(sEnd >= 0) {
+        snowDaysSince = (snwdDeltas.length - 1 - sEnd) + 1;
+        snowDepthEst = Math.round(sSum * 10) / 10;
+      } else {
+        // SNOTEL shows no recent accumulation — trust this over gridded data
+        snowDaysSince = null;
+        snowDepthEst = null;
+      }
+      snowSource = 'SNOTEL ' + snwdData.stationName + ' (' + snwdData.stationElev.toLocaleString() + '\')';
+    }
+  }
+
+   // Compute ripenessTrajectory for every day in allDays
+  var ripenessTrajectory = [];
+
+  // ── PRE-SEASON (Jan/Feb): CCC + temp/snow only, no surface metrics ──────
+  // Run CCC forward incrementally through preCCCDays so each day reflects
+  // the actual running cold reserve at that point in the winter.
+  for(var jp=0; jp<preCCCDays.length; jp++) {
+    var dp = preCCCDays[jp];
+    var cccP = archiveFailed
+      ? 0.95
+      : computeColumnColdContent(preCCCDays.slice(0, jp), swePct, new Date(dp.date+'T12:00:00').getMonth()+1);
+    ripenessTrajectory.push({
+      date: dp.date,
+      surfaceRipeness: null,   // pre-season: no freeze-thaw cycle yet
+      columnColdContent: cccP,
+      effectiveIsoPrb: null,
+      isForecast: false,
+      isPreSeason: true,
+      tmin: dp.tmin, tmax: dp.tmax, snowfall: dp.snowfall||0
+    });
+  }
+
+  var marchFirstIdx = ripenessTrajectory.length; // index where Mar 1 begins
+
+  // ── SEASON (Mar 1 onward): full two-layer trajectory ─────────────────────
+  for(var j=0; j<allDays.length; j++) {
+    var d = allDays[j];
+    var dm = new Date(d.date + 'T12:00:00').getMonth() + 1;
+    var h14 = allDays.slice(Math.max(0, j-14), j);
+    var sDays = preCCCDays.concat(allDays.slice(0, j));
+    var sr = computeSurfaceRipeness(h14, dm);
+    var ccc, eip;
+    if(!archiveFailed) {
+      ccc = computeColumnColdContent(sDays, swePct, dm);
+      eip = effectiveIsoPrbFn(sr, ccc);
+    } else {
+      var SB2 = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
+      ccc = SB2[dm] || 0.35;
+      eip = sr;
+    }
+    ripenessTrajectory.push({
+      date: d.date,
+      surfaceRipeness: sr,
+      columnColdContent: ccc,
+      effectiveIsoPrb: eip,
+      isForecast: sortedEntries[j].isForecast,
+      isPreSeason: false,
+      tmin: d.tmin, tmax: d.tmax, snowfall: d.snowfall||0
+    });
+  }
+
+  cb({
+    surfaceRipeness: surfaceRipeness,
+    columnColdContent: columnColdContent,
+    effectiveIsoPrb: effIsoPrb,
+    packRipeness: effIsoPrb,
+    days: allDays,
+    histDays: histDays14,
+    histDays14: histDays14,
+    seasonDays: seasonDaysForCCC,
+    forecastDays: forecastDays,
+    allDays: allDays,
+    targetDay: targetDay,
+    targetDate: targetDate,
+    fetchedForPeak: pk.n,
+    dawnTemp: dawnTemp,
+    snowDaysSince: snowDaysSince,
+    snowDepthEst: snowDepthEst,
+    snowSource: snowSource,
+    ripenessTrajectory: ripenessTrajectory,
+    marchFirstIdx: marchFirstIdx,          // ← new: chart uses this for the Mar 1 marker
+    archiveFailed: archiveFailed,
+    forecastFailed: forecastFailed,
+    todayStr: todayStr
+  });
+}
+
+function triggerWeatherFetch() {
+  var dateVal = document.getElementById('sel-date').value;
+  if(!dateVal) return;
+  var pk = PK[selectedPeak];
+  var m = new Date(dateVal+'T12:00:00').getMonth()+1;
+  if(m<3||m>6){ weatherData=null; return; }
+  document.getElementById('sel-month').value = m;
+  document.getElementById('wx-spinner-row').style.display='';
+  document.getElementById('wx-strip-container').style.display='none';
+  document.getElementById('wx-warn-row').style.display='none';
+  weatherData = null;
+  var swePct = (currentSWEData&&currentSWEData.loaded&&!currentSWEData.error)?currentSWEData.pct:null;
+  fetchWeatherData(pk, dateVal, swePct, function(wd){
+    document.getElementById('wx-spinner-row').style.display='none';
+    if(!wd){ document.getElementById('wx-warn-row').style.display=''; return; }
+    weatherData = wd;
+    renderWeatherStrip(wd, dateVal);
+    prefillForecast(wd);
+  });
+}
+
+function renderWeatherStrip(wd, targetDate) {
+  var container = document.getElementById('wx-strip-container');
+  var tilesEl = document.getElementById('wx-strip-tiles');
+  var labelEl = document.getElementById('wx-strip-label');
+  var sr = wd.surfaceRipeness;
+  var ccc = wd.columnColdContent;
+  var eip = wd.effectiveIsoPrb;
+  var archiveNote = wd.archiveFailed ? ' · archive unavailable' : '';
+  // Display as pack health: high = good conditions (inverted from internal ripeness score)
+  var sfqPct = Math.round((1 - sr) * 100);
+  var cccPct  = wd.archiveFailed ? 'N/A' : Math.round(ccc * 100)+'%';
+  var combPct = Math.round((1 - eip) * 100);
+  labelEl.innerHTML = 'Freeze quality <span style="color:#ff9040;font-weight:700">'+sfqPct+'%</span>'
+    +' · Cold reserve <span style="color:var(--cornblue);font-weight:700">'+cccPct+'</span>'
+    +' · Combined <span style="color:var(--teal);font-weight:700">'+combPct+'%</span>'
+    +archiveNote;
+
+  var today = wd.todayStr;
+  var html = '';
+  var days = wd.allDays || wd.days;
+
+  // Anchor window to target date: 10 days before → 4 days after
+  var targetIdx = -1, todayIdxS = -1;
+  for(var i=0;i<days.length;i++){
+    if(days[i].date===targetDate) targetIdx=i;
+    if(days[i].date===today)      todayIdxS=i;
+  }
+  if(targetIdx < 0) targetIdx = days.length - 1;
+  var showStart = Math.max(0, targetIdx - 10);
+  var showEnd   = Math.min(days.length, targetIdx + 5); // target + 4 forward
+
+  for(var ti=showStart; ti<showEnd; ti++) {
+    var d = days[ti];
+    var isTarget = d.date === targetDate;
+    var isToday  = d.date === today;
+    var isFcst   = (wd.ripenessTrajectory && wd.ripenessTrajectory[ti])
+                   ? wd.ripenessTrajectory[ti].isForecast : (todayIdxS >= 0 && ti >= todayIdxS);
+
+    // Background color by max temp — archive slightly more saturated than forecast
+    var bgColor, hiColor;
+    if(d.tmax < 35)      { bgColor=isFcst?'#0e2844':'#152e4a'; hiColor='#90c8f0'; }
+    else if(d.tmax < 42) { bgColor=isFcst?'#122840':'#182e50'; hiColor='#7ab8e8'; }
+    else if(d.tmax < 50) { bgColor=isFcst?'#1e2c3a':'#1a2d3a'; hiColor='#e0d070'; }
+    else if(d.tmax < 58) { bgColor=isFcst?'#2e1e10':'#362210'; hiColor='#ffa040'; }
+    else                 { bgColor=isFcst?'#3a1a00':'#441e00'; hiColor='#ff7020'; }
+
+    // Freeze quality icon (based on overnight low)
+    var freezeIco;
+    if(d.tmin <= 18)      freezeIco = '🧊';   // excellent deep freeze
+    else if(d.tmin <= 25) freezeIco = '❄️';   // good freeze
+    else if(d.tmin <= 29) freezeIco = '🌡️';  // marginal
+    else if(d.tmin <= 32) freezeIco = '💧';   // barely freezing
+    else                  freezeIco = '🔴';   // no overnight freeze
+
+    // Most meteorologically significant event of the day (single detail line)
+    var detailStr = '';
+    if(d.snowfall >= 0.3) {
+      var sf = d.snowfall >= 10 ? Math.round(d.snowfall)+'"' : d.snowfall.toFixed(1)+'"';
+      detailStr = '❄' + sf;
+    } else if(d.wind >= 22) {
+      detailStr = '💨' + Math.round(d.wind) + 'mph';
+    } else if(d.precip >= 0.1 && d.tmax > 35) {
+      detailStr = '🌧' + d.precip.toFixed(2) + '"';
+    } else if(d.cloud >= 70) {
+      detailStr = '☁️' + Math.round(d.cloud) + '%';
+    } else {
+      var sunPct = 100 - Math.round(d.cloud);
+      detailStr = '☀' + sunPct + '%';
+    }
+
+    var dt = new Date(d.date+'T12:00:00');
+    var dayAbbr = ['Su','Mo','Tu','We','Th','Fr','Sa'][dt.getDay()];
+    var dateNum = dt.getDate();
+    var cls = 'wx-tile' + (isTarget?' target':'') + (isToday?' today-marker':'');
+    var opacity = (isFcst && !isTarget && !isToday) ? 'opacity:.80;' : '';
+
+    var titleText = d.date
+      + ' Hi:'+Math.round(d.tmax)+'° Lo:'+Math.round(d.tmin)+'°'
+      + (d.snowfall >= 0.05 ? ' Snow:'+d.snowfall.toFixed(1)+'"' : '')
+      + ' Wind:'+Math.round(d.wind)+'mph'
+      + ' Cloud:'+Math.round(d.cloud)+'%'
+      + (isFcst ? ' (forecast)' : ' (archive)');
+
+    html += '<div class="'+cls+'" style="background:'+bgColor+';'+opacity+'" title="'+titleText+'">';
+    html += '<div class="wx-tile-day">'+dayAbbr+' '+dateNum+'</div>';
+    html += '<div class="wx-tile-hi" style="color:'+hiColor+'">'+Math.round(d.tmax)+'°</div>';
+    html += '<div class="wx-tile-lo">'+Math.round(d.tmin)+'°</div>';
+    html += '<div class="wx-tile-ico">'+freezeIco+'</div>';
+    html += '<div class="wx-tile-detail">'+detailStr+'</div>';
+    html += '</div>';
+  }
+  tilesEl.innerHTML = html;
+
+  // Scroll target tile into view (it's usually at position 10 of 14, near right)
+  setTimeout(function(){
+    var targetEl = tilesEl.querySelector('.target');
+    if(targetEl) targetEl.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+    else {
+      var todayEl = tilesEl.querySelector('.today-marker');
+      if(todayEl) todayEl.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+    }
+  }, 80);
+
+  var snowNote = '';
+  if(wd.snowDaysSince !== null && wd.snowDepthEst !== null) {
+    snowNote = ' · last storm ~'+wd.snowDepthEst+'" / '+wd.snowDaysSince+' day'+(wd.snowDaysSince===1?'':'s')+' ago';
+  } else {
+    snowNote = ' · no significant storm in window';
+  }
+
+  var pk2 = PK[selectedPeak];
+  var omUrl = 'https://open-meteo.com/en/docs'
+    + '#latitude=' + pk2.la.toFixed(4)
+    + '&longitude=' + pk2.lo.toFixed(4)
+    + '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean'
+    + '&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FDenver';
+  var peakEl = PK[selectedPeak].el.toLocaleString();
+  var dataNote = wd.archiveFailed ? ' (archive unavail — surface model only)' : ' · full two-layer model';
+  var srcHtml = '<div style="font-size:.62rem;color:#456a82;margin-top:.35rem;line-height:1.5">'
+    +'<a href="'+omUrl+'" target="_blank" style="color:#456a82;text-decoration:none">📡 Open-Meteo forecast for '+pk2.n+'</a>'
+    +' · ERA5 archive + forecast · lapse-corrected to '+peakEl+"'"
+    +dataNote+snowNote+'</div>';
+
+  var wrap = container.querySelector('.wx-strip-wrap');
+  var existing = container.querySelector('.wx-source-line');
+  if(existing) existing.remove();
+  var srcDiv = document.createElement('div');
+  srcDiv.className = 'wx-source-line';
+  srcDiv.innerHTML = srcHtml;
+  wrap.after ? wrap.after(srcDiv) : wrap.parentNode.insertBefore(srcDiv, wrap.nextSibling);
+
+  container.style.display = '';
+}
+
+function prefillForecast(wd) {
+  var td = wd.targetDay;
+  if(!td) return;
+
+  // Core forecast fields: overnight low, afternoon high, wind, cloud %
+  var fields = [
+    {id:'flo', val:Math.round(td.tmin)},
+    {id:'fhi', val:Math.round(td.tmax)},
+    {id:'fwi', val:Math.round(td.wind)},
+    {id:'fcn', val:Math.round(td.cloud)},
+    {id:'fcm', val:Math.round(td.cloud * 0.75)} // morning clouds ~75% of daily mean
+  ];
+
+  // Dawn temp from 6 AM hourly (elevation-corrected)
+  if(wd.dawnTemp !== null && wd.dawnTemp !== undefined) {
+    fields.push({id:'fda', val:Math.round(wd.dawnTemp)});
+  }
+
+  // Snowfall: days since last storm + depth estimate
+  if(wd.snowDaysSince !== null && wd.snowDaysSince !== undefined) {
+    fields.push({id:'fds', val:wd.snowDaysSince});
+  }
+  if(wd.snowDepthEst !== null && wd.snowDepthEst !== undefined) {
+    fields.push({id:'fsdp', val:Math.round(wd.snowDepthEst)});
+  }
+
+  // Update snow source label and note
+  if(wd.snowSource) {
+    var isSnotel = wd.snowSource.indexOf('SNOTEL') === 0;
+    var lbl = document.getElementById('snow-source-label');
+    if(lbl) lbl.textContent = isSnotel
+      ? '— from ' + wd.snowSource
+      : '— Open-Meteo gridded' + (wd.snowDepthEst !== null ? ' + orographic uplift (×1.5 forecast)' : '');
+    var noteEl = document.getElementById('snow-source-note');
+    if(noteEl) {
+      if(isSnotel) {
+        noteEl.textContent = '📡 Snow depth from ' + wd.snowSource + ' — real sensor at mountain elevation.';
+        noteEl.style.display = '';
+      } else if(wd.snowDepthEst !== null) {
+        noteEl.textContent = '📡 Snow depth estimated from Open-Meteo gridded model. For future dates, a 1.5× orographic uplift is applied. Verify against SNOTEL or OpenSnow.';
+        noteEl.style.display = '';
+      } else {
+        noteEl.style.display = 'none';
+      }
+    }
+  }
+
+  fields.forEach(function(f){
+    var el = document.getElementById(f.id);
+    if(!el) return;
+    el.value = f.val;
+    el.classList.add('autofill');
+    // Show the "auto" tag on dawn temp when filled; hide it if user overrides
+    if(f.id === 'fda') {
+      var tag = document.getElementById('fda-auto-tag');
+      if(tag) tag.style.display = '';
+      el.addEventListener('input', function onManual(){
+        el.classList.remove('autofill');
+        var t = document.getElementById('fda-auto-tag');
+        if(t) t.style.display = 'none';
+      }, {once:true});
+    } else {
+      el.addEventListener('input', function onManual(){ el.classList.remove('autofill'); }, {once:true});
+    }
+  });
+  crustPreview();
+}
+
+// ── RIPENESS CHART (v22) — Pannable + Temp Lines + Snowfall Bars ──────────
+function drawRipenessChart(canvasId, wd, month, cornWin) {
+  var canvas = document.getElementById(canvasId);
+  if(!canvas || !wd || !wd.ripenessTrajectory || !wd.ripenessTrajectory.length) return;
+
+  var traj = wd.ripenessTrajectory;
+  var N = traj.length;
+  var todayStr = wd.todayStr;
+  var targetDate = wd.targetDate;
+  var marchFirstIdx = wd.marchFirstIdx || 0;
+
+  var PAD = {top:20, right:44, bottom:36, left:32};
+  var containerW = (canvas.parentElement && canvas.parentElement.offsetWidth) || 320;
+  var minChartPx = containerW - PAD.left - PAD.right;
+  var PX_PER_DAY = Math.min(22, Math.max(8, Math.floor(minChartPx / Math.max(N, 1))));
+  var cW = N * PX_PER_DAY;
+  var H = 240;
+  var W = PAD.left + PAD.right + cW;
+  var cH = H - PAD.top - PAD.bottom;
+
+  // Snow bar strip occupies bottom 16px of chart area
+  var SNOW_H = 16;
+  var dataBot = PAD.top + cH - SNOW_H; // pack health + temp lines ceiling
+  var snowBot  = PAD.top + cH;
+
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width  = W * (window.devicePixelRatio || 1);
+  canvas.height = H * (window.devicePixelRatio || 1);
+  var ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+  function xPos(i) { return PAD.left + i * PX_PER_DAY + PX_PER_DAY / 2; }
+  function yH(r)   { return PAD.top + (dataBot - PAD.top) * (1 - Math.max(0, Math.min(1, r))); }
+
+  // Temp Y axis — fixed spring alpine range
+  var TEMP_MIN = -10, TEMP_MAX = 65;
+  function yT(t) {
+    var frac = (t - TEMP_MIN) / (TEMP_MAX - TEMP_MIN);
+    return PAD.top + (dataBot - PAD.top) * (1 - Math.max(0, Math.min(1, frac)));
+  }
+
+  // Metric accessors
+  function sfq(t)  { return 1.0 - t.surfaceRipeness; }
+  function ccr(t)  { return t.columnColdContent; }
+  function comb(t) { return 1.0 - t.effectiveIsoPrb; }
+
+  // Find today and target indices
+  var todayIdx = -1, tgtIdx = -1;
+  for(var i=0;i<N;i++){
+    if(traj[i].date===todayStr) todayIdx=i;
+    if(traj[i].date===targetDate) tgtIdx=i;
+  }
+
+  // ── Right Y axis: pack health % grid lines ──
+  ctx.font = '9px -apple-system,sans-serif';
+  [0, 0.25, 0.50, 0.75, 1.0].forEach(function(r){
+    var y = yH(r);
+    ctx.strokeStyle = 'rgba(46,74,96,0.40)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([3,4]);
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(93,184,240,0.55)';
+    ctx.textAlign = 'left';
+    ctx.fillText(Math.round(r*100)+'%', PAD.left + cW + 4, y + 3);
+  });
+  
+// ── Pre-season shading (Jan/Feb) ──
+  if(marchFirstIdx > 0) {
+    var psX0 = PAD.left;
+    var psX1 = xPos(marchFirstIdx - 1) + PX_PER_DAY / 2;
+    ctx.fillStyle = 'rgba(30,50,80,0.35)';
+    ctx.fillRect(psX0, PAD.top, psX1 - psX0, dataBot - PAD.top);
+    // Pre-season label — icon centered in zone, text in top padding
+    var psMidX = psX0 + (psX1 - psX0) / 2;
+    var psMidY = PAD.top + (dataBot - PAD.top) / 2;
+    ctx.font = '7px -apple-system,sans-serif';
+    ctx.fillStyle = 'rgba(120,160,190,0.45)';
+    ctx.fillText('← Jan/Feb', psMidX, PAD.top - 10);
+    // Mar 1 marker
+    var mar1X = xPos(marchFirstIdx);
+    ctx.strokeStyle = 'rgba(180,220,255,0.40)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(mar1X, PAD.top); ctx.lineTo(mar1X, PAD.top+cH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(180,220,255,0.55)';
+    ctx.font = 'bold 8px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Mar 1', mar1X, PAD.top + (dataBot - PAD.top) / 2 + 4);
+  }
+
+  
+  // ── Left Y axis: temperature reference lines ──
+// ── Left Y axis: temperature reference lines ──
+  // 32°F = refreeze line (blue), 40°F = pack degradation threshold (amber)
+  [0, 32, 40].forEach(function(t) {
+    var y = yT(t);
+    if(y < PAD.top || y > dataBot) return;
+    var is32 = (t === 32);
+    var is40 = (t === 40);
+    ctx.strokeStyle = is32 ? 'rgba(100,180,255,0.35)'
+                    : is40 ? 'rgba(255,180,60,0.35)'
+                    :        'rgba(100,140,160,0.15)';
+    ctx.lineWidth = (is32 || is40) ? 1 : 0.5;
+    ctx.setLineDash((is32 || is40) ? [2,3] : [1,4]);
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = is32 ? 'rgba(120,190,255,0.80)'
+                  : is40 ? 'rgba(255,180,60,0.85)'
+                  :        'rgba(120,160,180,0.40)';
+    ctx.textAlign = 'right';
+    ctx.font = (is32 || is40) ? 'bold 8px -apple-system,sans-serif' : '8px -apple-system,sans-serif';
+    ctx.fillText(t + '°', PAD.left - 3, y + 3);
+  });
+
+// ── Snowfall glyphs — ❄ at midpoint of temperature band ──
+  for(var si=0; si<N; si++) {
+    var sf = traj[si].snowfall || 0;
+    if(sf < 0.5) continue;
+    var hiT = traj[si].tmax, loT = traj[si].tmin;
+    // Midpoint of Hi/Lo band; fall back to lower chart area if no temp data
+    var bandMidY = (hiT !== null && loT !== null)
+      ? (yT(hiT) + yT(loT)) / 2
+      : dataBot - 14;
+    var sfAlpha = traj[si].isForecast ? 0.45 : 0.85;
+    var fontSize = sf >= 6 ? 11 : sf >= 3 ? 9 : 7;
+    var cx = xPos(si);
+    ctx.globalAlpha = sfAlpha;
+    ctx.font = fontSize + 'px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(210,235,255,1.0)';
+    ctx.fillText('❄', cx, bandMidY + fontSize * 0.35);
+    // Depth label for significant events
+    if(sf >= 3) {
+      ctx.font = 'bold 7px -apple-system,sans-serif';
+      ctx.fillStyle = 'rgba(210,235,255,0.85)';
+      ctx.fillText((sf >= 10 ? Math.round(sf) : sf.toFixed(0)) + '"', cx, bandMidY + fontSize * 0.35 + 9);
+    }
+    ctx.globalAlpha = 1.0;
+  }
+
+  // ── Forecast uncertainty shading ──
+  if(todayIdx >= 0) {
+    ctx.save();
+    ctx.beginPath();
+    for(var fi=todayIdx; fi<N; fi++){
+      var unc = Math.min(0.30, (fi - todayIdx) * 0.015);
+      var cv = comb(traj[fi]);
+      var xx = xPos(fi), yy = yH(Math.min(1, cv + unc));
+      if(fi===todayIdx) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+    }
+    for(var fi2=N-1; fi2>=todayIdx; fi2--){
+      var unc2 = Math.min(0.30, (fi2 - todayIdx) * 0.015);
+      var cv2 = comb(traj[fi2]);
+      ctx.lineTo(xPos(fi2), yH(Math.max(0, cv2 - unc2)));
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,144,64,0.07)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── Helper: draw a bezier polyline ──
+  function drawLine(pts, color, width, dashed) {
+    if(!pts.length) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    if(dashed) ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(var p=1;p<pts.length;p++){
+      var x0=pts[p-1].x,y0=pts[p-1].y,x1=pts[p].x,y1=pts[p].y;
+      ctx.bezierCurveTo((x0+x1)/2,y0,(x0+x1)/2,y1,x1,y1);
+    }
+    ctx.stroke();
+    if(dashed) ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // Segment array into solid/dashed, stitch at boundary
+  function segLine(mapFn) {
+    var solid=[], dashed=[];
+    for(var k=0;k<N;k++){
+      var pt={x:xPos(k),y:mapFn(traj[k])};
+      if(traj[k].isForecast) dashed.push(pt); else solid.push(pt);
+    }
+    if(solid.length && dashed.length) dashed.unshift(solid[solid.length-1]);
+  return {solid:solid, dashed:dashed};
+  }
+
+  // ── Uncertainty band edges — upper and lower dashed borders ──
+  if(todayIdx >= 0) {
+    var uncUpperPts = [];
+    var uncLowerPts = [];
+    for(var fi3=todayIdx; fi3<N; fi3++){
+      var unc3 = Math.min(0.30, (fi3 - todayIdx) * 0.015);
+      var cv3 = comb(traj[fi3]);
+      uncUpperPts.push({x: xPos(fi3), y: yH(Math.min(1, cv3 + unc3))});
+      uncLowerPts.push({x: xPos(fi3), y: yH(Math.max(0, cv3 - unc3))});
+    }
+    drawLine(uncUpperPts, 'rgba(255,144,64,0.25)', 1, true);
+    drawLine(uncLowerPts, 'rgba(255,144,64,0.25)', 1, true);
+  }
+  // ── Temperature band (Hi to Lo) — rose/peach fill, Hi edge only ──
+  // Drawn BEFORE CCR so blue cold reserve overlays it.
+  ctx.save();
+
+  // Archive fill (solid days)
+  ctx.beginPath();
+  var bandStarted = false;
+  for(var tb=0; tb<N; tb++) {
+    if(traj[tb].isForecast || traj[tb].tmax === null) continue;
+    if(!bandStarted) { ctx.moveTo(xPos(tb), yT(traj[tb].tmax)); bandStarted=true; }
+    else ctx.lineTo(xPos(tb), yT(traj[tb].tmax));
+  }
+  for(var tb2=N-1; tb2>=0; tb2--) {
+    if(traj[tb2].isForecast || traj[tb2].tmin === null) continue;
+    ctx.lineTo(xPos(tb2), yT(traj[tb2].tmin));
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,155,120,0.13)';
+  ctx.fill();
+
+  // Forecast fill (lighter)
+  ctx.beginPath();
+  var fBandStarted = false;
+  for(var tf=0; tf<N; tf++) {
+    if(!traj[tf].isForecast || traj[tf].tmax === null) continue;
+    if(!fBandStarted) { ctx.moveTo(xPos(tf), yT(traj[tf].tmax)); fBandStarted=true; }
+    else ctx.lineTo(xPos(tf), yT(traj[tf].tmax));
+  }
+  for(var tf2=N-1; tf2>=0; tf2--) {
+    if(!traj[tf2].isForecast || traj[tf2].tmin === null) continue;
+    ctx.lineTo(xPos(tf2), yT(traj[tf2].tmin));
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,155,120,0.06)';
+  ctx.fill();
+
+  // Hi edge line only (Lo edge is defined by the fill boundary)
+  var prevFcst = null;
+  var segPts = [];
+  function flushHiSeg() {
+    if(segPts.length < 2) { segPts = []; return; }
+    ctx.beginPath();
+    ctx.moveTo(segPts[0].x, segPts[0].y);
+    for(var sp=1; sp<segPts.length; sp++) ctx.lineTo(segPts[sp].x, segPts[sp].y);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    segPts = [];
+  }
+  for(var th=0; th<N; th++) {
+    if(traj[th].tmax === null) { flushHiSeg(); prevFcst = null; continue; }
+    var isFcst = traj[th].isForecast;
+    if(prevFcst !== null && isFcst !== prevFcst) flushHiSeg();
+    if(!segPts.length) {
+      ctx.setLineDash(isFcst ? [3,3] : []);
+      ctx.strokeStyle = isFcst ? 'rgba(255,120,80,0.20)' : 'rgba(255,120,80,0.42)';
+    }
+    segPts.push({x: xPos(th), y: yT(traj[th].tmax)});
+    prevFcst = isFcst;
+  }
+  flushHiSeg();
+  ctx.setLineDash([]);
+  ctx.restore();
+  // ── Column Cold Reserve — blue filled area, stronger gradient ──
+  var ccrS = segLine(function(t){ return yH(ccr(t)); });
+  if(ccrS.solid.length > 1) {
+    ctx.save(); ctx.beginPath();
+    ctx.moveTo(ccrS.solid[0].x, ccrS.solid[0].y);
+    for(var cp=1;cp<ccrS.solid.length;cp++){
+      var cx0=ccrS.solid[cp-1].x,cy0=ccrS.solid[cp-1].y,cx1=ccrS.solid[cp].x,cy1=ccrS.solid[cp].y;
+      ctx.bezierCurveTo((cx0+cx1)/2,cy0,(cx0+cx1)/2,cy1,cx1,cy1);
+    }
+    ctx.lineTo(ccrS.solid[ccrS.solid.length-1].x, dataBot);
+    ctx.lineTo(ccrS.solid[0].x, dataBot); ctx.closePath();
+    var cg = ctx.createLinearGradient(0, PAD.top, 0, dataBot);
+    cg.addColorStop(0,   'rgba(56,189,248,0.32)');
+    cg.addColorStop(0.5, 'rgba(56,189,248,0.12)');
+    cg.addColorStop(1,   'rgba(56,189,248,0.02)');
+    ctx.fillStyle = cg; ctx.fill(); ctx.restore();
+  }
+  drawLine(ccrS.solid,  'rgba(56,189,248,0.90)', 1.8, false);
+  drawLine(ccrS.dashed, 'rgba(56,189,248,0.45)', 1.8, true);
+
+// ── Surface freeze quality — thin gold line, Mar 1 onward ──
+  var sfqS = segLine(function(t){
+    return t.surfaceRipeness === null ? null : yH(sfq(t));
+  });
+  // Filter out null points before drawing
+  var sfqSolid = [], sfqDash = [];
+  for(var sq=marchFirstIdx; sq<N; sq++) {
+    if(traj[sq].surfaceRipeness === null) continue;
+    var pt = {x: xPos(sq), y: yH(sfq(traj[sq]))};
+    if(traj[sq].isForecast) sfqDash.push(pt); else sfqSolid.push(pt);
+  }
+  if(sfqSolid.length && sfqDash.length) sfqDash.unshift(sfqSolid[sfqSolid.length-1]);
+  drawLine(sfqSolid, 'rgba(251,191,36,0.75)', 1.2, false);
+  drawLine(sfqDash,  'rgba(251,191,36,0.35)', 1.2, true);
+
+  
+
+  // ── Today vertical line ──
+  if(todayIdx >= 0) {
+    var tx = xPos(todayIdx);
+    ctx.strokeStyle='rgba(255,209,102,0.55)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(tx,PAD.top); ctx.lineTo(tx,PAD.top+cH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,209,102,0.8)';
+    ctx.font='bold 8px -apple-system,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Today', tx, PAD.top - 3);
+  }
+
+  // ── Target date vertical line + dot ──
+  if(tgtIdx >= 0) {
+    var ttx = xPos(tgtIdx);
+    ctx.strokeStyle='rgba(0,212,170,0.65)'; ctx.lineWidth=1.5; ctx.setLineDash([4,2]);
+    ctx.beginPath(); ctx.moveTo(ttx,PAD.top); ctx.lineTo(ttx,PAD.top+cH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(ttx, yH(sfq(traj[tgtIdx])), 4, 0, Math.PI*2);
+    ctx.fillStyle='#00d4aa'; ctx.fill();
+    ctx.strokeStyle='rgba(0,212,170,0.4)'; ctx.lineWidth=2; ctx.stroke();
+  }
+// ── Corn window band on target date ──
+  if(cornWin && cornWin.ws !== null && tgtIdx >= 0) {
+    // Convert decimal hours to fraction of day for x-positioning within the target day column
+    var wsHr = cornWin.ws;  // e.g. 8.5 = 8:30 AM
+    var weHr = cornWin.we;  // e.g. 10.5 = 10:30 AM
+    var daySpan = 18;        // chart represents roughly 6AM-midnight = 18hr visible day
+    var startFrac = Math.max(0, (wsHr - 6) / daySpan);
+    var endFrac   = Math.min(1, (weHr - 6) / daySpan);
+
+    // x positions: the target column is PX_PER_DAY wide centered on xPos(tgtIdx)
+    var colLeft  = xPos(tgtIdx) - PX_PER_DAY / 2;
+    var bandX0   = colLeft + startFrac * PX_PER_DAY;
+    var bandX1   = colLeft + endFrac   * PX_PER_DAY;
+    var bandW    = Math.max(2, bandX1 - bandX0);
+
+    // Color by score
+    var bandCol = cornWin.q >= 75 ? 'rgba(46,213,115,0.18)'
+                : cornWin.q >= 50 ? 'rgba(255,209,102,0.15)'
+                : cornWin.q >= 25 ? 'rgba(255,165,2,0.13)'
+                :                   'rgba(255,71,87,0.12)';
+    var borderCol = cornWin.q >= 75 ? 'rgba(46,213,115,0.55)'
+                  : cornWin.q >= 50 ? 'rgba(255,209,102,0.45)'
+                  : cornWin.q >= 25 ? 'rgba(255,165,2,0.40)'
+                  :                   'rgba(255,71,87,0.40)';
+
+    ctx.fillStyle = bandCol;
+    ctx.fillRect(bandX0, PAD.top, bandW, dataBot - PAD.top);
+
+    // Left edge (opens) — solid border
+    ctx.strokeStyle = borderCol;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(bandX0, PAD.top);
+    ctx.lineTo(bandX0, dataBot);
+    ctx.stroke();
+
+    // Right edge (closes) — dashed border
+    ctx.setLineDash([3,2]);
+    ctx.beginPath();
+    ctx.moveTo(bandX1, PAD.top);
+    ctx.lineTo(bandX1, dataBot);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label above: "🌽 Opens 9:30" and "Closes 11:00"
+    ctx.font = 'bold 7px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = borderCol;
+    var midBand = (bandX0 + bandX1) / 2;
+    // Only show text if band is wide enough
+    if(bandW > 18) {
+      var wsTxt = cornWin.ws % 1 === 0
+        ? Math.floor(cornWin.ws) + ':00'
+        : Math.floor(cornWin.ws) + ':' + String(Math.round((cornWin.ws % 1)*60)).padStart(2,'0');
+      ctx.fillText('🌽 ' + wsTxt, midBand, PAD.top + 8);
+    }
+  }
+  // ── X-axis date labels ──
+  var alwaysLabeled={};
+  if(todayIdx>=0) alwaysLabeled[todayIdx]=true;
+  if(tgtIdx>=0) alwaysLabeled[tgtIdx]=true;
+  ctx.font='8px -apple-system,sans-serif';
+  var lastLabelX=-999;
+  var MNAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for(var xi=0;xi<N;xi++){
+    var dd=traj[xi], dt=new Date(dd.date+'T12:00:00');
+    var isWeekly=(dt.getDay()===1||dt.getDate()===1);
+    var isSpecial=alwaysLabeled[xi];
+    if(!isWeekly&&!isSpecial) continue;
+    var labelX=xPos(xi);
+    if(!isSpecial && labelX-lastLabelX<28) continue;
+    var mon=MNAMES[dt.getMonth()];
+    var label=isSpecial&&xi===todayIdx?'':(dt.getDate()===1?mon+' 1':mon+' '+dt.getDate());
+    if(isSpecial&&xi===tgtIdx) label='Target';
+    if(!label) continue;
+    ctx.fillStyle=isSpecial?(xi===tgtIdx?'rgba(0,212,170,0.7)':'rgba(255,209,102,0.7)'):'rgba(120,165,190,0.55)';
+    ctx.textAlign='center';
+    ctx.fillText(label, labelX, H - PAD.bottom + 10);
+    lastLabelX=labelX;
+  }
+
+
+ // ── Auto-scroll: show 2 weeks back from today as left edge ──
+  var scrollEl = canvas.parentElement;
+  if(scrollEl && scrollEl.id === 'ripeness-scroll') {
+    var anchorIdx = todayIdx >= 0 ? todayIdx : (tgtIdx >= 0 ? tgtIdx : N - 1);
+    var windowStart = Math.max(0, anchorIdx - 14);
+    scrollEl.scrollLeft = Math.max(0, xPos(windowStart) - PAD.left - 8);
+  }
+
+  // ── Tap → info panel (below chart, always readable) ──
+  var infoEl = document.getElementById('ripeness-info-panel');
+  if(infoEl) {
+    canvas.onclick = function(e) {
+      var rect = canvas.getBoundingClientRect();
+      var dpr = window.devicePixelRatio || 1;
+      var scaleX = (canvas.width / dpr) / rect.width;
+      var clickX = (e.clientX - rect.left) * scaleX;
+      var nearestIdx = Math.round((clickX - PAD.left - PX_PER_DAY/2) / PX_PER_DAY);
+      nearestIdx = Math.max(0, Math.min(N-1, nearestIdx));
+      var t = traj[nearestIdx];
+      if(!t) return;
+
+      if(infoEl.dataset.shown === t.date) {
+        infoEl.innerHTML = '← tap any day to inspect';
+        infoEl.style.color = 'var(--muted)';
+        infoEl.dataset.shown = '';
+        return;
+      }
+
+      var MNAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var dt = new Date(t.date + 'T12:00:00');
+      var dateStr = MNAMES[dt.getMonth()] + ' ' + dt.getDate();
+      var tag = t.isForecast ? 'forecast' : 'archive';
+      var sfqPct  = t.surfaceRipeness !== null ? Math.round((1-t.surfaceRipeness)*100)+'%' : '—';
+      var ccrPct  = t.columnColdContent !== null ? Math.round(t.columnColdContent*100)+'%' : '—';
+      var snowStr = (t.snowfall && t.snowfall >= 0.5) ? t.snowfall.toFixed(1)+'"' : '—';
+      var hiStr   = t.tmax !== null ? Math.round(t.tmax)+'°' : '—';
+      var loStr   = t.tmin !== null ? Math.round(t.tmin)+'°' : '—';
+
+      infoEl.style.color = 'var(--text)';
+      infoEl.dataset.shown = t.date;
+      infoEl.innerHTML =
+        '<strong>' + dateStr + '</strong>'
+        + ' <span style="color:var(--muted);font-size:.65rem">· ' + tag + '</span>'
+        + ' &nbsp;&nbsp;'
+        + '<span style="color:rgba(255,155,120,0.85)">Hi</span> <strong>' + hiStr + '</strong>'
+        + ' <span style="color:rgba(255,155,120,0.85)">Lo</span> <strong>' + loStr + '</strong>'
+        + ' &nbsp;&nbsp;'
+        + '<span style="color:#fbbf24">Sfc</span> <strong>' + sfqPct + '</strong>'
+        + ' &nbsp;'
+        + '<span style="color:rgba(56,189,248,0.9)">CCR</span> <strong>' + ccrPct + '</strong>'
+        + (snowStr !== '—' ? '&nbsp;&nbsp;❄ <strong>' + snowStr + '</strong>' : '');
+    };
+  }
+}
+
+// ── CORN MODEL ────────────────────────────────────────────────────────────
+function cornWindow(pk,asp,f,month){
+  var ad=pk.asp[asp];if(!ad)return null;
+  var tData=ad.t,ma=MONTH_ADJ[month]||MONTH_ADJ[4];
+  var radMult=BASE_RAD[asp]*((ma.radBoost||{})[asp]||1);
+  if(BASE_SUN[asp]===null)return{ws:null,we:null,dur:0,q:0,inf:"N-facing: insufficient solar radiation",note:ad.note};
+  var sunHit=BASE_SUN[asp]+((ma.sunShift||{})[asp]||0)+(ad.sh||0);
+  var elevB=(ad.ez-11500)/1800*0.18;
+  var rawFQ=Math.max(0,Math.min(1,(30-f.lo)/22+elevB+(ma.freezeBonus||0)));
+  var freezeQ=rawFQ*(0.50+0.50*(100-f.cn)/100);
+  var windScour=Math.max(0,(f.wi-12)*0.012*(WIND_ASP[asp]||0.5)*ad.wx);
+  var effFQ=Math.max(0.03,freezeQ-windScour);
+  var matPen=ma.maturityPenalty||0;
+  var isoPrb=(weatherData && weatherData.effectiveIsoPrb!=null)
+    ? weatherData.effectiveIsoPrb
+    : (ma.isothermProb||0);
+  effFQ=Math.max(0.03,effFQ*(1-matPen));
+  var cloudAtt=1-(f.cm/100)*0.78;
+  var effRad=radMult*cloudAtt;
+  var dth=f.hi-f.da;
+  if(dth<=0)return{ws:null,we:null,dur:0,q:0,inf:"Daytime high ≤ dawn — no melt",note:ad.note};
+  var meltDelay=effFQ>0.20?Math.min(4.5,(effFQ*Math.max(0,33-f.da))/(effRad*Math.max(0.8,dth/8)+0.01)):0.25;
+  meltDelay=meltDelay*(1-isoPrb*0.55);
+  var ws=Math.max(sunHit,sunHit+Math.min(4.2,meltDelay*1.05));
+
+  // ── CRUST QUALITY: two-mode model ───────────────────────────────────────
+  var depthFactor=f.sdp>0?Math.min(1.0,f.sdp/8.0):0.5;
+  var ageFactor=Math.exp(-f.ds*0.10);
+  var matScale=1-matPen*0.80;
+  var stormCrustQ=depthFactor*ageFactor*matScale;
+  // packFloor: isothermal pack weakens consolidated bonds (spec §physics)
+  var packFloor=0.35*depthFactor*(1-matPen*0.90)*(1-isoPrb*0.40);
+  var crustQ=Math.max(stormCrustQ,packFloor,0.05);
+
+  // SWE modifier
+  var sweAdj=0;
+  if(f.swePct!==null&&f.swePct!==undefined){sweAdj=Math.max(-0.10,Math.min(0.08,(f.swePct-100)/500));crustQ=Math.max(0.05,Math.min(1.0,crustQ+sweAdj));}
+  var windDurPen=Math.max(0,(f.wi-18)*0.055*ad.wx);
+  var sweDurBonus=(f.swePct!==null&&f.swePct!==undefined)?Math.max(-0.25,Math.min(0.20,(f.swePct-100)/400)):0;
+  var rawDur=(crustQ*1.6)+(effRad*1.4)+((f.hi-32)*0.065)-windDurPen+sweDurBonus;
+  rawDur*=(ma.winFactor||1);
+  rawDur*=(1-isoPrb*0.25); // isothermal pack collapses window faster (spec §physics)
+  var dur=Math.max(0.20,Math.min(4.0,rawDur));
+  var we=ws+dur;
+  var phys=0;
+  if(effFQ>0.70)phys+=30;else if(effFQ>0.45)phys+=22;else if(effFQ>0.25)phys+=12;else if(effFQ>0.10)phys+=5;
+  phys+=Math.min(20,effRad*16);phys+=Math.min(10,crustQ*10);
+  if(dur>=2.5)phys+=5;else if(dur>=1.5)phys+=3;
+  phys-=Math.min(15,windScour*25);if(f.lo>30)phys-=8;
+  var tMult=0.50+tData.q*0.50;
+  var rawScore=phys*tMult;
+  rawScore+=(ad.ez-12000)/1600*3;
+  rawScore*=((ma.radBoost||{})[asp]||1)*0.85+0.15;
+  if(dur<0.75)rawScore*=0.45;if(dur<0.35)rawScore*=0.20;
+  var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
+  var inf,qlabel;
+  if(f.lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
+  else if(f.lo>30){inf="⚠️ Marginal freeze — thin crust possible";qlabel="Poor";}
+  else if(f.ds>14&&f.sdp<=2){inf="⚠️ Old shallow snow ("+f.ds+" days, "+f.sdp+'") — weak crust';qlabel=q>=50?"Good":"Marginal";}
+  else if(windScour>0.35){inf="⚠️ Wind scour likely — crust may be stripped";qlabel="Marginal";}
+  else if(q>=75){inf="✅ Excellent corn — "+ad.note;qlabel="Excellent";}
+  else if(q>=50){inf="🟡 Good window — "+ad.note;qlabel="Good";}
+  else if(q>=28){inf="🟠 Marginal — "+ad.note;qlabel="Marginal";}
+  else{inf="🔴 Poor — "+ad.note;qlabel="Poor";}
+  return{ws:parseFloat(ws.toFixed(2)),we:parseFloat(we.toFixed(2)),dur:parseFloat(dur.toFixed(1)),q:q,qlabel:qlabel,inf:inf,
+    terrainQ:tData.q,terrainRubric:tData,freezeQ:parseFloat(effFQ.toFixed(2)),windScour:parseFloat(windScour.toFixed(2)),
+    effRad:parseFloat(effRad.toFixed(2)),note:ad.note,crustQ:parseFloat(crustQ.toFixed(2)),sweAdj:parseFloat(sweAdj.toFixed(3)),
+    depthFactor:parseFloat(depthFactor.toFixed(2)),ageFactor:parseFloat(ageFactor.toFixed(2)),
+    rawFQ:parseFloat(rawFQ.toFixed(2)),matPen:matPen,isoPrb:isoPrb,packRipeness:isoPrb,
+    surfaceRipeness:(weatherData&&weatherData.surfaceRipeness!=null)?parseFloat(weatherData.surfaceRipeness.toFixed(2)):null,
+    columnColdContent:(weatherData&&weatherData.columnColdContent!=null)?parseFloat(weatherData.columnColdContent.toFixed(2)):null,
+    isoPrbIsLive:!!(weatherData && weatherData.effectiveIsoPrb!=null),
+    archiveFailed:!!(weatherData && weatherData.archiveFailed),
+    windDurPen:parseFloat(windDurPen.toFixed(2)),sweDurBonus:parseFloat(sweDurBonus.toFixed(2))};
+}
+
+// ── SCORE DRIVER NARRATIVE ────────────────────────────────────────────────
+function buildDrivers(w,f,month,asp){
+  var ma=MONTH_ADJ[month]||MONTH_ADJ[4],mnames={3:"March",4:"April",5:"May",6:"June"},rows=[];
+  var peakElStr=PK[selectedPeak].el.toLocaleString();
+  function head(num,title){ rows.push({type:'head',text:'Step '+num+' · '+title}); }
+  function mod(title){  rows.push({type:'head',text:'Modifier · '+title}); }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 1 — OVERNIGHT FREEZE QUALITY
+  // Inputs: overnight low → sky clarity amplifies → wind scour degrades
+  // Output: effectiveFQ — the thermal debt solar energy must repay
+  // ─────────────────────────────────────────────────────────────────────────
+  head(1,'Overnight Freeze Quality');
+
+  if(f.lo<=18)       rows.push({icon:'🧊',cls:'driver-pos',text:'<strong>Overnight low '+f.lo+'°F — excellent freeze.</strong> This cold builds a deep, reinforced ice matrix at the surface. The thicker the crust, the longer the corn window lasts before collapsing to slush.'});
+  else if(f.lo<=24)  rows.push({icon:'❄️',cls:'driver-pos',text:'<strong>Overnight low '+f.lo+'°F — good freeze.</strong> Solid refreeze. A reliable crust will form, though not as deep as a sub-20° night.'});
+  else if(f.lo<=29)  rows.push({icon:'🌡️',cls:'driver-neu',text:'<strong>Overnight low '+f.lo+'°F — marginal freeze.</strong> The crust will be thin and the window shorter than ideal. A few degrees colder makes a meaningful difference here.'});
+  else               rows.push({icon:'⚠️',cls:'driver-neg',text:'<strong>Overnight low '+f.lo+'°F — weak or no freeze.</strong> Near or above 32°F overnight. Little to no ice crust will form — the essential first step for corn is absent.'});
+
+  if(f.cn<=15)       rows.push({icon:'🌟',cls:'driver-pos',text:'<strong>Clear overnight sky ('+f.cn+'% cloud).</strong> The snow surface radiates heat directly to the cold sky and receives almost nothing back — the surface can be 2–5°F colder than the air thermometer reads. Strong amplifier on top of the low temperature.'});
+  else if(f.cn<=40)  rows.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partly cloudy overnight ('+f.cn+'% cloud).</strong> Partial cloud moderates radiative cooling. The freeze will not penetrate quite as deep as a clear night at the same temperature.'});
+  else               rows.push({icon:'☁️',cls:'driver-neg',text:'<strong>Cloudy overnight ('+f.cn+'% cloud).</strong> Cloud radiates heat back to the surface, acting as a thermal blanket. Noticeably limits how deep the overnight freeze can penetrate.'});
+
+  if(f.wi>=22)       rows.push({icon:'💨',cls:'driver-neg',text:'<strong>High wind ('+f.wi+' mph) — crust scour.</strong> Wind physically erodes developing ice bonds before they consolidate. The '+asp+' aspect has '+Math.round((WIND_ASP[asp]||0.5)*100)+'% wind exposure. Freeze quality reduced by '+Math.round(w.windScour*100)+' pts.'});
+  else if(f.wi>=14)  rows.push({icon:'💨',cls:'driver-neu',text:'<strong>Moderate wind ('+f.wi+' mph).</strong> Some scour effect on crust formation, more significant on exposed ridge or summit terrain.'});
+  else               rows.push({icon:'🍃',cls:'driver-pos',text:'<strong>Light wind ('+f.wi+' mph).</strong> Negligible scour — overnight freeze builds undisturbed.'});
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MODIFIER — SNOWPACK CONDITION
+  // 14-day surface history + full-season column cold content
+  // These shape how deeply the overnight freeze penetrates and how long the window holds
+  // ─────────────────────────────────────────────────────────────────────────
+  mod('Snowpack Condition');
+
+  var ip=Math.round(w.isoPrb*100);
+  if(w.isoPrbIsLive){
+    var srRaw=w.surfaceRipeness!==null?w.surfaceRipeness:(ip/100);
+    var sfqPct=Math.round((1-srRaw)*100);
+    var sfqLabel=sfqPct>=80?'cold recent two weeks — surface cold-core, maximum freeze penetration'
+      :sfqPct>=60?'mostly cold recent two weeks — solid freeze depth likely'
+      :sfqPct>=40?'mixed recent two weeks — variable freeze depth, moderate crust'
+      :'warm recent two weeks — surface near-isothermal, freeze penetrates only a thin veneer regardless of overnight low';
+    var sfqColor=sfqPct>=80?'#2ed573':sfqPct>=60?'#ffd166':sfqPct>=40?'#ffa502':'#ff8a95';
+    rows.push({icon:'📦',cls:sfqPct>=60?'driver-pos':sfqPct>=40?'driver-neu':'driver-neg',
+      text:'<strong>Surface freeze quality: '+sfqPct+'%</strong> — '+sfqLabel+'.'
+        +'<br><div style="display:flex;align-items:center;gap:.4rem;margin-top:.28rem">'
+        +'<span style="font-size:.65rem;color:var(--muted);flex-shrink:0">Weak</span>'
+        +'<div class="pr-bar-wrap"><div class="pr-bar" style="width:'+sfqPct+'%;background:linear-gradient(90deg,#ff6040,#ff9040)"></div></div>'
+        +'<span style="font-size:.68rem;color:'+sfqColor+';font-weight:700;width:2.2rem;text-align:right">'+sfqPct+'%</span>'
+        +'<span style="font-size:.65rem;color:var(--muted)">Strong</span></div>'
+        +'<span style="font-size:.63rem;color:#456a82">14-day surface layer (0–30cm) · ERA5 archive · lapse-corrected to '+peakElStr+"'</span>"});
+
+    if(w.columnColdContent!==null&&!w.archiveFailed){
+      var cccPct=Math.round(w.columnColdContent*100);
+      var cccLabel=cccPct>=65?'full cold reserve — deep pack resists the slush transition; window stays open longer'
+        :cccPct>=40?'moderate cold reserve — column transitioning toward isothermal, some buffering remains'
+        :'low cold reserve — column near-isothermal; window may collapse quickly even after a good overnight freeze';
+      var cccCls=cccPct>=65?'driver-pos':cccPct>=40?'driver-neu':'driver-neg';
+      var cccColor=cccPct>=65?'#2ed573':cccPct>=40?'#ffd166':'#ff8a95';
+      rows.push({icon:'🏔️',cls:cccCls,
+        text:'<strong>Column cold reserve: '+cccPct+'%</strong> — '+cccLabel+'.'
+          +'<br><div style="display:flex;align-items:center;gap:.4rem;margin-top:.28rem">'
+          +'<span style="font-size:.65rem;color:var(--muted);flex-shrink:0">Depleted</span>'
+          +'<div class="pr-bar-wrap"><div class="pr-bar" style="width:'+cccPct+'%;background:linear-gradient(90deg,#1a4a7a,var(--cornblue))"></div></div>'
+          +'<span style="font-size:.68rem;color:'+cccColor+';font-weight:700;width:2.2rem;text-align:right">'+cccPct+'%</span>'
+          +'<span style="font-size:.65rem;color:var(--muted)">Full</span></div>'
+          +'<span style="font-size:.63rem;color:#456a82">Full-season column (30cm–full depth) · Mar 1 → target · Jennings et al. (2018)</span>'});
+    } else if(w.archiveFailed){
+      rows.push({icon:'🏔️',cls:'driver-neu',text:'<strong>Column cold reserve: unavailable</strong> — archive fetch failed; column defaults to seasonal baseline.'});
+    }
+  } else if(month>=5){
+    rows.push({icon:'📅',cls:'driver-neg',text:'<strong>'+mnames[month]+' seasonal maturity (default):</strong> Months of freeze-thaw cycles have rounded snow grains — bonds form weakly when refrozen. ~'+ip+'% probability the column is fully isothermal; if so, the overnight freeze can only penetrate a thin surface veneer.'});
+  } else if(month===4){
+    rows.push({icon:'📅',cls:'driver-neu',text:'<strong>April seasonal state (default):</strong> Grains beginning to coarsen. Moderate crust depth typical. ~'+ip+'% isothermal probability — most packs are still cold-core at depth in April.'});
+  } else {
+    rows.push({icon:'📅',cls:'driver-pos',text:'<strong>March seasonal state (default):</strong> Early-season cold-core snow with fine angular grains — ideal structure for deep refreeze. Low isothermal probability.'});
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEPS 2–3 — SOLAR INPUT & SUN-HIT TIME
+  // Aspect radiation multiplier × morning cloud attenuation
+  // Determines how fast the thermal debt (Step 1) is repaid
+  // ─────────────────────────────────────────────────────────────────────────
+  head('2–3','Solar Input & Sun-Hit Time');
+
+  var aspRad=BASE_RAD[asp]||0.5;
+  var aspRadPct=Math.round(aspRad*100);
+  var effRadPct=Math.round(w.effRad*100);
+  var aspCls=aspRadPct>=120?'driver-pos':aspRadPct>=80?'driver-neu':aspRadPct>=45?'driver-neu':'driver-neg';
+  rows.push({icon:'☀️',cls:aspCls,
+    text:'<strong>'+asp+'-facing aspect: '+aspRadPct+'% of flat-ground radiation in '+mnames[month]+'.</strong> '
+    +(aspRadPct>=120?'Direct, near-perpendicular solar loading — maximum melt energy per square foot.'
+     :aspRadPct>=80?'Good angled solar input — effective melt energy for this time of year.'
+     :aspRadPct>=45?'Oblique solar angle — slower melt rate; timing is tighter.'
+     :'Low radiation aspect — sun strikes at a shallow angle, minimal melt energy. Corn onset is sensitive to any cloud cover.')
+    +' After '+f.cm+'% morning cloud attenuation: <strong>'+effRadPct+'% effective</strong>.'});
+
+  if(f.cm<=15)      rows.push({icon:'🌞',cls:'driver-pos',text:'<strong>Clear morning sky ('+f.cm+'% cloud).</strong> Full solar loading reaches the face — rapid, predictable corn onset and uniform melt across the slope.'});
+  else if(f.cm<=40) rows.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partial morning clouds ('+f.cm+'%).</strong> Some solar attenuation. Onset slightly delayed; melt may be less consistent across the face.'});
+  else              rows.push({icon:'☁️',cls:'driver-neg',text:'<strong>Heavy morning clouds ('+f.cm+'%).</strong> Significantly reduced solar energy. On lower-radiation aspects, a cloudy morning can prevent the window from opening at reliably skiable conditions.'});
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 4 — MELT ONSET → CORN OPENS
+  // Dawn temp sets the thermal debt size; temp rise rate determines payoff speed
+  // ─────────────────────────────────────────────────────────────────────────
+  head(4,'Melt Onset → Corn Opens');
+
+  var dth=f.hi-f.da;
+  var debtCls=f.da<=28?'driver-neu':f.da<=33?'driver-neu':'driver-neg';
+  var debtNote=f.da<=20?'very cold at dawn — large thermal debt, delayed onset; but freeze was correspondingly deep'
+    :f.da<=28?'cool at dawn — moderate thermal debt, typical spring timing'
+    :f.da<=32?'near-freezing at dawn — small thermal debt, corn opens earlier; the overnight crust was likely thin'
+    :'above freezing at dawn — no thermal debt; surface opens immediately but the overnight freeze was already compromised';
+  rows.push({icon:'🌅',cls:debtCls,
+    text:'<strong>Dawn temp '+f.da+'°F → High '+f.hi+'°F ('+dth+'°F morning rise).</strong> '+debtNote
+    +'. The '+dth+'°F rise rate is '+(dth>=20?'steep — thermal debt clears quickly, corn opens promptly':dth>=12?'moderate — typical spring payoff timing':'shallow — slow debt repayoff; onset may be late or incomplete on low-radiation aspects')+'.'});
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 5 — SNOW SURFACE QUALITY
+  // Depth + age of storm snow, or consolidated pack floor
+  // Sets how much material is available to refreeze into a skiable crust
+  // ─────────────────────────────────────────────────────────────────────────
+  head(5,'Snow Surface — Material to Refreeze');
+
+  var cqPct=Math.round(w.crustQ*100);
+  if(f.sdp>=8&&f.ds<=3)        rows.push({icon:'🌨️',cls:'driver-pos',text:'<strong>Deep fresh snow ('+f.sdp+'" · '+f.ds+' day'+(f.ds===1?'':'s')+' old) — snow surface '+cqPct+'%.</strong> Fine angular grains with large surface area bond tightly when frozen. Best possible raw material: thick, well-bonded crust, longest window potential.'});
+  else if(f.sdp>=4&&f.ds<=7)   rows.push({icon:'🌨️',cls:'driver-pos',text:'<strong>Recent storm snow ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> Grains have begun rounding but angular facets remain. Good crust potential — enough depth to sustain a real window.'});
+  else if(f.sdp<=2&&f.ds>0)    rows.push({icon:'🟠',cls:'driver-neg',text:'<strong>Shallow snow ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> A thin layer ages out in 24–48 hours. Even with an excellent overnight freeze, 1–2" produces only a weak patchy crust — not enough material for a reliable window.'});
+  else if(f.ds>10&&f.sdp>=12)  rows.push({icon:'🏔️',cls:'driver-neu',text:'<strong>Consolidated spring pack ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> Grains have stabilized as large melt-freeze polycrystals — the aging process has plateaued. Cold nights still rebuild real ice bonds, but the crust is thinner than fresh storm snow. Expect a shorter window that opens earlier.'});
+  else if(f.ds>10&&f.sdp<12)   rows.push({icon:'🟠',cls:'driver-neg',text:'<strong>Old shallow snow ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> Limited refreeze material in an aging thin pack. Short window expected regardless of freeze quality.'});
+  else                          rows.push({icon:'🌨️',cls:'driver-neu',text:'<strong>Recent snowfall ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> Moderate crust potential.'});
+
+  if(f.swePct!==null&&f.swePct!==undefined){
+    var adjPts=Math.round(w.sweAdj*100);
+    var sweEff=Math.abs(adjPts)>0?' Snow surface adjusted '+(adjPts>0?'+':'')+adjPts+' pts from basin SWE.':' No SWE adjustment to snow surface.';
+    if(f.swePct<60)       rows.push({icon:'📉',cls:'driver-neg',text:'<strong>Low basin SWE ('+f.swePct+'% of median — '+sweLabel(f.swePct)+').</strong> Below-normal snowpack suggests a thinner, more cycle-worn surface — weaker crust and possibly patchy coverage on steeper terrain.'+sweEff});
+    else if(f.swePct>=115)rows.push({icon:'📈',cls:'driver-pos',text:'<strong>Strong basin SWE ('+f.swePct+'% of median — '+sweLabel(f.swePct)+').</strong> Above-normal pack means deeper snow with more cold reserve — marginally better crust material and a slightly longer window.'+sweEff});
+    else                  rows.push({icon:'📊',cls:'driver-neu',text:'<strong>Basin SWE '+f.swePct+'% of median ('+sweLabel(f.swePct)+').</strong> Near-normal snowpack — no significant effect on snow surface or window duration.'+sweEff});
+  } else {
+    rows.push({icon:'📡',cls:'driver-neu',text:'<strong>Basin SWE: unavailable.</strong> Running without live snowpack data. Check NRCS SNOTEL manually.'});
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 6 — WINDOW DURATION → CORN CLOSES
+  // Crust depth is the dominant term; wind + afternoon temp collapse it
+  // ─────────────────────────────────────────────────────────────────────────
+  head(6,'Window Duration → Corn Closes');
+
+  var durCls=w.dur>=2.0?'driver-pos':w.dur>=1.0?'driver-neu':'driver-neg';
+  var durNote=w.dur>=2.5?'wide window — deep crust with strong radiation; the surface holds the corn state well'
+    :w.dur>=1.5?'solid window — reliable timing margin for most approaches'
+    :w.dur>=0.75?'short window — thin crust or limited solar loading; timing precision matters'
+    :'very short window — marginal conditions; difficult to reliably hit on the mountain';
+  rows.push({icon:'⏱️',cls:durCls,
+    text:'<strong>Window duration: '+w.dur+' hrs — '+durNote+'.</strong> '
+    +'Crust depth is the dominant term (thicker crust = longer melt-through time). '
+    +'Afternoon high of '+f.hi+'°F '+(f.hi>=52?'accelerates slush transition significantly':f.hi>=44?'moderately accelerates slush transition':'has limited effect on slush transition')+'. '
+    +'Column cold reserve '+(w.columnColdContent!==null&&!w.archiveFailed?'('+Math.round(w.columnColdContent*100)+'%) ':'')+'buffers against rapid isothermal collapse.'});
+
+  if(f.wi>=18) rows.push({icon:'💨',cls:'driver-neg',text:'<strong>Wind '+f.wi+' mph shortens the window.</strong> Above 18 mph, wind mechanically disrupts the softened corn surface. Duration penalty on this '+asp+' aspect: −'+w.windDurPen.toFixed(2)+' hrs.'});
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP 7 — TERRAIN FACTOR
+  // Scales the physics score — never eliminates it, but poor terrain discounts it
+  // ─────────────────────────────────────────────────────────────────────────
+  head(7,'Terrain Factor');
+
+  var tPct=Math.round(w.terrainQ*100);
+  var tCls=w.terrainQ>=0.85?'driver-pos':w.terrainQ>=0.65?'driver-neu':'driver-neg';
+  var tNote=w.terrainQ>=0.85?'excellent — high snow retention, uniform solar exposure, sheltered from wind. Physics score passes through at full strength.'
+    :w.terrainQ>=0.65?'good — minor limitations in snow retention, aspect uniformity, or wind exposure.'
+    :w.terrainQ>=0.50?'moderate limitations — one or more of snow retention, aspect purity, or wind shelter is compromised. Physics score discounted.'
+    :'significant limitations — thin or patchy snowpack, inconsistent solar exposure, or exposed position. Physics score meaningfully reduced.';
+  var rbHtml='';
+  if(w.terrainRubric){
+    var rb=w.terrainRubric;
+    var ss=function(v){return[1,2,3].map(function(i){return'<span style="color:'+(i<=v?'#ffd166':'#2e4a60')+'">★</span>';}).join('');};
+    rbHtml='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem;margin-top:.32rem;text-align:center;font-size:.68rem">'
+      +'<div>'+ss(rb.sr)+'<div style="color:var(--muted);font-size:.62rem">Snow Retention</div></div>'
+      +'<div>'+ss(rb.ap)+'<div style="color:var(--muted);font-size:.62rem">Aspect Purity</div></div>'
+      +'<div>'+ss(rb.we)+'<div style="color:var(--muted);font-size:.62rem">Wind Shelter</div></div>'
+      +'</div>';
+  }
+  rows.push({icon:'⛰️',cls:tCls,text:'<strong>Terrain factor: '+tPct+'% — '+tNote+'</strong>'+rbHtml});
+
+  return rows;
+}
+
+function gf(){
+  var swePct=(currentSWEData&&currentSWEData.loaded&&!currentSWEData.error)?currentSWEData.pct:null;
+  return{lo:+document.getElementById('flo').value,da:+document.getElementById('fda').value,hi:+document.getElementById('fhi').value,
+    cn:+document.getElementById('fcn').value,cm:+document.getElementById('fcm').value,wi:+document.getElementById('fwi').value,
+    ds:+document.getElementById('fds').value,sdp:+document.getElementById('fsdp').value,
+    swePct:swePct,sl:document.getElementById('fsl').checked,
+    di:+document.getElementById('fdi').value,ga:+document.getElementById('fga').value,buf:+document.getElementById('fbuf').value};
+}
+function ht(hr){
+  if(hr===null||hr===undefined)return"--";
+  var h=Math.floor(hr),m=Math.round((hr-h)*60);if(m===60){h++;m=0;}
+  var ap=h<12?"AM":"PM",h12=h===0?12:h>12?h-12:h;
+  return h12+":"+(m<10?"0":"")+m+" "+ap;
+}
+function qc(q){return q>=75?"#2ed573":q>=50?"#ffd166":q>=25?"#ffa502":"#ff4757";}
+function qbg(q){return q>=75?"rgba(46,213,115,0.15)":q>=50?"rgba(255,209,102,0.12)":q>=25?"rgba(255,165,2,0.12)":"rgba(255,71,87,0.12)";}
+
+window.CA=function(){
+  if(!selectedAsp){alert("Please select a target aspect.");return;}
+  var f=gf(),month=+document.getElementById('sel-month').value,pk=PK[selectedPeak];
+  var primary=cornWindow(pk,selectedAsp,f,month);
+  var aspComps=[];
+  Object.keys(pk.asp).forEach(function(asp){var w=cornWindow(pk,asp,f,month);if(w)aspComps.push({asp:asp,ws:w.ws,we:w.we,dur:w.dur,q:w.q,qlabel:w.qlabel});});
+  aspComps.sort(function(a,b){return b.q-a.q;});
+  allResults=[];
+  PK.forEach(function(p){Object.keys(p.asp).forEach(function(asp){var w=cornWindow(p,asp,f,month);if(w)allResults.push({pk:p,asp:asp,q:w.q,ws:w.ws,we:w.we,dur:w.dur,inf:w.inf,qlabel:w.qlabel});});});
+  renderResult(pk,selectedAsp,primary,aspComps,f,month);
+  updateMapMarkers();ST('result');
+};
+
+function renderResult(pk,asp,w,aspComps,f,month){
+  var el=document.getElementById('result-out'),h="";
+  var mnames={3:"March",4:"April",5:"May",6:"June"};
+  if(f.sl)h+='<div class="alert">⚠️ Wind Slab Risk — avoid lee aspects (NE/E/SE) below corniced ridgelines.</div>';
+  if(f.lo>33)h+='<div class="alert">⛔ No overnight freeze. Corn very unlikely.</div>';
+  else if(f.lo>30)h+='<div class="alert">⚠️ Marginal freeze — thin crust possible.</div>';
+  if(!w||w.ws===null){h+='<div class="result-card"><div class="ppeak">'+pk.n+' · '+asp+'</div><div class="info-msg">'+(w?w.inf:"Cannot compute.")+'</div></div>';el.innerHTML=h;return;}
+
+  var app=calcApproach(f.di,f.ga,f.buf),sc=qc(w.q);
+  var depE=Math.max(3.0,w.ws-app.timeHrsRaw),depL=Math.max(depE+0.25,w.we-0.5-app.timeHrsRaw);
+
+  h+='<div class="depart-card">';
+  h+='<div style="font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.22rem">'+pk.n+' · '+asp+'-Facing · '+mnames[month]+'</div>';
+
+  if(w.q < 20) {
+    // Score too low to be actionable — suppress departure time, explain clearly
+    h+='<div style="background:rgba(255,71,87,0.10);border:1px solid rgba(255,71,87,0.35);border-radius:10px;padding:.7rem .8rem;margin-bottom:.5rem">';
+    h+='<div style="font-size:.9rem;font-weight:700;color:#ff8a95;margin-bottom:.22rem">⛔ Conditions too poor to plan around</div>';
+    h+='<div style="font-size:.78rem;color:var(--muted);line-height:1.55">A score this low means the physics model computes a corn window, but it is too short or marginal to be worth targeting. There may be a brief theoretical transition at the times shown below, but timing a mountain approach to a 10–15 minute window is not realistic.</div>';
+    h+='</div>';
+    h+='<div style="opacity:.42;pointer-events:none">';
+    h+='<div style="font-size:.72rem;color:var(--muted);margin-bottom:.3rem">Theoretical window (not actionable)</div>';
+    h+='<div class="depart-window">';
+    h+='<div class="dw-item"><div class="dw-val">'+ht(w.ws)+'</div><div class="dw-key">Corn Opens</div></div>';
+    h+='<div class="dw-item"><div class="dw-val">'+ht(w.we)+'</div><div class="dw-key">Corn Closes</div></div>';
+    h+='<div class="dw-item"><div class="dw-val">'+w.dur+'h</div><div class="dw-key">Duration</div></div>';
+    h+='<div class="dw-item"><div class="dw-val" style="color:'+sc+'">'+w.q+'</div><div class="dw-key">Score</div></div>';
+    h+='</div></div>';
+  } else if(depE>=depL-0.1){
+    h+='<div class="big-time">'+ht(depE)+'</div><div class="big-label">Leave Trailhead — narrow window</div>';
+    h+='<div class="depart-window">';
+    h+='<div class="dw-item"><div class="dw-val">'+ht(w.ws)+'</div><div class="dw-key">Corn Opens</div></div>';
+    h+='<div class="dw-item"><div class="dw-val">'+ht(w.we)+'</div><div class="dw-key">Corn Closes</div></div>';
+    h+='<div class="dw-item"><div class="dw-val">'+w.dur+'h</div><div class="dw-key">Duration</div></div>';
+    h+='<div class="dw-item"><div class="dw-val" style="color:'+sc+'">'+w.q+'</div><div class="dw-key">Score</div></div>';
+    h+='</div>';
+    h+='<div class="approach-detail">'+f.di+'mi · '+f.ga.toLocaleString()+"' gain · "+app.gradePct+'% grade → '+app.speedMph+' mph → '+app.skinHrs+' hrs + '+f.buf+' min buffer = '+app.timeHrs+' hrs total</div>';
+  } else {
+    h+='<div style="display:flex;gap:.8rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:.3rem">';
+    h+='<div><div style="font-size:1.05rem;color:var(--muted);font-weight:600">Earliest</div><div class="big-time">'+ht(depE)+'</div></div>';
+    h+='<div style="padding-bottom:.35rem;color:var(--muted);font-size:1.4rem">→</div>';
+    h+='<div><div style="font-size:1.05rem;color:var(--muted);font-weight:600">Latest</div><div class="big-time" style="color:#ffa060">'+ht(depL)+'</div></div></div>';
+    h+='<div class="big-label">Trailhead window ('+((depL-depE)*60).toFixed(0)+' min flexibility)</div>';
+    h+='<div class="depart-window">';
+    h+='<div class="dw-item"><div class="dw-val">'+ht(w.ws)+'</div><div class="dw-key">Corn Opens</div></div>';
+    h+='<div class="dw-item"><div class="dw-val">'+ht(w.we)+'</div><div class="dw-key">Corn Closes</div></div>';
+    h+='<div class="dw-item"><div class="dw-val">'+w.dur+'h</div><div class="dw-key">Duration</div></div>';
+    h+='<div class="dw-item"><div class="dw-val" style="color:'+sc+'">'+w.q+'</div><div class="dw-key">Score</div></div>';
+    h+='</div>';
+    h+='<div class="approach-detail">'+f.di+'mi · '+f.ga.toLocaleString()+"' gain · "+app.gradePct+'% grade → '+app.speedMph+' mph → '+app.skinHrs+' hrs + '+f.buf+' min buffer = '+app.timeHrs+' hrs total</div>';
+  }
+  h+='</div>';
+
+  // Conditions card
+  h+='<div class="result-card" style="border-color:'+sc+'40">';
+  h+='<h2 style="margin-bottom:.4rem">Conditions</h2>';
+  h+='<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem">';
+  h+='<div style="background:'+qbg(w.q)+';border:2px solid '+sc+';border-radius:8px;padding:.35rem .7rem;font-size:1rem;font-weight:700;color:'+sc+'">'+w.qlabel+'</div>';
+  h+='<div style="font-size:1.8rem;font-weight:700;color:'+sc+'">'+w.q+'<span style="font-size:.85rem;color:var(--muted);font-weight:400">/100</span></div>';
+  h+='</div>';
+  h+='<div class="wbar"><div class="wfill" style="width:'+w.q+'%;background:'+sc+'"></div></div>';
+  h+='<div class="info-msg">'+w.inf+'</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.32rem;margin-top:.55rem">';
+  h+='<div class="metric"><div class="metric-val">'+Math.round(w.terrainQ*100)+'%</div><div class="metric-key">Terrain</div></div>';
+  h+='<div class="metric"><div class="metric-val">'+Math.round(w.freezeQ*100)+'%</div><div class="metric-key">Freeze</div></div>';
+  h+='<div class="metric"><div class="metric-val">'+Math.round(w.crustQ*100)+'%</div><div class="metric-key">Snow Surface</div></div>';
+  h+='</div>';
+  h+='<div style="font-size:.62rem;color:#456a82;margin-top:.32rem;line-height:1.5">Terrain = mountain quality · Freeze = overnight cold strength · Snow Surface = depth &amp; freshness of snow available to refreeze. The score combines all three.</div>';
+  if(w.terrainRubric){
+    var rb=w.terrainRubric,ss=function(v){var s='';for(var i=1;i<=3;i++)s+='<span style="color:'+(i<=v?'#ffd166':'#2e4a60')+'">★</span>';return s;};
+    h+='<div style="background:rgba(0,0,0,0.18);border-radius:8px;padding:.42rem .6rem;margin-top:.38rem">';
+    h+='<div style="color:var(--teal);font-weight:700;font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.28rem">Terrain Factor</div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem;text-align:center">';
+    h+='<div><div>'+ss(rb.sr)+'</div><div style="color:var(--muted);font-size:.64rem;margin-top:.1rem">Snow Retention</div></div>';
+    h+='<div><div>'+ss(rb.ap)+'</div><div style="color:var(--muted);font-size:.64rem;margin-top:.1rem">Aspect Purity</div></div>';
+    h+='<div><div>'+ss(rb.we)+'</div><div style="color:var(--muted);font-size:.64rem;margin-top:.1rem">Wind Shelter</div></div>';
+    h+='</div></div>';
+  }
+  if(f.swePct!==null&&f.swePct!==undefined){
+    var sweC=sweBarColor(f.swePct),sweL=sweLabel(f.swePct);
+    h+='<div style="margin-top:.45rem;padding:.4rem .6rem;background:var(--navy3);border-radius:6px;font-size:.76rem;display:flex;align-items:center;justify-content:space-between">';
+    h+='<span style="color:var(--muted)">Basin SWE</span><span style="color:'+sweC+';font-weight:700">'+f.swePct+'% median <span style="font-weight:400;color:var(--muted)">('+sweL+')</span></span></div>';
+  }
+  h+='</div>';
+
+  // Driver narrative
+  var drivers=buildDrivers(w,f,month,asp);
+  h+='<div class="driver-card"><h2 style="margin-bottom:.45rem">What\'s Driving the Score</h2>';
+  drivers.forEach(function(d){
+    if(d.type==='head'){
+      h+='<div class="driver-step-head">'+d.text+'</div>';
+    } else {
+      h+='<div class="driver-row"><div class="driver-icon">'+d.icon+'</div><div class="'+d.cls+'">'+d.text+'</div></div>';
+    }
+  });
+
+  // Ripeness chart — only when weather data is live
+  if(weatherData && weatherData.ripenessTrajectory && weatherData.ripenessTrajectory.length) {
+    h+='<div class="ripeness-chart-wrap">';
+    h+='<h3>📈 Snowpack Condition Trajectory — Season Start → Target +15 days</h3>';
+    h+='<div id="ripeness-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px">';
+    h+='<canvas id="ripeness-canvas" style="display:block;height:240px"></canvas>';
+    h+='</div>';
+    h+='<div id="ripeness-info-panel" style="margin-top:.5rem;padding:.4rem .65rem;border-radius:7px;background:rgba(13,27,42,0.55);border:1px solid rgba(56,189,248,0.12);font-size:.72rem;color:var(--muted);min-height:1.9rem;line-height:1.5">← tap any day to inspect</div>';
+    h+='<div style="font-size:.63rem;color:#456a82;margin-top:.35rem">';
+    h+='<span style="color:#fbbf24">●</span> Sfc freeze &nbsp;';
+    h+='<span style="color:rgba(56,189,248,0.85)">■</span> Cold reserve &nbsp;';
+    h+='<span style="color:rgba(255,155,120,0.7)">▬</span> Hi/Lo temp &nbsp;';
+    h+='<span style="opacity:.75">❄</span> Snow &nbsp;·&nbsp; Dashed = forecast &nbsp;·&nbsp; Pan ← history';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // Timeline
+  h+='<div class="result-card"><h2 style="margin-bottom:.45rem">Hourly Conditions</h2><div class="tl">';
+  for(var hr=5;hr<=15;hr++){
+    var st2="Frozen",pc=5,bc="#2a4a6a";
+    if(hr>=w.ws&&hr<=w.we){st2="🌽 Prime Corn";pc=96;bc="#2ed573";}
+    else if(hr>w.we&&hr<=w.we+1){st2="Softening";pc=55;bc="#ffd166";}
+    else if(hr>w.we+1&&hr<=w.we+2.5){st2="Slush";pc=28;bc="#ffa502";}
+    else if(hr>w.we+2.5){st2="Heavy/Wet";pc=10;bc="#ff4757";}
+    else if(hr>=w.ws-1.5&&hr<w.ws){st2="Thawing";pc=48;bc="#ffd166";}
+    var isDep=(hr>=depE&&hr<=depL);
+    h+='<div class="tlr" style="'+(isDep?'background:rgba(255,209,102,0.07);border-radius:4px;':'')+'">';
+    h+='<div class="tlt">'+(isDep?'<span style="color:var(--gold)">▶</span> ':'')+ht(hr)+'</div>';
+    h+='<div class="tlbw"><div class="tlb" style="width:'+pc+'%;background:'+bc+'"></div></div>';
+    h+='<div class="tll" style="color:'+bc+'">'+st2+'</div></div>';
+  }
+  h+='<div style="font-size:.68rem;color:var(--gold);margin-top:.3rem">▶ = departure window</div></div></div>';
+
+  // Aspect comparison
+  h+='<div class="result-card"><h2 style="margin-bottom:.42rem">All Aspects — '+pk.n+'</h2>';
+  h+='<table class="asp-table"><tr><th>Aspect</th><th>Opens</th><th>Window</th><th>Quality</th><th>Score</th></tr>';
+  aspComps.forEach(function(r){
+    var isSel=r.asp===asp;
+    h+='<tr style="'+(isSel?'background:rgba(0,212,170,0.07)':'')+'">';
+    h+='<td style="font-weight:'+(isSel?700:400)+';color:'+(isSel?'var(--teal)':'var(--text)')+'">'+r.asp+(isSel?' ◀':'')+'</td>';
+    h+='<td>'+ht(r.ws)+'</td><td>'+r.dur+'h</td><td style="color:'+qc(r.q)+'">'+r.qlabel+'</td>';
+    h+='<td><span style="color:'+qc(r.q)+';font-weight:700">'+r.q+'</span></td></tr>';
+  });
+  h+='</table></div>';
+  el.innerHTML=h;
+  // Draw ripeness chart after DOM is ready
+  if(weatherData && weatherData.ripenessTrajectory && weatherData.ripenessTrajectory.length) {
+    requestAnimationFrame(function(){
+      drawRipenessChart('ripeness-canvas', weatherData, month, w);
+    });
+  }
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────
+function initMap(){
+  if(leafletMap)return;
+  if(typeof L==='undefined'){
+    document.getElementById('leaflet-map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.85rem;flex-direction:column;gap:.5rem"><div>⏳ Loading map tiles...</div></div>';
+    window._leafletCallback=function(){window._leafletCallback=null;initMap();};return;
+  }
+  document.getElementById('leaflet-map').innerHTML='';
+  leafletMap=L.map('leaflet-map',{center:[40.14,-105.63],zoom:11,zoomControl:true});
+  var usgsTopo=L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'USGS'});
+  var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+  var hillshade=L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,opacity:0.35,attribution:'USGS'});
+  usgsTopo.addTo(leafletMap);hillshade.addTo(leafletMap);
+  L.control.layers({'USGS Topo':usgsTopo,'OpenStreetMap':osm},{'Hillshade':hillshade},{position:'bottomright'}).addTo(leafletMap);
+  addPeakMarkers();
+}
+function makePieSVG(pk,size){
+  var asps=Object.keys(pk.asp),r=size/2-2,cx=size/2,cy=size/2,paths='',hasData=allResults.length>0;
+  asps.forEach(function(asp){
+    var az=AZ[asp],q=0;
+    if(hasData)for(var i=0;i<allResults.length;i++){if(allResults[i].pk.n===pk.n&&allResults[i].asp===asp){q=allResults[i].q;break;}}
+    var col=hasData?qc(q):'#4a8ab0';
+    var sr=((az-22.5-90)*Math.PI/180),er=((az+22.5-90)*Math.PI/180);
+    var x1=cx+r*Math.cos(sr),y1=cy+r*Math.sin(sr),x2=cx+r*Math.cos(er),y2=cy+r*Math.sin(er);
+    paths+='<path d="M'+cx+','+cy+' L'+x1+','+y1+' A'+r+','+r+' 0 0,1 '+x2+','+y2+' Z" fill="'+col+'aa" stroke="#000" stroke-width="0.5"/>';
+    if(hasData&&q>0&&size>=28){var mr=((az-90)*Math.PI/180),lx=cx+r*0.62*Math.cos(mr),ly=cy+r*0.62*Math.sin(mr);paths+='<text x="'+lx+'" y="'+(ly+3.5)+'" font-size="7" fill="white" text-anchor="middle" font-weight="bold">'+q+'</text>';}
+  });
+  paths+='<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="white" stroke="#000" stroke-width="0.5"/>';
+  if(PK[selectedPeak]&&PK[selectedPeak].n===pk.n)paths+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+1)+'" fill="none" stroke="#00d4aa" stroke-width="2.5"/>';
+  return'<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'+paths+'</svg>';
+}
+function addPeakMarkers(){
+  pkMarkers.forEach(function(m){leafletMap.removeLayer(m);});pkMarkers=[];
+  PK.forEach(function(pk){
+    var size=36;
+    var icon=L.divIcon({className:'corn-marker',html:makePieSVG(pk,size),iconSize:[size,size],iconAnchor:[size/2,size/2],popupAnchor:[0,-(size/2)]});
+    var m=L.marker([pk.la,pk.lo],{icon:icon});
+    m.on('click',function(){showPeakPopup(pk);});
+    m.bindTooltip(pk.n+" ("+pk.el.toLocaleString()+"')",{permanent:false,direction:'top',offset:[0,-(size/2)],opacity:0.9});
+    m.addTo(leafletMap);pkMarkers.push(m);
+  });
+}
+function updateMapMarkers(){if(!leafletMap)return;addPeakMarkers();}
+function showPeakPopup(pk){
+  var h='<div class="ppeak">'+pk.n+' <span style="font-size:.76rem;color:var(--muted)">'+pk.el.toLocaleString()+"'</span></div>";
+  if(!allResults.length){h+='<p style="color:var(--muted);font-size:.83rem">Go to Plan → compute to see scores.</p>';}
+  else{
+    var pkR=allResults.filter(function(r){return r.pk.n===pk.n;}).sort(function(a,b){return b.q-a.q;});
+    h+='<table class="asp-table"><tr><th>Aspect</th><th>Opens</th><th>Window</th><th>Quality</th><th>Score</th></tr>';
+    pkR.forEach(function(r){h+='<tr><td style="color:var(--teal)">'+r.asp+'</td><td>'+ht(r.ws)+'</td><td>'+r.dur+'h</td><td style="color:'+qc(r.q)+'">'+r.qlabel+'</td><td><span style="color:'+qc(r.q)+';font-weight:700">'+r.q+'</span></td></tr>';});
+    h+='</table>';
+  }
+  h+='<button class="btn-sm" style="display:block;margin-top:.6rem" onclick="setObjPeak(\''+pk.n.replace(/'/g,"\\'")+'\')">Plan this Peak →</button>';
+  document.getElementById('pc').innerHTML=h;document.getElementById('popup').style.display='block';
+}
+window.setObjPeak=function(n){for(var i=0;i<PK.length;i++){if(PK[i].n===n){document.getElementById('sel-peak').value=i;selectedPeak=i;buildAspGrid(i);selectedAsp=null;CP();ST('plan');return;}}};
+window.CP=function(){document.getElementById('popup').style.display='none';};
+document.getElementById('popup').addEventListener('click',function(e){if(e.target===this)window.CP();});
+window.ST=function(name){
+  ['plan','result','map','about'].forEach(function(n,i){
+    document.querySelectorAll('.tab')[i].classList.toggle('active',n===name);
+    document.getElementById('tab-'+n).classList.toggle('active',n===name);
+  });
+  if(name==='map'){setTimeout(function(){if(!leafletMap)initMap();else leafletMap.invalidateSize();},80);}
+};
+window.addEventListener('resize',function(){if(leafletMap)leafletMap.invalidateSize();});
+buildUI();
+})();
+</script>
+</body>
+</html>

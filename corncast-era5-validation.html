@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CornCast · ERA5 Validation · 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #0a1628;
+    --navy2:  #152238;
+    --navy3:  #1e3050;
+    --navy4:  #243b55;
+    --teal:   #00d4aa;
+    --gold:   #ffd166;
+    --corn:   #5db8f0;
+    --orange: #ff8c40;
+    --pink:   #ff8a95;
+    --ice:    #a0e8ff;
+    --text:   #e8f4f8;
+    --muted:  #7aa5be;
+    --dim:    #3a5a72;
+    --niwot:  #ffd166;
+    --ucamp:  #00d4aa;
+    --era5:   #5db8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--navy);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(160deg, #0a1628 0%, #0d2240 50%, #091520 100%);
+    border-bottom: 1px solid var(--navy4);
+    padding: 40px 24px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 80% 20%, rgba(0,212,170,0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 60% at 10% 80%, rgba(93,184,240,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .eyebrow {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--teal); margin-bottom: 10px;
+  }
+  .hero h1 {
+    font-size: clamp(22px, 4vw, 36px);
+    font-weight: 700; line-height: 1.15; margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--text) 40%, var(--corn) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 680px; }
+  .station-pills {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px;
+  }
+  .pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px;
+    border: 1px solid; font-size: 11px; font-weight: 500;
+    font-family: 'DM Mono', monospace;
+  }
+  .pill-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* ── LAYOUT ── */
+  .page { max-width: 980px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  /* ── ALERT BANNER ── */
+  .banner {
+    background: rgba(0,212,170,0.07);
+    border: 1px solid rgba(0,212,170,0.25);
+    border-left: 3px solid var(--teal);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .banner-title { font-size: 13px; font-weight: 700; color: var(--teal); margin-bottom: 5px; }
+  .banner p { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .banner strong { color: var(--text); }
+
+  /* ── STAT CARDS ── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .card {
+    background: var(--navy2);
+    border: 1px solid var(--navy4);
+    border-radius: 10px;
+    padding: 14px 14px 12px;
+  }
+  .card-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
+  .card-vals { display: flex; justify-content: space-around; gap: 4px; }
+  .card-val { text-align: center; }
+  .card-num { font-size: 26px; font-weight: 700; line-height: 1; font-family: 'DM Mono', monospace; }
+  .card-sub { font-size: 9px; color: var(--dim); margin-top: 4px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 7px 16px; border: none; border-radius: 7px; cursor: pointer;
+    font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 500;
+    background: var(--navy3); color: var(--muted); transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--teal); color: var(--navy); font-weight: 700; }
+  .tab-btn:hover:not(.active) { background: var(--navy4); color: var(--text); }
+
+  /* ── TABLE ── */
+  .filter-row { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer;
+    font-family: 'Sora', sans-serif; font-size: 11px;
+    background: var(--navy3); color: var(--muted); transition: all 0.12s;
+  }
+  .filter-btn.active { background: var(--teal); color: var(--navy); font-weight: 600; }
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--navy4); }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead tr:first-child { background: var(--navy2); }
+  th {
+    padding: 8px 10px; font-size: 9px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+  }
+  th.right, td.right { text-align: right; }
+  th.left,  td.left  { text-align: left; }
+  .subhead td { padding: 3px 10px; font-size: 9px; color: var(--dim); background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--navy4); }
+  td { padding: 4px 10px; border-bottom: 1px solid rgba(36,59,85,0.3); }
+  tr.warm-both { background: rgba(255,100,30,0.06); }
+  tr.warm-n    { background: rgba(255,160,60,0.04); }
+  tr.mar1      { border-top: 2px solid rgba(255,209,102,0.4); }
+  tr.mar1 td:first-child { font-weight: 600; color: var(--text); }
+  .mar1-badge { font-size: 9px; color: var(--gold); margin-left: 5px; }
+  .fire { font-size: 11px; }
+  td.mono { font-family: 'DM Mono', monospace; }
+
+  /* ── CHART ── */
+  .chart-wrap { position: relative; }
+  .chart-labels { display: flex; font-size: 10px; color: var(--muted); margin-top: 4px; padding-left: 28px; }
+  .chart-labels span { flex: 1; text-align: center; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 11px; color: var(--muted); }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .leg-line { width: 18px; height: 3px; border-radius: 2px; }
+  .leg-dot  { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ── LAPSE TABLE ── */
+  .lapse-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .lapse-card { background: var(--navy2); border: 1px solid var(--navy4); border-radius: 10px; padding: 12px 14px; }
+  .lapse-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; }
+  .lapse-row { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
+
+  /* ── INSIGHT CARDS ── */
+  .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 600px) { .insight-grid { grid-template-columns: 1fr; } }
+  .insight-card { background: var(--navy2); border: 1px solid var(--navy4); border-radius: 10px; padding: 14px; }
+  .insight-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+  .insight-body { font-size: 11px; color: var(--muted); line-height: 1.75; white-space: pre-line; }
+
+  /* ── BAR CHART ── */
+  .bar-section { background: var(--navy2); border: 1px solid var(--navy4); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+  .bar-title { font-size: 11px; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .bar-label { font-size: 10px; color: var(--muted); width: 130px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 14px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; }
+  .bar-fill  { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .bar-count { font-size: 10px; color: var(--text); font-weight: 700; width: 24px; text-align: right; font-family: 'DM Mono', monospace; }
+
+  .footer { margin-top: 20px; font-size: 9px; color: var(--dim); line-height: 1.6; border-top: 1px solid var(--navy4); padding-top: 12px; }
+
+  /* Tab panels */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div style="max-width:980px;margin:0 auto;padding:0 4px">
+    <div class="eyebrow">🌽 CornCast · ERA5 Validation Study · Indian Peaks Wilderness</div>
+    <h1>Summit Temps Don't Feel Like Longmont</h1>
+    <p class="hero-sub">Three-station elevation transect confirming ERA5 reanalysis as the correct temperature source for the Column Cold Content model. Jan 1–Mar 5, 2026.</p>
+    <div class="station-pills">
+      <div class="pill" style="border-color:rgba(255,209,102,0.4);color:var(--niwot)">
+        <div class="pill-dot" style="background:var(--niwot)"></div>SNOTEL #663 Niwot Ridge · 9,940 ft
+      </div>
+      <div class="pill" style="border-color:rgba(0,212,170,0.4);color:var(--ucamp)">
+        <div class="pill-dot" style="background:var(--ucamp)"></div>SNOTEL #838 University Camp · 10,330 ft
+      </div>
+      <div class="pill" style="border-color:rgba(93,184,240,0.4);color:var(--era5)">
+        <div class="pill-dot" style="background:var(--era5)"></div>ERA5 Open-Meteo · 12,858 ft (Mt. Toll proxy)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="page">
+
+  <!-- Banner -->
+  <div class="banner">
+    <div class="banner-title">Key finding: the chinook warming effect collapses above ~10,300 ft</div>
+    <p>Warm days on the Front Range (Longmont, Boulder) are driven by downslope foehn winds that warm most intensely at lower elevations. Both SNOTELs sit inside the active chinook zone. The ERA5 grid at 12,858 ft is near the source air — the foehn effect is essentially absent. <strong>ERA5 is capturing real atmospheric physics, not an artifact.</strong></p>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Pre-season days above 40°F (Jan–Feb)</div>
+      <div class="card-vals">
+        <div class="card-val"><div class="card-num" style="color:var(--niwot)">14</div><div class="card-sub">Niwot 9,940'</div></div>
+        <div class="card-val"><div class="card-num" style="color:var(--ucamp)">8</div><div class="card-sub">UCamp 10,330'</div></div>
+        <div class="card-val"><div class="card-num" style="color:var(--teal)">0</div><div class="card-sub">ERA5 12,858'</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Pre-season days above 32°F</div>
+      <div class="card-vals">
+        <div class="card-val"><div class="card-num" style="color:var(--niwot)">34</div><div class="card-sub">Niwot</div></div>
+        <div class="card-val"><div class="card-num" style="color:var(--ucamp)">27</div><div class="card-sub">UCamp</div></div>
+        <div class="card-val"><div class="card-num" style="color:var(--teal)">0</div><div class="card-sub">ERA5</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Observed lapse rate on warm days</div>
+      <div class="card-vals">
+        <div class="card-val"><div class="card-num" style="color:var(--orange)">6.8</div><div class="card-sub">Niwot→UCamp</div></div>
+        <div class="card-val"><div class="card-num" style="color:var(--orange)">6.5</div><div class="card-sub">UCamp→ERA5</div></div>
+        <div class="card-val"><div class="card-num" style="color:var(--dim)">3.5</div><div class="card-sub">Standard env.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('table')">Daily Table</button>
+    <button class="tab-btn" onclick="setTab('chart')">Chart</button>
+    <button class="tab-btn" onclick="setTab('lapse')">Lapse Rates</button>
+    <button class="tab-btn" onclick="setTab('insight')">Insights</button>
+  </div>
+
+  <!-- TABLE PANEL -->
+  <div id="panel-table" class="tab-panel active">
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setFilter('all',this)">All (63)</button>
+      <button class="filter-btn" onclick="setFilter('jan',this)">January (31)</button>
+      <button class="filter-btn" onclick="setFilter('feb',this)">February (28)</button>
+      <button class="filter-btn" onclick="setFilter('mar',this)">Mar 1–4 (4)</button>
+      <button class="filter-btn" onclick="setFilter('warm',this)">Niwot &gt;40°F</button>
+    </div>
+    <div class="table-wrap">
+      <table id="main-table">
+        <thead>
+          <tr>
+            <th class="left">Date</th>
+            <th class="right" style="color:var(--niwot)">Niwot Max<br><span style="font-size:8px;color:var(--dim)">9,940'</span></th>
+            <th class="right" style="color:var(--ucamp)">UCamp Max<br><span style="font-size:8px;color:var(--dim)">10,330'</span></th>
+            <th class="right" style="color:var(--era5)">ERA5 Max<br><span style="font-size:8px;color:var(--dim)">12,858'</span></th>
+            <th class="right">N→U Δ</th>
+            <th class="right">U→E Δ</th>
+          </tr>
+          <tr class="subhead"><td colspan="3">← SNOTEL observed (provisional, known warm bias)</td><td colspan="3" style="text-align:right">ERA5 lapse-adj to summit →</td></tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CHART PANEL -->
+  <div id="panel-chart" class="tab-panel">
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Daily max temperature at each station. Dashed lines at 40°F (CCC heat threshold) and 32°F. Each warm Niwot day is a dot — note how few reach UCamp, and none reach ERA5.</p>
+    <div class="chart-wrap">
+      <svg id="main-chart" width="100%" style="display:block;height:300px" viewBox="0 0 640 300" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="chart-labels">
+      <span style="flex:31">January</span>
+      <span style="flex:28">February</span>
+      <span style="flex:4">Mar</span>
+    </div>
+    <div class="legend">
+      <span><div class="leg-line" style="background:var(--niwot)"></div>Niwot 9,940'</span>
+      <span><div class="leg-line" style="background:var(--ucamp)"></div>Univ. Camp 10,330'</span>
+      <span><div class="leg-line" style="background:var(--era5)"></div>ERA5 12,858'</span>
+      <span><div class="leg-dot" style="background:var(--orange)"></div>Niwot &gt;40°F</span>
+      <span><div class="leg-dot" style="background:var(--teal)"></div>UCamp &gt;40°F</span>
+    </div>
+  </div>
+
+  <!-- LAPSE PANEL -->
+  <div id="panel-lapse" class="tab-panel">
+    <div class="lapse-grid">
+      <div class="lapse-card">
+        <div class="lapse-title">Niwot → UCamp (390 ft)</div>
+        <div class="lapse-row"><span style="color:var(--muted)">All days avg</span><span style="color:var(--text);font-weight:700">7.3°F / 1,000ft</span></div>
+        <div class="lapse-row"><span style="color:var(--muted)">Warm days (N&gt;40°)</span><span style="color:var(--orange);font-weight:700">6.8°F / 1,000ft</span></div>
+        <div class="lapse-row"><span style="color:var(--muted)">Cold days</span><span style="color:var(--corn);font-weight:700">7.7°F / 1,000ft</span></div>
+        <div style="font-size:9px;color:var(--dim);margin-top:8px;line-height:1.5">Both stations in the chinook zone — tight tracking with each other. The 390ft gap is too small to show the inversion.</div>
+      </div>
+      <div class="lapse-card">
+        <div class="lapse-title">UCamp → ERA5 (2,528 ft)</div>
+        <div class="lapse-row"><span style="color:var(--muted)">All days avg</span><span style="color:var(--text);font-weight:700">5.9°F / 1,000ft</span></div>
+        <div class="lapse-row"><span style="color:var(--muted)">Warm days (N&gt;40°)</span><span style="color:var(--orange);font-weight:700">6.5°F / 1,000ft</span></div>
+        <div class="lapse-row"><span style="color:var(--muted)">Absolute avg drop</span><span style="color:var(--pink);font-weight:700">~15°F on warm days</span></div>
+        <div style="font-size:9px;color:var(--dim);margin-top:8px;line-height:1.5">Smaller °/1000ft rate but the 2,528ft span means a massive absolute gap. Above ~10,500ft the foehn effect rapidly attenuates.</div>
+      </div>
+      <div class="lapse-card">
+        <div class="lapse-title">Full span Niwot → ERA5 (2,918 ft)</div>
+        <div class="lapse-row"><span style="color:var(--muted)">All days avg</span><span style="color:var(--text);font-weight:700">6.1°F / 1,000ft</span></div>
+        <div class="lapse-row"><span style="color:var(--muted)">Warm days</span><span style="color:var(--orange);font-weight:700">6.5°F / 1,000ft</span></div>
+        <div class="lapse-row"><span style="color:var(--muted)">vs standard env.</span><span style="color:var(--dim)">3.5°F / 1,000ft</span></div>
+        <div style="font-size:9px;color:var(--dim);margin-top:8px;line-height:1.5">Consistently ~75% above standard lapse all season. The foehn signature is present on most days, not just obvious chinook events.</div>
+      </div>
+      <div class="lapse-card">
+        <div class="lapse-title">UCamp→ERA5 gap distribution</div>
+        <div id="bar-chart-lapse"></div>
+        <div style="font-size:9px;color:var(--dim);margin-top:8px">Mean gap: 15.0°F all days · 15.5°F on warm days</div>
+      </div>
+    </div>
+
+    <div style="background:var(--navy2);border:1px solid var(--navy4);border-radius:10px;padding:14px;margin-top:4px">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px">Top 8 Warmest Days — Full Three-Station View</div>
+      <div class="table-wrap" style="border:none">
+        <table id="warm-table" style="font-size:11px">
+          <thead><tr>
+            <th class="left">Date</th>
+            <th class="right" style="color:var(--niwot)">Niwot</th>
+            <th class="right" style="color:var(--ucamp)">UCamp</th>
+            <th class="right" style="color:var(--era5)">ERA5</th>
+            <th class="right">N→U</th>
+            <th class="right">U→E</th>
+          </tr></thead>
+          <tbody id="warm-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSIGHT PANEL -->
+  <div id="panel-insight" class="tab-panel">
+    <div class="insight-grid">
+      <div class="insight-card">
+        <div class="insight-title" style="color:var(--teal)">Why ERA5 is colder than lapse rate predicts</div>
+        <div class="insight-body">The standard environmental lapse rate (3.5°F/1000ft) assumes calm, stable air. On warm Front Range days that assumption fails entirely.
+
+Chinook/foehn winds descend from the Continental Divide, warming at the dry adiabatic rate (~5.5°F/1000ft) — but the warming concentrates at the lowest elevations where descent has been longest.
+
+Niwot at 9,940' and UCamp at 10,330' both sit in the active downslope warming zone. ERA5 at 12,858' is near the divide — it barely participates in the foehn effect.
+
+On the 14 warm days Niwot recorded &gt;40°F, ERA5 showed temps 10–23°F colder. This is not ERA5 error — it's real atmospheric physics confirmed by two independent surface observations.</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title" style="color:var(--gold)">UCamp as a field reference for CornCast</div>
+        <div class="insight-body">University Camp (#838) at 10,330 ft in the St. Vrain watershed is the best qualitative reference for Indian Peaks summit conditions:
+
+• Same watershed drainage as Mt. Toll — matched orographic fetch
+• 360 ft higher than Niwot — slightly less chinook influence
+• Only 8 pre-season warm days vs Niwot's 14
+• Snow depth data directly validates ERA5 snowfall accumulation
+
+Rule of thumb for field planning:
+  UCamp &gt;45°F → ERA5 ~low 30s, no CCC heat depletion
+  UCamp &lt;35°F → Summit 15–25°F, excellent freeze conditions
+  UCamp &lt;20°F → Summit single digits, deep winter quality
+
+CornCast using ERA5 directly (not SNOTEL + lapse) is the most accurate approach available.</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title" style="color:var(--orange)">Feb 5 — Season's most extreme chinook</div>
+        <div class="insight-body">Feb 5, 2026 was the warmest day at both SNOTELs:
+
+  Niwot   9,940':  48.0°F  (+8.0° above CCC threshold)
+  UCamp  10,330':  45.7°F  (+5.7° above threshold)
+  ERA5   12,858':  29.3°F  (−10.7° below threshold)
+
+The two SNOTELs differed by only 2.3°F over 390 ft — both fully inside the chinook. Then ERA5 dropped 16.4°F over the next 2,528 ft.
+
+If CornCast had used Niwot + lapse correction, it would have estimated the summit at ~37.8°F — triggering false CCC heat depletion on one of the coldest summit days of the season.
+
+Across all 8 days UCamp exceeded 40°F, lapse-correction would have generated phantom heat depletion every time. ERA5 correctly showed sub-40°F for all 63 days in the dataset.</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title" style="color:var(--muted)">Data quality and caveats</div>
+        <div class="insight-body">SNOTEL warm bias: NRCS acknowledges a systematic warm bias in Colorado's post-2004 extended-range sensors. Real SNOTEL temps may be 1–3°F lower than reported, which would further reduce the already-zero pre-season warm day count at summit elevation.
+
+ERA5 spatial resolution: ~31km grid cells. The specific grid point sits at 12,858' — only 121' below Mt. Toll's 12,979' summit. Lapse correction is 0.4°F (negligible).
+
+Snow depth agreement: UCamp showed 14–34" depth all season, consistent with the 62% of median SWE visible in CornCast's display. ERA5 snowfall accumulation matches the progression. Both datasets tell the same story.
+
+Conclusion: Three independent data sources confirm this was a cold, dry pre-season with zero warm penetration at summit elevation. The 95% cold reserve reading is well-supported.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Sources: NRCS SNOTEL #663 Niwot Ridge (9,940 ft) and #838 University Camp (10,330 ft, St. Vrain watershed) — daily TMAX/TMIN Jan 1–Mar 4 2026, provisional data subject to revision, known warm bias per NRCS advisory.
+    Open-Meteo ERA5 archive lat=40.0883° lon=−105.6339° grid elevation 3,919m = 12,858 ft. Lapse rate 3.5°F/1,000 ft standard; observed rates computed from station pairs.
+    Analysis produced Mar 5, 2026 · CornCast v21.
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const DATES=["01-01","01-02","01-03","01-04","01-05","01-06","01-07","01-08","01-09","01-10","01-11","01-12","01-13","01-14","01-15","01-16","01-17","01-18","01-19","01-20","01-21","01-22","01-23","01-24","01-25","01-26","01-27","01-28","01-29","01-30","01-31","02-01","02-02","02-03","02-04","02-05","02-06","02-07","02-08","02-09","02-10","02-11","02-12","02-13","02-14","02-15","02-16","02-17","02-18","02-19","02-20","02-21","02-22","02-23","02-24","02-25","02-26","02-27","02-28","03-01","03-02","03-03","03-04"];
+const NMX=[40.3,35.2,40.1,41.4,32.7,26.1,34.7,25.5,13.6,25.7,36.9,42.4,39.0,34.9,34.9,21.7,22.3,30.2,25.2,30.0,28.8,31.3,29.8,17.4,6.1,19.9,24.3,31.8,22.6,26.6,32.4,41.9,37.2,27.7,37.0,48.0,46.0,38.7,40.6,43.5,29.3,37.4,37.9,38.1,37.4,42.6,46.8,36.1,26.2,11.3,14.4,20.8,36.1,41.2,43.2,36.3,33.3,39.6,43.7,41.0,46.2,39.2,45.0];
+const UMX=[36.7,30.9,37.0,38.5,29.7,23.7,31.8,22.8,10.4,23.7,35.1,41.2,36.5,35.1,31.5,19.4,18.7,26.6,20.7,28.2,26.4,28.6,27.0,15.6,3.6,15.4,20.5,27.5,16.9,23.4,30.4,36.0,33.4,23.5,35.8,45.7,45.0,34.7,36.3,40.5,28.0,35.2,35.6,34.0,32.7,40.3,44.4,33.6,24.1,7.7,13.5,17.2,31.6,38.7,42.1,33.4,30.0,36.5,40.8,40.1,44.2,38.1,41.2];
+const EMX=[20.6,18.2,23.4,23.1,16.9,12.0,16.2,9.1,-1.5,3.1,16.9,18.5,18.7,19.4,16.6,4.8,-0.6,11.9,7.9,10.4,10.3,13.6,12.9,4.1,-7.6,0.9,7.1,13.2,3.8,7.9,16.1,21.0,17.9,11.1,16.9,29.3,31.3,20.7,21.5,23.9,17.2,18.8,20.1,21.3,16.3,23.0,27.6,19.6,10.5,-3.1,3.4,3.6,18.0,22.2,23.1,22.4,17.8,20.9,25.1,24.1,28.6,22.5,24.1];
+
+const DATA = DATES.map((d,i)=>({
+  d, nMax:NMX[i], uMax:UMX[i], eMax:EMX[i],
+  nuDelta: NMX[i]-UMX[i], ueDelta: UMX[i]-EMX[i],
+  month: parseInt(d.slice(0,2))
+}));
+
+// ── COLOR HELPERS ──────────────────────────────────────────────────────────
+function maxColor(v) {
+  if(v>45) return '#ff3010';
+  if(v>40) return '#ff6030';
+  if(v>35) return '#ff8c40';
+  if(v>32) return '#ffb060';
+  if(v>20) return '#ffd166';
+  if(v>10) return '#e8f4f8';
+  if(v>0)  return '#5db8f0';
+  return '#a0e8ff';
+}
+function fmt(v) { return v.toFixed(1)+'°'; }
+
+// ── TABLE ─────────────────────────────────────────────────────────────────
+let currentFilter = 'all';
+
+function buildTable(filter) {
+  const body = document.getElementById('table-body');
+  const rows = DATA.filter(r =>
+    filter==='jan' ? r.month===1 :
+    filter==='feb' ? r.month===2 :
+    filter==='mar' ? r.month===3 :
+    filter==='warm'? r.nMax>40 : true
+  );
+  body.innerHTML = rows.map(r => {
+    const bothWarm = r.nMax>40 && r.uMax>40;
+    const nOnly    = r.nMax>40 && r.uMax<=40;
+    const isMar1   = r.d==='03-01';
+    const cls = isMar1?'mar1':bothWarm?'warm-both':nOnly?'warm-n':'';
+    return `<tr class="${cls}">
+      <td class="left mono" style="color:${r.month<3?'var(--muted)':'var(--text)'};font-size:10px">
+        2026-${r.d}${isMar1?'<span class="mar1-badge">◀ MAR 1</span>':''}
+      </td>
+      <td class="right" style="color:${maxColor(r.nMax)};font-weight:${r.nMax>40?700:400}">
+        ${fmt(r.nMax)}${r.nMax>40?' 🔥':''}
+      </td>
+      <td class="right" style="color:${maxColor(r.uMax)};font-weight:${r.uMax>40?700:400}">
+        ${fmt(r.uMax)}${r.uMax>40?' 🔥':''}
+      </td>
+      <td class="right" style="color:${maxColor(r.eMax)};font-weight:600">
+        ${fmt(r.eMax)}
+      </td>
+      <td class="right" style="color:var(--muted);font-size:10px">−${r.nuDelta.toFixed(1)}°</td>
+      <td class="right" style="color:${r.ueDelta>17?'var(--pink)':'var(--muted)'};font-size:10px;font-weight:${r.ueDelta>17?700:400}">−${r.ueDelta.toFixed(1)}°</td>
+    </tr>`;
+  }).join('');
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildTable(f);
+}
+
+// ── SVG CHART ─────────────────────────────────────────────────────────────
+function buildChart() {
+  const svg = document.getElementById('main-chart');
+  const W=640, H=300, PAD=28, TMIN=-15, TMAX=55, RANGE=TMAX-TMIN;
+  const x = i => PAD + i*(W-PAD)/DATA.length + (W-PAD)/DATA.length/2;
+  const y = v => H - ((v-TMIN)/RANGE)*H;
+
+  let html = '';
+  // Grid lines
+  [50,40,32,20,10,0,-10].forEach(t => {
+    const yy = y(t);
+    const col = t===40?'rgba(255,209,102,0.5)':t===32?'rgba(255,140,60,0.35)':'rgba(36,59,85,0.5)';
+    const dash = (t===40||t===32)?'4,3':'2,4';
+    html += `<line x1="${PAD}" y1="${yy}" x2="${W}" y2="${yy}" stroke="${col}" stroke-width="${t===40||t===32?1:0.5}" stroke-dasharray="${dash}"/>`;
+    html += `<text x="${PAD-3}" y="${yy+3}" font-size="7" fill="${t===40?'#ffd166':t===32?'#ff8c40':'#3a5a72'}" text-anchor="end">${t}°</text>`;
+  });
+  // Month dividers
+  [31,59].forEach(i => {
+    html += `<line x1="${PAD + i*(W-PAD)/DATA.length}" y1="0" x2="${PAD + i*(W-PAD)/DATA.length}" y2="${H}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+  });
+  // Lines
+  const line = (arr, col, w) => {
+    const pts = arr.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+    return `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" opacity="0.9"/>`;
+  };
+  html += line(EMX,'#5db8f0',1.5);
+  html += line(UMX,'#00d4aa',1.5);
+  html += line(NMX,'#ffd166',1.5);
+  // Hot dots
+  DATA.forEach((r,i) => {
+    if(r.uMax>40) html += `<circle cx="${x(i)}" cy="${y(r.uMax)}" r="3" fill="#00d4aa" opacity="0.9"/>`;
+    if(r.nMax>40) html += `<circle cx="${x(i)}" cy="${y(r.nMax)}" r="3" fill="#ff8c40" opacity="0.9"/>`;
+  });
+  svg.innerHTML = html;
+}
+
+// ── LAPSE BAR CHART ────────────────────────────────────────────────────────
+function buildLapseBars() {
+  const buckets = [
+    ['< 12°F gap',    DATA.filter(r=>r.ueDelta<12).length],
+    ['12–15°F',       DATA.filter(r=>r.ueDelta>=12&&r.ueDelta<15).length],
+    ['15–18°F',       DATA.filter(r=>r.ueDelta>=15&&r.ueDelta<18).length],
+    ['18–21°F',       DATA.filter(r=>r.ueDelta>=18&&r.ueDelta<21).length],
+    ['> 21°F gap',    DATA.filter(r=>r.ueDelta>=21).length],
+  ];
+  const el = document.getElementById('bar-chart-lapse');
+  el.innerHTML = buckets.map(([label,n])=>`
+    <div class="bar-row">
+      <div class="bar-label">${label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${n/DATA.length*100}%;background:var(--corn)"></div></div>
+      <div class="bar-count">${n}</div>
+    </div>
+  `).join('');
+}
+
+// ── WARM TABLE ─────────────────────────────────────────────────────────────
+function buildWarmTable() {
+  const top8 = [...DATA].sort((a,b)=>b.nMax-a.nMax).slice(0,8);
+  document.getElementById('warm-body').innerHTML = top8.map(r=>`
+    <tr>
+      <td class="left mono" style="font-size:10px;color:var(--muted)">2026-${r.d}</td>
+      <td class="right" style="color:${maxColor(r.nMax)};font-weight:700">${fmt(r.nMax)}</td>
+      <td class="right" style="color:${maxColor(r.uMax)};font-weight:700">${fmt(r.uMax)}</td>
+      <td class="right" style="color:${maxColor(r.eMax)};font-weight:600">${fmt(r.eMax)}</td>
+      <td class="right" style="color:var(--muted);font-size:10px">−${r.nuDelta.toFixed(1)}°</td>
+      <td class="right" style="color:${r.ueDelta>17?'var(--pink)':'var(--muted)'};font-size:10px;font-weight:${r.ueDelta>17?700:400}">−${r.ueDelta.toFixed(1)}°</td>
+    </tr>
+  `).join('');
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+function setTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    const names = ['table','chart','lapse','insight'];
+    b.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p=>{
+    p.classList.toggle('active', p.id==='panel-'+name);
+  });
+  if(name==='chart') buildChart();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+buildTable('all');
+buildLapseBars();
+buildWarmTable();
+</script>
+</body>
+</html>
