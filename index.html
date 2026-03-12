@@ -495,7 +495,7 @@ input[type=date]:focus{border-color:var(--teal)}
 <script>
 (function(){
 "use strict";
-var RAW_MAX=66.85;
+var RAW_MAX=64;
 function tq(sr,ap,we){return{sr:sr,ap:ap,we:we,q:(sr+ap+we)/9};}
 
 // ── PEAKS — coordinates verified against USGS summit data ────────────────
@@ -1978,7 +1978,6 @@ function cornWindow(pk,asp,f,month){
   rawScore*=((ma.radBoost||{})[asp]||1)*0.85+0.15;
   if(dur<0.75)rawScore*=0.45;if(dur<0.35)rawScore*=0.20;
   rawScore *= lateOpenPenalty;
-  console.log(rawScore);
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
   var inf,qlabel;
   if(f.lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
