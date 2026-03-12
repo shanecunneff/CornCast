@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v22 2026-03-12 03:50 UTC</title>
+<title>CornCast 🌽 v23 2026-03-12 04:24 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -832,7 +832,21 @@ function computeSurfaceRipeness(days14, month) {
     var heatLoad = Math.max(0, d.tmax - 38) * 0.018 * weight;
     ripeness += heatLoad;
     if (d.tmin > 32) ripeness += 0.08 * weight;
-    if (d.precip > 1.0) ripeness -= 0.10;
+    if (d.precip > 1.0) {
+      var isRain = d.tmax > 34; // proxy for liquid precip at alpine elevation
+      if (isRain) {
+        var nextDay = days14[i + 1];
+        var postRainLow = nextDay ? nextDay.tmin : d.tmin;
+        if (postRainLow < 28) {
+          // Rain + hard refreeze: denser surface, good corn material
+          ripeness -= 0.04 * weight; // mild — rain still slightly ripening overall
+        } else {
+          // Rain with no refreeze: pure ripening/degradation signal, recency-weighted
+          ripeness -= 0.10 * weight;
+        }
+      }
+      // Snow precip (tmax <= 34): no ripeness penalty — fresh snow is good for crust
+    }
     var coldRecovery = Math.max(0, 28 - d.tmin) * 0.006 * weight;
     ripeness -= coldRecovery;
   });
@@ -1006,6 +1020,12 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
   // Pre-season Jan/Feb data captures real warm-year depletion of column cold content
   var seasonDaysForCCC = preCCCDays.concat(allDays.slice(0, tgtIdx));
 
+  // Freeze-thaw cycle counter: each day where tmax > 36°F followed by tmin < 28°F counts
+  var ftCycles = 0;
+  for (var fti = 1; fti < histDays14.length; fti++) {
+    if (histDays14[fti-1].tmax > 36 && histDays14[fti].tmin < 28) ftCycles++;
+  }
+
   // Two-layer model
   var surfaceRipeness, columnColdContent, effIsoPrb;
   if(!archiveFailed) {
@@ -1154,6 +1174,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     surfaceRipeness: surfaceRipeness,
     columnColdContent: columnColdContent,
     effectiveIsoPrb: effIsoPrb,
+    ftCycles: ftCycles,
     packRipeness: effIsoPrb,
     days: allDays,
     histDays: histDays14,
@@ -1899,6 +1920,14 @@ function cornWindow(pk,asp,f,month){
   // SWE modifier
   var sweAdj=0;
   if(f.swePct!==null&&f.swePct!==undefined){sweAdj=Math.max(-0.10,Math.min(0.08,(f.swePct-100)/500));crustQ=Math.max(0.05,Math.min(1.0,crustQ+sweAdj));}
+
+  // Freeze-thaw cycle bonus: well-developed polycrystal structure
+  // Up to +0.12 on crustQ for 4+ clean cycles in the past 14 days
+  if (weatherData && weatherData.ftCycles != null) {
+    var ftBonus = Math.min(0.12, weatherData.ftCycles * 0.03);
+    crustQ = Math.min(1.0, crustQ + ftBonus);
+  }
+
   var windDurPen=Math.max(0,(f.wi-18)*0.055*ad.wx);
   var sweDurBonus=(f.swePct!==null&&f.swePct!==undefined)?Math.max(-0.25,Math.min(0.20,(f.swePct-100)/400)):0;
   var rawDur=(crustQ*1.6)+(effRad*1.4)-((f.hi-32)*0.065)-windDurPen+sweDurBonus;
@@ -2088,6 +2117,12 @@ function buildDrivers(w,f,month,asp){
     else                  rows.push({icon:'📊',cls:'driver-neu',text:'<strong>Basin SWE '+f.swePct+'% of median ('+sweLabel(f.swePct)+').</strong> Near-normal snowpack — no significant effect on snow surface or window duration.'+sweEff});
   } else {
     rows.push({icon:'📡',cls:'driver-neu',text:'<strong>Basin SWE: unavailable.</strong> Running without live snowpack data. Check NRCS SNOTEL manually.'});
+  }
+
+  if(weatherData && weatherData.ftCycles >= 2) {
+    var ftC = weatherData.ftCycles;
+    if(ftC >= 4) rows.push({icon:'🔄',cls:'driver-pos',text:'<strong>'+ftC+' freeze-thaw cycles in the past 14 days — well-developed polycrystal structure.</strong> Best possible corn material.'});
+    else rows.push({icon:'🔄',cls:'driver-neu',text:'<strong>'+ftC+' freeze-thaw cycles — grains developing good corn structure.</strong>'});
   }
 
   // ─────────────────────────────────────────────────────────────────────────
