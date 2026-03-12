@@ -177,34 +177,6 @@ About tab score band 0-24 updated: "theoretical window only; too short to plan a
 
 ---
 
-### Session 17 — v20 (SNOTEL SNWD storm detection + orographic multiplier)
-
-**Motivation:** Open-Meteo gridded snowfall systematically underestimates alpine snowfall at 12,000'+ terrain due to orographic enhancement that the ~9km model grid cannot resolve. SNOTEL SNWD (snow depth) sensors sit at 9,400–11,480' and measure actual fallen snow, making them far more reliable for storm detection at mountain elevation.
-
-**SNOTEL SNWD integration (primary change):** New `nrcsSnwdUrl`, `parseSnwdCSV`, and `loadSNWD` functions mirror the existing SWE fetch architecture. Each basin's highest-elevation station is used as the primary SNWD source (Niwot Ridge #663 at 11,480' for boulder, Sawtooth #1251 at 9,640' for stvrain, Joe Wright #551 at 10,020' for bigthompson), with fallback down the station list. `loadSNWD` is fired as a third Promise inside `fetchWeatherData` in parallel with the two Open-Meteo fetches, so it adds no latency to the critical path. `processWeatherData` receives `snwdData` as a new parameter.
-
-**Storm detection logic:** For **past target dates** (target ≤ today), the Open-Meteo storm scan is replaced by SNOTEL SNWD daily depth-change deltas over a 14-day lookback. If SNOTEL shows no recent accumulation (no delta ≥ 0.5"), `snowDaysSince` and `snowDepthEst` are set to null — trusting the sensor reading over the gridded estimate. For **future target dates**, Open-Meteo remains the source with a new `OROG_MULT = 1.5` orographic uplift factor applied to forecast-flagged days only. Archive days are not multiplied (they are real ERA5 observations, not forecasts).
-
-**isForecast flag preserved on allDays:** Previously stripped during the dayMap merge. Now preserved via `Object.assign` so the storm detection scan can distinguish forecast vs. archive days for the OROG_MULT decision.
-
-**Source transparency in UI:** `snowSource` string added to the `wd` return object. `prefillForecast` updates the "Recent Snowfall" section header subtitle dynamically: SNOTEL source shows station name and elevation; Open-Meteo shows orographic note. A `snow-source-note` div below the crust preview shows a one-line explanation of where the depth estimate came from. Future dates get an explicit "verify against SNOTEL or OpenSnow" note.
-
-**Temperature limitation documented (no model change):** Confirmed temperatures and wind are requested in correct imperial units. Lapse rate accuracy assessed: 3.5°F/1000ft is a reasonable climatological mean but has ±1.5°F/1000ft variability per event. Clear-calm nights (best corn nights) are most prone to temperature inversions that make the model over-predict summit coldness. Magnitude estimate: ±3-8°F systematic bias on optimal nights. SNOTEL TMIN from Niwot Ridge (#663) as a cross-check on auto-filled overnight lows is a noted future improvement.
-
----
-
-### Session 16 — v19 (Unit audit: snowfall cm→in fix + dynamic lapse correction)
-
-Two bugs corrected following observation of unrealistically cold snowpack state and inflated storm depth estimates in auto-filled fields.
-
-**snowfall_sum unit bug (primary):** Open-Meteo's `snowfall_sum` field is always returned in centimeters regardless of `precipitation_unit=inch` — that parameter only converts liquid precipitation (`precipitation_sum`). Fixed in `parseDailyJson`: multiply by 0.3937 (cm → inches) at the parse point. Downstream thresholds (storm detection ≥ 0.5", CCC boost > 1.0", tile display ≥ 0.3", depth estimate) were all written for inches and are now correct. Effect: eliminates artificially elevated column cold content from spurious snowfall counts throughout the season; `snowDepthEst` auto-fill now shows realistic inch values (was ~2.5× overstated).
-
-**Dynamic lapse correction:** `GRID_ELEV_FT = 10500` was hardcoded as the assumed ERA5 grid cell elevation. Open-Meteo returns `json.elevation` (meters) in every response — the actual grid cell elevation for the queried coordinates. `elevCorrectTemp()` updated to accept an optional `gridElevFt` parameter (falls back to 10500 if absent for safety). `parseDailyJson` reads `json.elevation * 3.28084` and passes it through for both tmin and tmax. `processWeatherData` does the same for the hourly dawn temp pulled from the forecast endpoint. Grid elevation for Indian Peaks / RMNP coordinates typically runs 8,800–11,200 ft; the dynamic value removes a potential 2–9°F lapse correction error depending on peak.
-
-No model logic, thresholds, or physics coefficients changed. Temperature and wind unit requests (`temperature_unit=fahrenheit`, `wind_speed_unit=mph`) were confirmed correct in both API URLs — those were not the source of the issue.
-
----
-
 ### Session 15 — v18 (Driver Narrative Restructured to Physics Pipeline)
 
 "What's Driving the Score" completely restructured from a flat list into seven labeled pipeline steps matching the About tab physics sequence.
@@ -226,6 +198,32 @@ Step 7 - Terrain Factor: star rubric moved inline into the driver row.
 CSS added: .driver-step-head -- teal left-border section label, uppercase tracking.
 
 Bug fixed: unescaped apostrophe (won't) in a single-quoted JS string in buildDrivers silently killed the entire script, emptying the peak selector. Caught via Node.js Function() syntax check. Fixed to "will not."
+---
+
+### Session 16 — v19 (Unit audit: snowfall cm→in fix + dynamic lapse correction)
+
+Two bugs corrected following observation of unrealistically cold snowpack state and inflated storm depth estimates in auto-filled fields.
+
+**snowfall_sum unit bug (primary):** Open-Meteo's `snowfall_sum` field is always returned in centimeters regardless of `precipitation_unit=inch` — that parameter only converts liquid precipitation (`precipitation_sum`). Fixed in `parseDailyJson`: multiply by 0.3937 (cm → inches) at the parse point. Downstream thresholds (storm detection ≥ 0.5", CCC boost > 1.0", tile display ≥ 0.3", depth estimate) were all written for inches and are now correct. Effect: eliminates artificially elevated column cold content from spurious snowfall counts throughout the season; `snowDepthEst` auto-fill now shows realistic inch values (was ~2.5× overstated).
+
+**Dynamic lapse correction:** `GRID_ELEV_FT = 10500` was hardcoded as the assumed ERA5 grid cell elevation. Open-Meteo returns `json.elevation` (meters) in every response — the actual grid cell elevation for the queried coordinates. `elevCorrectTemp()` updated to accept an optional `gridElevFt` parameter (falls back to 10500 if absent for safety). `parseDailyJson` reads `json.elevation * 3.28084` and passes it through for both tmin and tmax. `processWeatherData` does the same for the hourly dawn temp pulled from the forecast endpoint. Grid elevation for Indian Peaks / RMNP coordinates typically runs 8,800–11,200 ft; the dynamic value removes a potential 2–9°F lapse correction error depending on peak.
+
+No model logic, thresholds, or physics coefficients changed. Temperature and wind unit requests (`temperature_unit=fahrenheit`, `wind_speed_unit=mph`) were confirmed correct in both API URLs — those were not the source of the issue.
+---
+
+### Session 17 — v20 (SNOTEL SNWD storm detection + orographic multiplier)
+
+**Motivation:** Open-Meteo gridded snowfall systematically underestimates alpine snowfall at 12,000'+ terrain due to orographic enhancement that the ~9km model grid cannot resolve. SNOTEL SNWD (snow depth) sensors sit at 9,400–11,480' and measure actual fallen snow, making them far more reliable for storm detection at mountain elevation.
+
+**SNOTEL SNWD integration (primary change):** New `nrcsSnwdUrl`, `parseSnwdCSV`, and `loadSNWD` functions mirror the existing SWE fetch architecture. Each basin's highest-elevation station is used as the primary SNWD source (Niwot Ridge #663 at 11,480' for boulder, Sawtooth #1251 at 9,640' for stvrain, Joe Wright #551 at 10,020' for bigthompson), with fallback down the station list. `loadSNWD` is fired as a third Promise inside `fetchWeatherData` in parallel with the two Open-Meteo fetches, so it adds no latency to the critical path. `processWeatherData` receives `snwdData` as a new parameter.
+
+**Storm detection logic:** For **past target dates** (target ≤ today), the Open-Meteo storm scan is replaced by SNOTEL SNWD daily depth-change deltas over a 14-day lookback. If SNOTEL shows no recent accumulation (no delta ≥ 0.5"), `snowDaysSince` and `snowDepthEst` are set to null — trusting the sensor reading over the gridded estimate. For **future target dates**, Open-Meteo remains the source with a new `OROG_MULT = 1.5` orographic uplift factor applied to forecast-flagged days only. Archive days are not multiplied (they are real ERA5 observations, not forecasts).
+
+**isForecast flag preserved on allDays:** Previously stripped during the dayMap merge. Now preserved via `Object.assign` so the storm detection scan can distinguish forecast vs. archive days for the OROG_MULT decision.
+
+**Source transparency in UI:** `snowSource` string added to the `wd` return object. `prefillForecast` updates the "Recent Snowfall" section header subtitle dynamically: SNOTEL source shows station name and elevation; Open-Meteo shows orographic note. A `snow-source-note` div below the crust preview shows a one-line explanation of where the depth estimate came from. Future dates get an explicit "verify against SNOTEL or OpenSnow" note.
+
+**Temperature limitation documented (no model change):** Confirmed temperatures and wind are requested in correct imperial units. Lapse rate accuracy assessed: 3.5°F/1000ft is a reasonable climatological mean but has ±1.5°F/1000ft variability per event. Clear-calm nights (best corn nights) are most prone to temperature inversions that make the model over-predict summit coldness. Magnitude estimate: ±3-8°F systematic bias on optimal nights. SNOTEL TMIN from Niwot Ridge (#663) as a cross-check on auto-filled overnight lows is a noted future improvement.
 ---
 
 ### Session [N] — v21 (Jan 1 Column Cold Content Window)
@@ -288,8 +286,37 @@ pre-season ends. Chart changes: pre-season region shaded with a dim overlay and 
 starts at marchFirstIdx, skipping nulls; CCR (blue), Tmax, Tmin, and snowfall bars render 
 across the full Jan 1 → target range. Auto-scroll focus unchanged — still centers on target/today.
 ---
+Here are the two proper changelog entries to add to your changelog.md, based exactly on what Claude Code implemented. Add them after the v21 entry:
 
-### Session 3 — v24 (rawFQ ceiling widened, freeze duration bonus)
+markdown### Session 19 — v22 (Score Formula Bugs: Afternoon High Sign Fix + Late-Opening Penalty)
+
+**Commit:** `v22 — afternoon high sign fix, late-opening penalty`  
+**Date:** 2026-03-12
+
+**1A — Afternoon high coefficient sign fix (`cornWindow`, `rawDur`):**  
+The `rawDur` formula had the wrong sign on the afternoon high term — a warm afternoon was incorrectly lengthening the window instead of shortening it. Fixed: `+((f.hi-32)*0.065)` → `-((f.hi-32)*0.065)`. A 55°F afternoon now correctly shortens the window by −1.50 hrs. About tab Step 6 formula box updated to show the corrected sign.
+
+**1B — Late-opening window score penalty:**  
+Windows opening after 11:30am carry higher risk (afternoon heat buildup, thunderstorm probability, approach conditions). Added `lateOpenPenalty` immediately after `var we=ws+dur;`: 0.80 for ws > 13.0, 0.90 for ws > 11.5, 1.0 otherwise. Applied to `rawScore` before normalization. Driver narrative Step 4 adds a ⚠️ warning row for ws > 13.0 and a 🕐 note for ws > 11.5.
+
+**RAW_MAX recalibration required** after this session.
+
+---
+
+### Session 20 — v23 (Surface Ripeness Overhaul: Rain-on-Snow Flip + Freeze-Thaw Cycles)
+
+**Commit:** `v23 — rain-on-snow flip, recency weighting, freeze-thaw cycle bonus`  
+**Date:** 2026-03-12
+
+**2A — Rain-on-snow sign flip + recency weighting (`computeSurfaceRipeness`):**  
+Previously all rain was a flat −0.10 ripeness penalty regardless of what followed or when it occurred. Rain followed by a hard refreeze (postRainLow < 28°F) now applies only a mild −0.04 × weight penalty — denser surface is good corn material. Rain with no refreeze applies the full −0.10 × weight penalty, now recency-weighted. Snow precip (tmax ≤ 34°F) applies zero penalty — fresh snow is good for crust.
+
+**2B — Freeze-thaw cycle counter:**  
+Multiple freeze-thaw cycles develop the large melt-freeze polycrystal structure that produces the best corn. Added `ftCycles` counter (days where prior tmax > 36°F and current tmin < 28°F) across the 14-day window. Stored as `weatherData.ftCycles`. Applied as a bonus to `crustQ` in `cornWindow`: up to +0.12 for 4+ clean cycles (`ftBonus = Math.min(0.12, ftCycles * 0.03)`). Driver narrative Step 5 adds a 🔄 row for ftCycles ≥ 2: "well-developed polycrystal structure" at 4+, "developing good corn structure" at 2–3.
+
+**No RAW_MAX recalibration required** after this session.
+
+### Session 21 — v24 (rawFQ ceiling widened, freeze duration bonus)
 
 **3A — rawFQ normalization range widened:**
 Changed rawFQ divisor from 22 to 35. Previous ceiling: 8°F nights, 0°F nights, and −5°F nights all capped at rawFQ = 1.0 — no meaningful differentiation in the sub-8°F range where the best corn occurs. New anchoring: −5°F → 1.0, 0°F → 0.89, 10°F → 0.60, 20°F → 0.32, 28°F → 0.09. Sub-8°F nights now produce distinct rawFQ values and thus distinct scores. Updated About tab formula box to show `/35`.
