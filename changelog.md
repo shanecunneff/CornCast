@@ -287,6 +287,24 @@ pre-season ends. Chart changes: pre-season region shaded with a dim overlay and 
 "Pre-season" label; vertical dashed "Mar 1" marker at the boundary; SFQ (orange) line 
 starts at marchFirstIdx, skipping nulls; CCR (blue), Tmax, Tmin, and snowfall bars render 
 across the full Jan 1 → target range. Auto-scroll focus unchanged — still centers on target/today.
+---
+
+### Session 3 — v24 (rawFQ ceiling widened, freeze duration bonus)
+
+**3A — rawFQ normalization range widened:**
+Changed rawFQ divisor from 22 to 35. Previous ceiling: 8°F nights, 0°F nights, and −5°F nights all capped at rawFQ = 1.0 — no meaningful differentiation in the sub-8°F range where the best corn occurs. New anchoring: −5°F → 1.0, 0°F → 0.89, 10°F → 0.60, 20°F → 0.32, 28°F → 0.09. Sub-8°F nights now produce distinct rawFQ values and thus distinct scores. Updated About tab formula box to show `/35`.
+
+Downstream phys scoring band adjustment: second tier threshold lowered from `>0.45` to `>0.40` to keep 15°F nights (effFQ ≈ 0.42) in the second scoring tier — without this adjustment, a 15°F freeze would incorrectly drop to third tier despite being a solid corn night. Benchmark (2°F, 5% cloud, 3 mph wind) still scores top-tier (effFQ ≈ 0.77 → >0.70).
+
+**3B — Freeze duration bonus from hourly data:**
+Added `freezeHours` computation in `processWeatherData`: counts hourly temperatures below 28°F in the overnight window (10pm prior day through 8am target day) using forecast hourly data with elevation correction. Stored on `weatherData.freezeHours`.
+
+Bonus applied to `rawFQ` in `cornWindow` after base computation: 0 at ≤2 hrs, +0.025 per hour above 2, capped at +0.15 at 8+ hrs. A night that holds 26°F for 8 hours now builds a meaningfully different rawFQ than one that dips to 26°F for one hour — the overnight low alone cannot capture this.
+
+Driver narrative: freeze hours note added under Step 1 — 🧊 for 7+ hours, ❄️ for 3–6 hours, silent below 2 hours.
+
+RAW_MAX recalibration required: `console.log(rawScore)` is active before the normalization line. Run benchmark (S. Arapaho SE · March · 2°F overnight · 5% cloud · 3 mph wind · 10" fresh snow · normal SWE · ~36" SNWD), read rawScore from console, update `RAW_MAX` to that value, remove the log.
+
 ## Architecture Decisions (Standing)
 Bug fix — CCC trajectory seam at Mar 1: Season trajectory loop was passing only 
 allDays.slice(0,j) into computeColumnColdContent, losing all pre-season history at 

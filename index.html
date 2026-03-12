@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v23 2026-03-12 04:24 UTC</title>
+<title>CornCast 🌽 v24 2026-03-12 14:35 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -283,7 +283,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>Sky clarity matters as much as temperature.</strong> On clear nights, the snow surface radiates heat directly to a cold sky and receives very little back — so the snow surface can be 2–5°F colder than the air thermometer reads. Clouds reverse this: they act as a warm blanket, radiating heat back down. A clear 22°F night builds a meaningfully deeper crust than a cloudy 22°F night even though the thermometer reads the same. CornCast applies up to a 2× effective freeze bonus for a clear sky versus fully overcast.<br><br>
         <strong>Elevation compounds the cold.</strong> Air temperature drops roughly 3–4°F per 1,000' of elevation gain. The app lapse-corrects all weather data to the peak's actual elevation — a face at 13,500' refreezes harder than one at 12,000' even when the forecast originates from the same grid point.
       </div>
-      <div class="formula-box">rawFQ = (30 − overnightLow) / 22 + elevBonus<br>effectiveFQ = rawFQ × (0.50 + 0.50 × clearSkyFraction) − windScour<br><br>clearSkyFraction = (100 − overnightCloudPct) / 100<br>elevBonus ≈ +0.18 per 1,800' above 11,500'<br>→ Colder + clearer + higher = deeper, harder freeze</div>
+      <div class="formula-box">rawFQ = (30 − overnightLow) / 35 + elevBonus<br>effectiveFQ = rawFQ × (0.50 + 0.50 × clearSkyFraction) − windScour<br><br>clearSkyFraction = (100 − overnightCloudPct) / 100<br>elevBonus ≈ +0.18 per 1,800' above 11,500'<br>→ Colder + clearer + higher = deeper, harder freeze</div>
       <div class="pipe-ref">Male &amp; Granger (1981), Water Resources Research 17(3) — snow surface energy exchange and longwave radiative balance; Pomeroy &amp; Brun (2001), Snow Ecology, Cambridge — physical properties of snow</div>
       <div class="pipe-feeds">↓ Sets the thermal debt that solar energy must repay before corn can open (Step 4)</div>
     </div>
@@ -1059,6 +1059,25 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     dawnTemp = targetDay.tmin + 2;
   }
 
+  // Count hours below 28°F in the overnight window (10pm–8am)
+  var freezeHours = 0;
+  if (forecastJson && forecastJson.hourly && forecastJson.hourly.time) {
+    var hh = forecastJson.hourly;
+    var prevDate = fmtDate(new Date(new Date(targetDate+'T12:00:00').getTime() - 86400000));
+    for (var hi2 = 0; hi2 < hh.time.length; hi2++) {
+      var hDate2 = hh.time[hi2].slice(0,10);
+      var hHour2 = parseInt(hh.time[hi2].slice(11,13));
+      var hTemp2 = hh.temperature_2m[hi2];
+      if (hTemp2 === null) continue;
+      var isOvernight = (hDate2 === prevDate && hHour2 >= 22) ||
+                        (hDate2 === targetDate && hHour2 <= 8);
+      if (isOvernight) {
+        var correctedTemp = elevCorrectTemp(hTemp2, pk.el, fcastGridElevFt);
+        if (correctedTemp < 28) freezeHours++;
+      }
+    }
+  }
+
   // Snowfall storm detection — Open-Meteo baseline with orographic uplift for forecast days.
   // Forecast snowfall from gridded model (~10,000' effective elevation) underestimates
   // alpine snowfall at 12,000'+ terrain; OROG_MULT applies only to forecast days.
@@ -1175,6 +1194,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     columnColdContent: columnColdContent,
     effectiveIsoPrb: effIsoPrb,
     ftCycles: ftCycles,
+    freezeHours: freezeHours > 0 ? freezeHours : null,
     packRipeness: effIsoPrb,
     days: allDays,
     histDays: histDays14,
@@ -1891,7 +1911,14 @@ function cornWindow(pk,asp,f,month){
   if(BASE_SUN[asp]===null)return{ws:null,we:null,dur:0,q:0,inf:"N-facing: insufficient solar radiation",note:ad.note};
   var sunHit=BASE_SUN[asp]+((ma.sunShift||{})[asp]||0)+(ad.sh||0);
   var elevB=(ad.ez-11500)/1800*0.18;
-  var rawFQ=Math.max(0,Math.min(1,(30-f.lo)/22+elevB+(ma.freezeBonus||0)));
+  // Widened range: 1.0 anchors at ~-5°F instead of ~8°F
+  // 28°F → 0.09, 20°F → 0.32, 10°F → 0.60, 0°F → 0.89, -5°F → 1.0
+  var rawFQ=Math.max(0,Math.min(1,(30-f.lo)/35+elevB+(ma.freezeBonus||0)));
+  // Freeze duration bonus: 0 at ≤2 hrs below 28°F, up to +0.15 at 8+ hrs
+  if (weatherData && weatherData.freezeHours != null) {
+    var freezeDurBonus = Math.min(0.15, Math.max(0, (weatherData.freezeHours - 2) * 0.025));
+    rawFQ = Math.min(1.0, rawFQ + freezeDurBonus);
+  }
   var freezeQ=rawFQ*(0.50+0.50*(100-f.cn)/100);
   var windScour=Math.max(0,(f.wi-12)*0.012*(WIND_ASP[asp]||0.5)*ad.wx);
   var effFQ=Math.max(0.03,freezeQ-windScour);
@@ -1941,7 +1968,7 @@ function cornWindow(pk,asp,f,month){
                       : ws > 11.5 ? 0.90
                       : 1.0;
   var phys=0;
-  if(effFQ>0.70)phys+=30;else if(effFQ>0.45)phys+=22;else if(effFQ>0.25)phys+=12;else if(effFQ>0.10)phys+=5;
+  if(effFQ>0.70)phys+=30;else if(effFQ>0.40)phys+=22;else if(effFQ>0.25)phys+=12;else if(effFQ>0.10)phys+=5;
   phys+=Math.min(20,effRad*16);phys+=Math.min(10,crustQ*10);
   if(dur>=2.5)phys+=5;else if(dur>=1.5)phys+=3;
   phys-=Math.min(15,windScour*25);if(f.lo>30)phys-=8;
@@ -2000,6 +2027,12 @@ function buildDrivers(w,f,month,asp){
   if(f.wi>=22)       rows.push({icon:'💨',cls:'driver-neg',text:'<strong>High wind ('+f.wi+' mph) — crust scour.</strong> Wind physically erodes developing ice bonds before they consolidate. The '+asp+' aspect has '+Math.round((WIND_ASP[asp]||0.5)*100)+'% wind exposure. Freeze quality reduced by '+Math.round(w.windScour*100)+' pts.'});
   else if(f.wi>=14)  rows.push({icon:'💨',cls:'driver-neu',text:'<strong>Moderate wind ('+f.wi+' mph).</strong> Some scour effect on crust formation, more significant on exposed ridge or summit terrain.'});
   else               rows.push({icon:'🍃',cls:'driver-pos',text:'<strong>Light wind ('+f.wi+' mph).</strong> Negligible scour — overnight freeze builds undisturbed.'});
+
+  if (weatherData && weatherData.freezeHours != null) {
+    var fh = weatherData.freezeHours;
+    if (fh >= 7) rows.push({icon:'🧊',cls:'driver-pos',text:'<strong>'+fh+' hours below 28°F overnight — sustained cold builds a deep, reinforced crust.</strong>'});
+    else if (fh >= 3) rows.push({icon:'❄️',cls:'driver-neu',text:'<strong>'+fh+' hours below 28°F — moderate freeze duration.</strong>'});
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // MODIFIER — SNOWPACK CONDITION
