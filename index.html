@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v23_new_</title>
+<title>CornCast 🌽 v22 2026-03-12 03:50 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -412,7 +412,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>A counterintuitive result:</strong> higher-radiation aspects (SE, S) tend to produce slightly longer windows than lower-radiation aspects for the same crust quality. Intense, uniform solar loading melts the surface consistently across the whole face — every square meter enters the corn state at the same time. Low-radiation faces melt patchily, creating inconsistent micro-conditions across the slope even though the aggregate window technically hasn't closed.<br><br>
         A warm afternoon high accelerates the transition to slush: a 55°F day burns through a corn window faster than a 42°F day. Wind above about 18 mph mechanically disrupts the softened surface and shortens the window.
       </div>
-      <div class="formula-box">duration = crust quality × 1.6   [dominant — deeper crust = longer window]<br>         + radiation × 1.4       [uniform melt = consistent corn across face]<br>         + temp above 32°F × 0.065  [warmer afternoon = faster slush transition]<br>         − wind penalty           [above 18 mph disrupts softened surface]<br>         ± SWE and column bonus<br><br>→ Clamped 0.2 – 4.0 hours<br>→ cornCloses = cornOpens + duration</div>
+      <div class="formula-box">duration = crust quality × 1.6   [dominant — deeper crust = longer window]<br>         + radiation × 1.4       [uniform melt = consistent corn across face]<br>         − temp above 32°F × 0.065  [warmer afternoon = faster slush transition]<br>         − wind penalty           [above 18 mph disrupts softened surface]<br>         ± SWE and column bonus<br><br>→ Clamped 0.2 – 4.0 hours<br>→ cornCloses = cornOpens + duration</div>
       <div class="pipe-output">📍 OUTPUT B: Corn Closes = corn opens + duration</div>
       <div class="pipe-feeds">↓ Corn Opens and Corn Closes together define the window; your arrival must fall between them</div>
     </div>
@@ -1901,11 +1901,16 @@ function cornWindow(pk,asp,f,month){
   if(f.swePct!==null&&f.swePct!==undefined){sweAdj=Math.max(-0.10,Math.min(0.08,(f.swePct-100)/500));crustQ=Math.max(0.05,Math.min(1.0,crustQ+sweAdj));}
   var windDurPen=Math.max(0,(f.wi-18)*0.055*ad.wx);
   var sweDurBonus=(f.swePct!==null&&f.swePct!==undefined)?Math.max(-0.25,Math.min(0.20,(f.swePct-100)/400)):0;
-  var rawDur=(crustQ*1.6)+(effRad*1.4)+((f.hi-32)*0.065)-windDurPen+sweDurBonus;
+  var rawDur=(crustQ*1.6)+(effRad*1.4)-((f.hi-32)*0.065)-windDurPen+sweDurBonus;
   rawDur*=(ma.winFactor||1);
   rawDur*=(1-isoPrb*0.25); // isothermal pack collapses window faster (spec §physics)
   var dur=Math.max(0.20,Math.min(4.0,rawDur));
   var we=ws+dur;
+  // Late-opening penalty: windows opening after 11:30am carry higher risk
+  // (afternoon heat buildup, thunderstorm probability, approach conditions)
+  var lateOpenPenalty = ws > 13.0 ? 0.80
+                      : ws > 11.5 ? 0.90
+                      : 1.0;
   var phys=0;
   if(effFQ>0.70)phys+=30;else if(effFQ>0.45)phys+=22;else if(effFQ>0.25)phys+=12;else if(effFQ>0.10)phys+=5;
   phys+=Math.min(20,effRad*16);phys+=Math.min(10,crustQ*10);
@@ -1916,6 +1921,8 @@ function cornWindow(pk,asp,f,month){
   rawScore+=(ad.ez-12000)/1600*3;
   rawScore*=((ma.radBoost||{})[asp]||1)*0.85+0.15;
   if(dur<0.75)rawScore*=0.45;if(dur<0.35)rawScore*=0.20;
+  rawScore *= lateOpenPenalty;
+  console.log(rawScore);
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
   var inf,qlabel;
   if(f.lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
@@ -2054,6 +2061,9 @@ function buildDrivers(w,f,month,asp){
   rows.push({icon:'🌅',cls:debtCls,
     text:'<strong>Dawn temp '+f.da+'°F → High '+f.hi+'°F ('+dth+'°F morning rise).</strong> '+debtNote
     +'. The '+dth+'°F rise rate is '+(dth>=20?'steep — thermal debt clears quickly, corn opens promptly':dth>=12?'moderate — typical spring payoff timing':'shallow — slow debt repayoff; onset may be late or incomplete on low-radiation aspects')+'.'});
+
+  if(w.ws > 13.0) rows.push({icon:'⚠️',cls:'driver-neg',text:'Window opens at '+ht(w.ws)+' — afternoon opening increases exposure to heat buildup and convective risk.'});
+  else if(w.ws > 11.5) rows.push({icon:'🕐',cls:'driver-neu',text:'Window opens late morning — plan approach accordingly.'});
 
   // ─────────────────────────────────────────────────────────────────────────
   // STEP 5 — SNOW SURFACE QUALITY
