@@ -26,3 +26,29 @@ Expanding this to an area larger than the front range
 is there a way to build a graph of snow quality incorporating SWe?
 
 April outscoring March under identical conditions due to lateOpenPenalty interaction with winFactor — investigate in future calibration session
+
+
+## May Calibration — Pending (post-Session 5)
+
+**Finding:** May scenarios score q=53 under ideal conditions (lo=15°F, early da, 
+clear sky) due to three stacking penalties in MONTH_ADJ[5]:
+  - matPen=0.14 drops effFQ below the +22 phys threshold → drops to +12 (−10 pts)
+  - winFactor=0.9 compresses rawDur  
+  - isoPrb=0.40 reduces meltDelay and collapses rawDur further
+
+**Impact:** A genuinely good May day (15°F overnight, 42°F afternoon, SE aspect) 
+scores ~53 — same bracket as a marginal April day. Peak season performance is 
+significantly underrepresented.
+
+**Root cause:** Penalty coefficients were designed around March physics. 
+The maturity and isothermal penalties are physically correct in direction but 
+over-weighted for conditions that still produce excellent corn in May.
+
+**Fix approach (defer until after Session 5):**
+  - Run sensitivity grid in May against the completed physics model
+  - Tune matPen and isoPrb to produce q=70–80 for a very good May day
+  - Verify that genuinely marginal May days (lo=25°F, hi=55°F) still score 40–50
+  - Recalibrate RAW_MAX at same time
+
+**Do not tune before Session 5** — CCC rewrite (v25) and SNOTEL depth physics 
+(v26) both affect May scoring and would require re-tuning.
