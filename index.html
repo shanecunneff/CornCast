@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v25 2026-03-12 14:35 UTC</title>
+<title>CornCast 🌽 v26 2026-03-12 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -589,27 +589,41 @@ function getPeakBasin(n){
 }
 var sweCache={};
 
-// NRCS URL builder — try both with and without the name token for problematic stations
+// NRCS URL builder — 15-day window to capture today + 14-days-ago for trend detection
 function nrcsUrl(id,alt){
   var base='https://wcc.sc.egov.usda.gov/reportGenerator/view_csv/customSingleStationReport/daily/';
-  if(alt) return base+id+':CO:SNTL/-1,0/WTEQ::value,WTEQ::median_1991,WTEQ::pctOfMedian_1991';
-  return base+id+':CO:SNTL|id=""|name/-1,0/WTEQ::value,WTEQ::median_1991,WTEQ::pctOfMedian_1991';
+  if(alt) return base+id+':CO:SNTL/-15,0/WTEQ::value,WTEQ::median_1991,WTEQ::pctOfMedian_1991';
+  return base+id+':CO:SNTL|id=""|name/-15,0/WTEQ::value,WTEQ::median_1991,WTEQ::pctOfMedian_1991';
 }
 function parseNrcsCSV(csv){
   var lines=csv.split('\n').filter(function(l){return l.trim()&&!l.startsWith('#');});
-  var dl=null;
-  for(var i=lines.length-1;i>=0;i--){if(lines[i].trim()&&!lines[i].startsWith('"Date')&&!lines[i].startsWith('Date')){dl=lines[i].trim();break;}}
-  if(!dl)throw new Error('No data');
+  // Collect all non-header data lines
+  var dataLines=[];
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i].trim();
+    if(l&&!l.startsWith('"Date')&&!l.startsWith('Date'))dataLines.push(l);
+  }
+  if(!dataLines.length)throw new Error('No data');
+  var dl=dataLines[dataLines.length-1];
   var c=dl.split(','),swe=parseFloat(c[1]),med=parseFloat(c[2]),pct=parseFloat(c[3]);
   if(isNaN(pct)||isNaN(swe))throw new Error('Parse fail: '+dl);
-  return{swe:swe,median:med,pct:pct};
+  // Extract SWE from 14 days ago for trend detection (15-day window → index -15)
+  var swe14=null;
+  if(dataLines.length>=15){
+    var dl14=dataLines[dataLines.length-15];
+    var c14=dl14.split(',');
+    var v14=parseFloat(c14[1]);
+    if(!isNaN(v14)&&v14>=0)swe14=v14;
+  }
+  return{swe:swe,median:med,pct:pct,swe14:swe14};
 }
 
-// NRCS SNWD URL — 30-day snow depth history for storm detection
+// NRCS SNWD URL — 30-day snow depth + TMIN history
+// TMIN column added for overnight low blend in processWeatherData (5C)
 function nrcsSnwdUrl(id, alt) {
   var base = 'https://wcc.sc.egov.usda.gov/reportGenerator/view_csv/customSingleStationReport/daily/';
-  if(alt) return base + id + ':CO:SNTL/-30,0/SNWD::value';
-  return base + id + ':CO:SNTL|id=""|name/-30,0/SNWD::value';
+  if(alt) return base + id + ':CO:SNTL/-30,0/SNWD::value,TMIN::value';
+  return base + id + ':CO:SNTL|id=""|name/-30,0/SNWD::value,TMIN::value';
 }
 
 // Parse multi-row SNWD CSV → [{date, depthIn}] sorted oldest→newest
@@ -662,7 +676,7 @@ function fetchStation(st,cb){
       if(err||!text){
         if(!tried){tried=true;attempt(altUrl);}else{cb(null);} return;
       }
-      try{var d=parseNrcsCSV(text);cb({swe:d.swe,median:d.median,pct:d.pct,name:st.name,elev:st.elev,id:st.id});}
+      try{var d=parseNrcsCSV(text);cb({swe:d.swe,median:d.median,pct:d.pct,swe14:d.swe14,name:st.name,elev:st.elev,id:st.id});}
       catch(e){if(!tried){tried=true;attempt(altUrl);}else{cb(null);}}
     });
   }
@@ -681,9 +695,15 @@ function loadSWE(basinKey,cb){
         var res={loaded:true,date:ds,basin:basinKey,cfg:cfg,stations:results};
         if(!results.length){res.error='No stations responded';res.pct=null;}
         else{
-          var wS=0,pS=0,sS=0,mS=0;
-          results.forEach(function(r){var w=elevWeight(r.elev);wS+=w;pS+=r.pct*w;sS+=r.swe*w;mS+=r.median*w;});
+          var wS=0,pS=0,sS=0,mS=0,s14S=0,w14S=0;
+          results.forEach(function(r){var w=elevWeight(r.elev);wS+=w;pS+=r.pct*w;sS+=r.swe*w;mS+=r.median*w;if(r.swe14!=null){s14S+=r.swe14*w;w14S+=w;}});
           res.pct=Math.round(pS/wS);res.swe=Math.round(sS/wS*10)/10;res.median=Math.round(mS/wS*10)/10;res.stationCount=results.length;
+          // SWE trend: % of median change over past 14 days (per week = /2)
+          if(w14S>0&&res.median>0){
+            var swe14Avg=Math.round(s14S/w14S*10)/10;
+            res.swe14=swe14Avg;
+            res.sweTrend=Math.round((res.swe-swe14Avg)/res.median/2*100);
+          }
         }
         sweCache[basinKey]=res;cb(res);
       }
@@ -697,6 +717,7 @@ var currentSWEData=null;
 // Data covers past dates only; future storm detection uses Open-Meteo + OROG_MULT.
 var snwdCache={};
 var currentSNWDData=null;
+var currentSNWDInches=null; // module-level: most recent SNWD depth in inches, surfaced for cornWindow via gf()
 
 function loadSNWD(basinKey, cb) {
   if(snwdCache[basinKey] && snwdCache[basinKey].loaded) { cb(snwdCache[basinKey]); return; }
@@ -721,7 +742,8 @@ function loadSNWD(basinKey, cb) {
           var days = parseSnwdCSV(text);
           if(days.length < 2) throw new Error('insufficient data');
           snwdCache[basinKey] = { loaded: true, days: days,
-            stationName: st.name, stationElev: st.elev, stationId: st.id };
+            stationName: st.name, stationElev: st.elev, stationId: st.id,
+            rawCsv: text }; // rawCsv saved for parseSnotelTmin (5C TMIN blend)
           cb(snwdCache[basinKey]);
         } catch(e) { if(!tried){tried=true;attempt(alt);}else{tryStation();} }
       });
@@ -747,6 +769,15 @@ function updateSWEPanel(pkIdx){
     h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.28rem"><span style="font-weight:700;color:var(--text)">'+cfg.name+' Basin</span><span style="color:'+col+';font-weight:700;font-size:.95rem">'+pct+'% <span style="font-size:.68rem;font-weight:400;color:var(--muted)">of median</span></span></div>';
     h+='<div style="background:var(--navy2);border-radius:4px;height:8px;margin-bottom:.3rem;overflow:hidden"><div style="width:'+Math.min(100,pct)+'%;height:100%;background:'+col+';border-radius:4px"></div></div>';
     h+='<div style="display:flex;justify-content:space-between;font-size:.7rem;margin-bottom:.22rem"><span style="color:'+col+'">'+lbl+'</span><span style="color:var(--muted)">Wtd SWE: '+d.swe+'" (med '+d.median+'")</span></div>';
+    if(d.sweTrend!=null){
+      var trendAbs=Math.abs(d.sweTrend);
+      var trendStr,trendColor;
+      if(d.sweTrend<-8){trendStr='▼ '+trendAbs+'% last 2 weeks';trendColor='var(--red)';}
+      else if(d.sweTrend<-4){trendStr='▼ '+trendAbs+'% last 2 weeks';trendColor='var(--orange)';}
+      else if(d.sweTrend>5){trendStr='▲ +'+trendAbs+'% last 2 weeks';trendColor='var(--teal)';}
+      else{trendStr='→ Stable';trendColor='var(--muted)';}
+      h+='<div style="font-size:.7rem;color:'+trendColor+';margin-bottom:.18rem">'+trendStr+'</div>';
+    }
     if(d.stations&&d.stations.length>1){h+='<div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.1rem">';d.stations.forEach(function(s){var sc=sweBarColor(s.pct);h+='<span style="background:var(--navy2);border-radius:4px;padding:.12rem .38rem;font-size:.64rem;color:'+sc+'">'+s.name+' '+s.pct+'%</span>';});h+='</div>';}
     h+='<div style="font-size:.62rem;color:var(--muted);margin-top:.22rem">'+d.stationCount+' station'+(d.stationCount>1?'s':'')+' · elevation-weighted · '+d.date+' · <a href="https://www.nrcs.usda.gov/resources/data-and-reports/snow-and-water-interactive-map" target="_blank" style="color:var(--muted)">NRCS ↗</a></div>';
     el.innerHTML=h;
@@ -931,7 +962,8 @@ function parseDailyJson(json, pk) {
       precip: d.precipitation_sum[i]||0,
       snowfall: (d.snowfall_sum[i]||0) * 0.3937, // cm→in: Open-Meteo snowfall_sum is always cm regardless of precipitation_unit
       wind: d.windspeed_10m_max[i]||0,
-      cloud: d.cloudcover_mean[i]||0
+      cloud: d.cloudcover_mean[i]||0,
+      windDir: (d.winddirection_10m_dominant && d.winddirection_10m_dominant[i] != null) ? d.winddirection_10m_dominant[i] : null
     });
   }
   return days;
@@ -953,14 +985,14 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
 
   var archiveUrl = 'https://archive-api.open-meteo.com/v1/archive'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
     +'&start_date='+cccStart+'&end_date='+yesterdayStr;
 
   var forecastUrl = 'https://api.open-meteo.com/v1/forecast'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
     +'&hourly=temperature_2m'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
@@ -982,6 +1014,24 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
     var snwdData = results[2];
     processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb);
   });
+}
+
+// Parse TMIN (°F) from NRCS CSV for a given target date.
+// The SNWD URL now requests SNWD::value,TMIN::value — SNWD is col 1, TMIN is col 2.
+function parseSnotelTmin(csvText, targetDate) {
+  if (!csvText) return null;
+  var lines = csvText.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line || line.startsWith('#') || line.startsWith('"Date') || line.startsWith('Date')) continue;
+    var cols = line.split(',');
+    var dateVal = cols[0] ? cols[0].replace(/"/g,'').trim() : '';
+    if (dateVal === targetDate && cols.length >= 3) {
+      var v = parseFloat(cols[2]); // col 2 = TMIN::value
+      if (!isNaN(v) && v > -40 && v < 80) return v;
+    }
+  }
+  return null;
 }
 
 function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb) {
@@ -1037,7 +1087,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
   }
 
   // Resolve current SNWD depth from SNOTEL data for CCC depth-dependent depletion
-  var currentSNWDInches = null;
+  currentSNWDInches = null; // reset module-level var for this fetch
   if (snwdData && snwdData.days) {
     for (var snwdI = snwdData.days.length - 1; snwdI >= 0; snwdI--) {
       if (snwdData.days[snwdI].date <= targetDate && snwdData.days[snwdI].depthIn != null) {
@@ -1052,6 +1102,17 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
   if(!archiveFailed) {
     surfaceRipeness = computeSurfaceRipeness(histDays14, month);
     columnColdContent = computeColumnColdContent(seasonDaysForCCC, swePct, month, currentSNWDInches);
+    // 5D — Apply SWE trend to surfaceRipeness before effectiveIsoPrb is computed
+    if (currentSWEData && currentSWEData.sweTrend != null && !isNaN(currentSWEData.sweTrend)) {
+      var st5d = currentSWEData.sweTrend;
+      if (st5d < -8) {
+        surfaceRipeness = Math.min(0.95, surfaceRipeness * 1.12);
+      } else if (st5d < -4) {
+        surfaceRipeness = Math.min(0.95, surfaceRipeness * 1.06);
+      } else if (st5d > 5) {
+        surfaceRipeness = Math.max(0.03, surfaceRipeness * 0.95);
+      }
+    }
     effIsoPrb = effectiveIsoPrbFn(surfaceRipeness, columnColdContent);
   } else {
     // Archive failed: surface-only mode using forecast backfill (graceful fallback)
@@ -1210,6 +1271,25 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     });
   }
 
+  // 5C — SNOTEL TMIN overnight low blend (past/current dates only)
+  // Niwot Ridge (#663) observed TMIN corrects for inversion bias on clear nights.
+  var snotelTminUsed = false, snotelTminRaw = null;
+  if (snwdData && snwdData.rawCsv && targetDate <= todayStr && targetDay) {
+    var snotelTmin = parseSnotelTmin(snwdData.rawCsv, targetDate);
+    if (snotelTmin !== null) {
+      var stationElev = snwdData.stationElev || 11550;
+      var LAPSE_BLEND = 3.5; // °F per 1000ft
+      var residualCorr = (pk.el - stationElev) / 1000 * LAPSE_BLEND;
+      var observedLo = snotelTmin - residualCorr;
+      // Create a blended copy of targetDay so allDays trajectory is unchanged
+      targetDay = Object.assign({}, targetDay, {
+        tmin: Math.round((observedLo * 0.70 + targetDay.tmin * 0.30) * 10) / 10
+      });
+      snotelTminUsed = true;
+      snotelTminRaw = snotelTmin;
+    }
+  }
+
   cb({
     surfaceRipeness: surfaceRipeness,
     columnColdContent: columnColdContent,
@@ -1234,7 +1314,11 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     marchFirstIdx: marchFirstIdx,          // ← new: chart uses this for the Mar 1 marker
     archiveFailed: archiveFailed,
     forecastFailed: forecastFailed,
-    todayStr: todayStr
+    todayStr: todayStr,
+    windDir: targetDay ? (targetDay.windDir || null) : null,
+    snotelTminUsed: snotelTminUsed,
+    snotelTminRaw: snotelTminRaw,
+    sweTrend: (currentSWEData && currentSWEData.sweTrend != null) ? currentSWEData.sweTrend : null
   });
 }
 
@@ -1944,9 +2028,15 @@ function cornWindow(pk,asp,f,month){
   var windScour=Math.max(0,(f.wi-12)*0.012*(WIND_ASP[asp]||0.5)*ad.wx);
   var effFQ=Math.max(0.03,freezeQ-windScour);
   var matPen=ma.maturityPenalty||0;
-  var isoPrb=(weatherData && weatherData.effectiveIsoPrb!=null)
+  var baseIsoPrb = (weatherData && weatherData.effectiveIsoPrb != null)
     ? weatherData.effectiveIsoPrb
-    : (ma.isothermProb||0);
+    : (ma.isothermProb || 0);
+  // Depth adjustment: thin packs advance effective season; deep packs retard it
+  // At 18" SNWD: +0.10 isothermal probability (pack acts older than calendar)
+  // At 54" SNWD: -0.07 isothermal probability (pack acts younger than calendar)
+  var snwdIn = (f.snwdInches != null && f.snwdInches > 0) ? f.snwdInches : 36;
+  var depthIsoPrbAdj = (36 - snwdIn) / 36 * 0.15;
+  var isoPrb = Math.max(0, Math.min(0.95, baseIsoPrb + depthIsoPrbAdj));
   effFQ=Math.max(0.03,effFQ*(1-matPen));
   var cloudAtt=1-(f.cm/100)*0.78;
   var effRad=radMult*cloudAtt;
@@ -1965,9 +2055,28 @@ function cornWindow(pk,asp,f,month){
   var packFloor=0.35*depthFactor*(1-matPen*0.90)*(1-isoPrb*0.40);
   var crustQ=Math.max(stormCrustQ,packFloor,0.05);
 
-  // SWE modifier
-  var sweAdj=0;
-  if(f.swePct!==null&&f.swePct!==undefined){sweAdj=Math.max(-0.10,Math.min(0.08,(f.swePct-100)/500));crustQ=Math.max(0.05,Math.min(1.0,crustQ+sweAdj));}
+  // SWE modifier — absolute thresholds (primary) with % of median fallback
+  var sweAdj = 0, sweDurBonus = 0;
+  if (f.sweInches != null) {
+    sweAdj     = f.sweInches < 8  ? -0.12
+               : f.sweInches < 12 ? -0.08
+               : f.sweInches < 18 ? -0.04
+               : f.sweInches < 28 ?  0.00
+               : f.sweInches < 40 ?  0.04
+               :                    0.07;
+    sweDurBonus = f.sweInches < 8  ? -0.30
+                : f.sweInches < 12 ? -0.18
+                : f.sweInches < 18 ? -0.08
+                : f.sweInches < 28 ?  0.00
+                : f.sweInches < 40 ?  0.10
+                :                    0.18;
+    crustQ = Math.max(0.05, Math.min(1.0, crustQ + sweAdj));
+  } else if (f.swePct != null) {
+    // Fallback to % of median if absolute SWE unavailable
+    sweAdj      = Math.max(-0.10, Math.min(0.08,  (f.swePct - 100) / 500));
+    sweDurBonus = Math.max(-0.25, Math.min(0.20,  (f.swePct - 100) / 400));
+    crustQ = Math.max(0.05, Math.min(1.0, crustQ + sweAdj));
+  }
 
   // Freeze-thaw cycle bonus: well-developed polycrystal structure
   // Up to +0.12 on crustQ for 4+ clean cycles in the past 14 days
@@ -1977,7 +2086,6 @@ function cornWindow(pk,asp,f,month){
   }
 
   var windDurPen=Math.max(0,(f.wi-18)*0.055*ad.wx);
-  var sweDurBonus=(f.swePct!==null&&f.swePct!==undefined)?Math.max(-0.25,Math.min(0.20,(f.swePct-100)/400)):0;
   var rawDur=(crustQ*1.6)+(effRad*1.4)-((f.hi-32)*0.065)-windDurPen+sweDurBonus;
   rawDur*=(ma.winFactor||1);
   rawDur*=(1-isoPrb*0.25); // isothermal pack collapses window faster (spec §physics)
@@ -2053,6 +2161,10 @@ function buildDrivers(w,f,month,asp){
     var fh = weatherData.freezeHours;
     if (fh >= 7) rows.push({icon:'🧊',cls:'driver-pos',text:'<strong>'+fh+' hours below 28°F overnight — sustained cold builds a deep, reinforced crust.</strong>'});
     else if (fh >= 3) rows.push({icon:'❄️',cls:'driver-neu',text:'<strong>'+fh+' hours below 28°F — moderate freeze duration.</strong>'});
+  }
+
+  if (weatherData && weatherData.snotelTminUsed) {
+    rows.push({icon:'🌡️',cls:'driver-pos',text:'Overnight low blended with SNOTEL observation ('+weatherData.snotelTminRaw+'°F at station) — corrects for inversion bias on clear, calm nights.'});
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -2227,10 +2339,12 @@ function buildDrivers(w,f,month,asp){
 
 function gf(){
   var swePct=(currentSWEData&&currentSWEData.loaded&&!currentSWEData.error)?currentSWEData.pct:null;
+  var sweInches=(currentSWEData&&currentSWEData.loaded&&!currentSWEData.error&&currentSWEData.swe!=null)?currentSWEData.swe:null;
   return{lo:+document.getElementById('flo').value,da:+document.getElementById('fda').value,hi:+document.getElementById('fhi').value,
     cn:+document.getElementById('fcn').value,cm:+document.getElementById('fcm').value,wi:+document.getElementById('fwi').value,
     ds:+document.getElementById('fds').value,sdp:+document.getElementById('fsdp').value,
-    swePct:swePct,sl:document.getElementById('fsl').checked,
+    swePct:swePct,sweInches:sweInches,snwdInches:currentSNWDInches,
+    sl:document.getElementById('fsl').checked,
     di:+document.getElementById('fdi').value,ga:+document.getElementById('fga').value,buf:+document.getElementById('fbuf').value};
 }
 function ht(hr){
