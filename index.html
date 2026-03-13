@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v24 2026-03-12 14:35 UTC</title>
+<title>CornCast 🌽 v25 2026-03-12 14:35 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -856,31 +856,41 @@ function computeSurfaceRipeness(days14, month) {
 // ── Layer 2: Column cold content — full season history (March 1 → day before target) ──
 // CCC 0.0–1.0: 1.0 = maximum cold reserve, 0.0 = fully isothermal column
 // Ref: Jennings et al. (2018) The Cryosphere 12; DeWalle & Rango (2008); Fierz (2011)
-function computeColumnColdContent(seasonDays, swePct, month) {
+function computeColumnColdContent(seasonDays, swePct, month, snwdInches) {
   var SEASONAL_BASELINE = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
-  // If seasonDays begins in Jan or Feb, start from near-peak cold reserve (deep winter).
-  // If only Mar+ data is available (archive fallback), use the month-specific baseline.
   var hasPreSeason = seasonDays.length > 0 &&
-    new Date(seasonDays[0].date + 'T12:00:00').getMonth() < 2; // month index 0=Jan, 1=Feb
+    new Date(seasonDays[0].date + 'T12:00:00').getMonth() < 2;
   var ccc = hasPreSeason ? 0.95 : (SEASONAL_BASELINE[month] || 0.35);
+
+  // Depth scale: thin packs deplete CCC faster, deep packs slower
+  // Anchored at 36" (normal Indian Peaks spring ski zone depth)
+  // At 18": scale=0.50 → depletes at 2× rate
+  // At 36": scale=1.00 → baseline rate
+  // At 54": scale=1.50 → depletes at 0.67× rate
+  var depthIn = (snwdInches != null && snwdInches > 0) ? snwdInches : 36;
+  var depthScale = Math.min(1.5, Math.max(0.5, depthIn / 36));
+
   var N = seasonDays.length;
   seasonDays.forEach(function(d, i) {
-    var ageFactor = 0.3 + (i / Math.max(N - 1, 1)) * 0.70; // older 0.30, recent 1.00
-    // Column warms ~4.5× slower than surface; threshold 40°F vs 38°F for surface
-    var colHeat = Math.max(0, d.tmax - 40) * 0.004 * ageFactor;
+    // Flat ageFactor: column integrates thermal history uniformly
+    // (replaces old 0.3→1.0 ramp which was correct for surface, wrong for column)
+    var ageFactor = 1.0;
+
+    // Depth-scaled depletion: same heat load depletes thin packs faster
+    var colHeat = Math.max(0, d.tmax - 40) * (0.004 / depthScale) * ageFactor;
     ccc -= colHeat;
-    if (d.tmin > 32) ccc -= 0.015 * ageFactor; // sustained warm nights penetrate column
-    var colCold = Math.max(0, 25 - d.tmax) * 0.003 * ageFactor; // cold days rebuild reserve
+    if (d.tmin > 32) ccc -= (0.015 / depthScale) * ageFactor;
+
     if (d.date >= d.date.slice(0,4) + '-03-01') {
+      var colCold = Math.max(0, 25 - d.tmax) * 0.003 * ageFactor;
       ccc += colCold;
       if (d.snowfall > 1.0) ccc += 0.04 * ageFactor;
-    }// fresh snow insulates, adds cold to column top
+    }
   });
-  // SWE boost: higher SWE = more column mass = more cold content reserve
-  if (swePct !== null && swePct !== undefined) {
-    var sweBoost = (swePct - 100) / 1000; // ±0.05 at ±50% deviation — intentionally modest
-    ccc += sweBoost;
-  }
+
+  // sweBoost REMOVED — superseded by depthScale above
+  // (SWE % of median no longer needed for CCC physics)
+
   return Math.max(0.05, Math.min(0.95, ccc));
 }
 
@@ -1026,11 +1036,22 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     if (histDays14[fti-1].tmax > 36 && histDays14[fti].tmin < 28) ftCycles++;
   }
 
+  // Resolve current SNWD depth from SNOTEL data for CCC depth-dependent depletion
+  var currentSNWDInches = null;
+  if (snwdData && snwdData.days) {
+    for (var snwdI = snwdData.days.length - 1; snwdI >= 0; snwdI--) {
+      if (snwdData.days[snwdI].date <= targetDate && snwdData.days[snwdI].depthIn != null) {
+        currentSNWDInches = snwdData.days[snwdI].depthIn;
+        break;
+      }
+    }
+  }
+
   // Two-layer model
   var surfaceRipeness, columnColdContent, effIsoPrb;
   if(!archiveFailed) {
     surfaceRipeness = computeSurfaceRipeness(histDays14, month);
-    columnColdContent = computeColumnColdContent(seasonDaysForCCC, swePct, month);
+    columnColdContent = computeColumnColdContent(seasonDaysForCCC, swePct, month, currentSNWDInches);
     effIsoPrb = effectiveIsoPrbFn(surfaceRipeness, columnColdContent);
   } else {
     // Archive failed: surface-only mode using forecast backfill (graceful fallback)
@@ -1148,7 +1169,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     var dp = preCCCDays[jp];
     var cccP = archiveFailed
       ? 0.95
-      : computeColumnColdContent(preCCCDays.slice(0, jp), swePct, new Date(dp.date+'T12:00:00').getMonth()+1);
+      : computeColumnColdContent(preCCCDays.slice(0, jp), swePct, new Date(dp.date+'T12:00:00').getMonth()+1, currentSNWDInches);
     ripenessTrajectory.push({
       date: dp.date,
       surfaceRipeness: null,   // pre-season: no freeze-thaw cycle yet
@@ -1171,7 +1192,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     var sr = computeSurfaceRipeness(h14, dm);
     var ccc, eip;
     if(!archiveFailed) {
-      ccc = computeColumnColdContent(sDays, swePct, dm);
+      ccc = computeColumnColdContent(sDays, swePct, dm, currentSNWDInches);
       eip = effectiveIsoPrbFn(sr, ccc);
     } else {
       var SB2 = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
@@ -1978,6 +1999,7 @@ function cornWindow(pk,asp,f,month){
   rawScore*=((ma.radBoost||{})[asp]||1)*0.85+0.15;
   if(dur<0.75)rawScore*=0.45;if(dur<0.35)rawScore*=0.20;
   rawScore *= lateOpenPenalty;
+  console.log('rawScore', rawScore);
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
   var inf,qlabel;
   if(f.lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
