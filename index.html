@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v30 2026-03-16 UTC</title>
+<title>CornCast 🌽 v31 2026-03-16 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -945,6 +945,28 @@ function fetchJsonWithTimeout(url, timeoutMs) {
     .catch(function(e){ if(timer)clearTimeout(timer); throw e; });
 }
 
+function elevationDepthGradient(snwdStations) {
+  var valid = snwdStations.filter(function(s){
+    return s.snwdIn !== null && s.snwdIn !== undefined && s.snwdIn > 0;
+  });
+  if (valid.length < 2) return null;
+  var n = valid.length;
+  var sumX=0, sumY=0, sumXY=0, sumX2=0;
+  valid.forEach(function(s){
+    sumX  += s.elevFt;
+    sumY  += s.snwdIn;
+    sumXY += s.elevFt * s.snwdIn;
+    sumX2 += s.elevFt * s.elevFt;
+  });
+  var denom = n * sumX2 - sumX * sumX;
+  if (Math.abs(denom) < 1e-9) return null;
+  var b = (n * sumXY - sumX * sumY) / denom;
+  var a = (sumY - b * sumX) / n;
+  // Cap gradient: no more than 0.08"/ft gain or 0.01"/ft loss
+  b = Math.max(-0.01, Math.min(0.08, b));
+  return { a: a, b: b, n: valid.length };
+}
+
 function parseDailyJson(json, pk) {
   if(!json || !json.daily || !json.daily.time || !json.daily.time.length) return [];
   // Open-Meteo returns json.elevation (meters) for the actual grid cell.
@@ -963,7 +985,10 @@ function parseDailyJson(json, pk) {
       snowfall: (d.snowfall_sum[i]||0) * 0.3937, // cm→in: Open-Meteo snowfall_sum is always cm regardless of precipitation_unit
       wind: d.windspeed_10m_max[i]||0,
       cloud: d.cloudcover_mean[i]||0,
-      windDir: (d.winddirection_10m_dominant && d.winddirection_10m_dominant[i] != null) ? d.winddirection_10m_dominant[i] : null
+      windDir: (d.winddirection_10m_dominant && d.winddirection_10m_dominant[i] != null) ? d.winddirection_10m_dominant[i] : null,
+      snwdOmInches: (d.snow_depth && d.snow_depth[i] != null)
+        ? Math.round(d.snow_depth[i] * 39.37)   // meters → inches
+        : null
     });
   }
   return days;
@@ -985,14 +1010,14 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
 
   var archiveUrl = 'https://archive-api.open-meteo.com/v1/archive'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant,snow_depth'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
     +'&start_date='+cccStart+'&end_date='+yesterdayStr;
 
   var forecastUrl = 'https://api.open-meteo.com/v1/forecast'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant,snow_depth'
     +'&hourly=temperature_2m,cloudcover'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
@@ -1311,6 +1336,23 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     }
   }
 
+  // 9A — Open-Meteo snow_depth at grid elevation
+  var snwdOmInches = (targetDay && targetDay.snwdOmInches != null) ? targetDay.snwdOmInches : null;
+
+  // 9C — Build multi-station depth array for elevation gradient
+  // Primary point: SNOTEL highest-elevation station (already fetched)
+  // Second point: Open-Meteo grid cell depth at its grid elevation
+  var snwdStationsForGrad = [];
+  if (snwdData && snwdData.stationElev && currentSNWDInches != null) {
+    snwdStationsForGrad.push({ elevFt: snwdData.stationElev, snwdIn: currentSNWDInches });
+  }
+  var omGridElev = (forecastJson && forecastJson.elevation != null)
+    ? Math.round(forecastJson.elevation * 3.28084) : null;
+  if (omGridElev && snwdOmInches != null && snwdOmInches > 0) {
+    snwdStationsForGrad.push({ elevFt: omGridElev, snwdIn: snwdOmInches });
+  }
+  var depthGradient = elevationDepthGradient(snwdStationsForGrad);
+
   cb({
     surfaceRipeness: surfaceRipeness,
     columnColdContent: columnColdContent,
@@ -1341,7 +1383,9 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     snotelTminRaw: snotelTminRaw,
     sweTrend: (currentSWEData && currentSWEData.sweTrend != null) ? currentSWEData.sweTrend : null,
     overnightCloud: overnightCloud !== undefined ? overnightCloud : null,
-    morningCloud: morningCloud !== undefined ? morningCloud : null
+    morningCloud: morningCloud !== undefined ? morningCloud : null,
+    snwdOmInches: snwdOmInches,
+    depthGradient: depthGradient
   });
 }
 
@@ -2070,7 +2114,27 @@ function cornWindow(pk,asp,f,month){
   // Depth adjustment: thin packs advance effective season; deep packs retard it
   // At 18" SNWD: +0.10 isothermal probability (pack acts older than calendar)
   // At 54" SNWD: -0.07 isothermal probability (pack acts younger than calendar)
-  var snwdIn = (f.snwdInches != null && f.snwdInches > 0) ? f.snwdInches : 36;
+  // Face-specific depth: elevation gradient → SR modifier → fallback chain
+  // 1. Elevation gradient (SNOTEL + Open-Meteo grid point)
+  // 2. Open-Meteo snow_depth at grid elevation
+  // 3. SNOTEL basin depth (existing f.snwdInches)
+  // 4. Default 36"
+  var baseSnwdInches;
+  if (weatherData && weatherData.depthGradient) {
+    var grad = weatherData.depthGradient;
+    baseSnwdInches = Math.max(0, grad.a + grad.b * ad.ez);
+  } else if (weatherData && weatherData.snwdOmInches != null && weatherData.snwdOmInches > 0) {
+    baseSnwdInches = weatherData.snwdOmInches;
+  } else {
+    baseSnwdInches = (f.snwdInches != null && f.snwdInches > 0) ? f.snwdInches : 36;
+  }
+  // SR-based depth modifier: wind-loaded faces hold more snow; scoured faces hold less
+  // tData.sr: 3=well-sheltered/loaded, 2=neutral, 1=scoured/exposed
+  var srDepthMult = (tData.sr === 3) ? 1.30
+                  : (tData.sr === 1) ? 0.70
+                  : 1.0;
+  var faceSnwdInches = Math.max(1, baseSnwdInches * srDepthMult);
+  var snwdIn = faceSnwdInches;
   var depthIsoPrbAdj = (36 - snwdIn) / 36 * 0.15;
   var isoPrb = Math.max(0, Math.min(0.95, baseIsoPrb + depthIsoPrbAdj));
   effFQ=Math.max(0.03,effFQ*(1-matPen));
@@ -2393,6 +2457,19 @@ function buildDrivers(w,f,month,asp){
         text:'<strong>Light, unconsolidated pack (density ' + pd.toFixed(2) + ').</strong> '
           + 'Low density indicates loose, unbonded crystal structure. '
           + 'Crust forms but bonds weakly when refrozen.'});
+    }
+  }
+
+  if (weatherData && (weatherData.depthGradient || weatherData.snwdOmInches != null)) {
+    var depthNote = '';
+    if (weatherData.depthGradient) {
+      var grad = weatherData.depthGradient;
+      depthNote = '📏 Ski zone depth estimated from ' + grad.n + '-point elevation gradient.';
+    } else if (weatherData.snwdOmInches != null) {
+      depthNote = '📏 Snow depth from Open-Meteo grid (' + weatherData.snwdOmInches + '" at grid elevation).';
+    }
+    if (depthNote) {
+      rows.push({icon:'📏', cls:'driver-neu', text: depthNote});
     }
   }
 
