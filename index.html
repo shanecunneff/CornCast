@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v28b 2026-03-16 UTC</title>
+<title>CornCast 🌽 v29 2026-03-16 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -993,7 +993,7 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
   var forecastUrl = 'https://api.open-meteo.com/v1/forecast'
     +'?latitude='+pk.la+'&longitude='+pk.lo
     +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
-    +'&hourly=temperature_2m'
+    +'&hourly=temperature_2m,cloudcover'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
     +'&start_date='+todayStr+'&end_date='+fmtDate(fcastEnd)
@@ -1160,6 +1160,27 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     }
   }
 
+  // Split hourly cloud: overnight (midnight–5am) drives freeze quality; morning (6am–noon) drives melt onset.
+  function meanHourlyCloud(hourlyData, date, startHr, endHr) {
+    var vals = [], h = hourlyData;
+    for (var i = 0; i < h.time.length; i++) {
+      var d2 = h.time[i].slice(0,10);
+      var hr = parseInt(h.time[i].slice(11,13));
+      if (d2 === date && hr >= startHr && hr <= endHr &&
+          h.cloudcover && h.cloudcover[i] !== null && h.cloudcover[i] !== undefined) {
+        vals.push(h.cloudcover[i]);
+      }
+    }
+    if (!vals.length) return null;
+    return Math.round(vals.reduce(function(a,b){return a+b;},0) / vals.length);
+  }
+  // Overnight cloud (midnight–5am): drives freeze quality calculation
+  // Morning cloud (6am–noon): drives solar attenuation and melt onset
+  var overnightCloud = (forecastJson && forecastJson.hourly)
+    ? meanHourlyCloud(forecastJson.hourly, targetDate, 0, 5) : null;
+  var morningCloud = (forecastJson && forecastJson.hourly)
+    ? meanHourlyCloud(forecastJson.hourly, targetDate, 6, 12) : null;
+
   // Snowfall storm detection — Open-Meteo baseline with orographic uplift for forecast days.
   // Forecast snowfall from gridded model (~10,000' effective elevation) underestimates
   // alpine snowfall at 12,000'+ terrain; OROG_MULT applies only to forecast days.
@@ -1318,7 +1339,9 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     windDir: targetDay ? (targetDay.windDir || null) : null,
     snotelTminUsed: snotelTminUsed,
     snotelTminRaw: snotelTminRaw,
-    sweTrend: (currentSWEData && currentSWEData.sweTrend != null) ? currentSWEData.sweTrend : null
+    sweTrend: (currentSWEData && currentSWEData.sweTrend != null) ? currentSWEData.sweTrend : null,
+    overnightCloud: overnightCloud !== undefined ? overnightCloud : null,
+    morningCloud: morningCloud !== undefined ? morningCloud : null
   });
 }
 
@@ -2170,6 +2193,20 @@ function buildDrivers(w,f,month,asp){
   if(f.cn<=15)       rows.push({icon:'🌟',cls:'driver-pos',text:'<strong>Clear overnight sky ('+f.cn+'% cloud).</strong> The snow surface radiates heat directly to the cold sky and receives almost nothing back — the surface can be 2–5°F colder than the air thermometer reads. Strong amplifier on top of the low temperature.'});
   else if(f.cn<=40)  rows.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partly cloudy overnight ('+f.cn+'% cloud).</strong> Partial cloud moderates radiative cooling. The freeze will not penetrate quite as deep as a clear night at the same temperature.'});
   else               rows.push({icon:'☁️',cls:'driver-neg',text:'<strong>Cloudy overnight ('+f.cn+'% cloud).</strong> Cloud radiates heat back to the surface, acting as a thermal blanket. Noticeably limits how deep the overnight freeze can penetrate.'});
+
+  if (weatherData && weatherData.overnightCloud !== null &&
+      weatherData.morningCloud !== null &&
+      Math.abs(weatherData.morningCloud - weatherData.overnightCloud) > 15) {
+    var diff = weatherData.morningCloud > weatherData.overnightCloud
+      ? 'clouding up by morning'
+      : 'clearing by morning';
+    rows.push({icon:'🌥️', cls:'driver-neu',
+      text:'<strong>Cloud split: ' + weatherData.overnightCloud + '% overnight → '
+        + weatherData.morningCloud + '% morning (' + diff + ').</strong> '
+        + (weatherData.morningCloud > weatherData.overnightCloud
+          ? 'Freeze quality higher than morning solar input suggests — crust may be better than the melt window implies.'
+          : 'Morning clearing will accelerate melt onset despite overnight clouds.')});
+  }
 
   if(f.wi>=22)       rows.push({icon:'💨',cls:'driver-neg',text:'<strong>High wind ('+f.wi+' mph) — crust scour.</strong> Wind physically erodes developing ice bonds before they consolidate. The '+asp+' aspect has '+Math.round((WIND_ASP[asp]||0.5)*100)+'% wind exposure. Freeze quality reduced by '+Math.round(w.windScour*100)+' pts.'});
   else if(f.wi>=14)  rows.push({icon:'💨',cls:'driver-neu',text:'<strong>Moderate wind ('+f.wi+' mph).</strong> Some scour effect on crust formation, more significant on exposed ridge or summit terrain.'});
