@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v26 2026-03-12 UTC</title>
+<title>CornCast 🌽 v27 2026-03-16 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -564,10 +564,10 @@ var BASE_RAD={N:0.18,NE:0.55,E:0.88,SE:1.25,S:1.38,SW:1.20,W:0.72,NW:0.30};
 var BASE_SUN={N:null,NE:7.8,E:6.9,SE:7.3,S:9.5,SW:12.0,W:13.5,NW:15.2};
 var WIND_ASP={N:0.55,NE:0.45,E:0.35,SE:0.28,S:0.50,SW:0.72,W:1.00,NW:0.90};
 var MONTH_ADJ={
-  3:{radBoost:{N:.60,NE:.75,E:.90,SE:1.10,S:1.18,SW:1.08,W:.85,NW:.55},sunShift:{N:0,NE:.8,E:.5,SE:.3,S:-.2,SW:-.3,W:-.3,NW:.5},winFactor:1.1,freezeBonus:.08,maturityPenalty:0.00,isothermProb:0.05},
-  4:{radBoost:{N:1,NE:1,E:1,SE:1,S:1,SW:1,W:1,NW:1},sunShift:{N:0,NE:0,E:0,SE:0,S:0,SW:0,W:0,NW:0},winFactor:1.0,freezeBonus:.00,maturityPenalty:0.06,isothermProb:0.15},
-  5:{radBoost:{N:1.30,NE:1.25,E:1.10,SE:.95,S:.90,SW:.92,W:1.05,NW:1.15},sunShift:{N:0,NE:-.5,E:-.4,SE:-.2,S:.3,SW:.5,W:.4,NW:-.3},winFactor:.9,freezeBonus:-.05,maturityPenalty:0.14,isothermProb:0.40},
-  6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},winFactor:.8,freezeBonus:-.12,maturityPenalty:0.22,isothermProb:0.70},
+  3:{radBoost:{N:.60,NE:.75,E:.90,SE:1.10,S:1.18,SW:1.08,W:.85,NW:.55},sunShift:{N:0,NE:.8,E:.5,SE:.3,S:-.2,SW:-.3,W:-.3,NW:.5},winFactor:1.1,freezeBonus:.08,isothermProb:0.05},
+  4:{radBoost:{N:1,NE:1,E:1,SE:1,S:1,SW:1,W:1,NW:1},sunShift:{N:0,NE:0,E:0,SE:0,S:0,SW:0,W:0,NW:0},winFactor:1.0,freezeBonus:.00,isothermProb:0.15},
+  5:{radBoost:{N:1.30,NE:1.25,E:1.10,SE:.95,S:.90,SW:.92,W:1.05,NW:1.15},sunShift:{N:0,NE:-.5,E:-.4,SE:-.2,S:.3,SW:.5,W:.4,NW:-.3},winFactor:.9,freezeBonus:-.05,isothermProb:0.40},
+  6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},winFactor:.8,freezeBonus:-.12,isothermProb:0.70},
 };
 
 var selectedPeak=0,selectedAsp=null,allResults=[],leafletMap=null,pkMarkers=[];
@@ -2027,7 +2027,16 @@ function cornWindow(pk,asp,f,month){
   var freezeQ=rawFQ*(0.50+0.50*(100-f.cn)/100);
   var windScour=Math.max(0,(f.wi-12)*0.012*(WIND_ASP[asp]||0.5)*ad.wx);
   var effFQ=Math.max(0.03,freezeQ-windScour);
-  var matPen=ma.maturityPenalty||0;
+  // Physics-native maturity: derived from actual pack state, not calendar month.
+  // CCC measures column thermal depletion (0=depleted, 1=full cold reserve).
+  // ftCycles measures grain development (more cycles = better polycrystals).
+  // Penalty rises as CCC depletes; each freeze-thaw cycle reduces it slightly.
+  var liveCCC = (weatherData && weatherData.columnColdContent != null)
+    ? weatherData.columnColdContent
+    : (month <= 3 ? 0.85 : month === 4 ? 0.60 : month === 5 ? 0.35 : 0.15);
+  var liveFTC = (weatherData && weatherData.ftCycles != null)
+    ? weatherData.ftCycles : 0;
+  var matPen = Math.max(0, Math.min(0.20, (1 - liveCCC) * 0.22 - liveFTC * 0.015));
   var baseIsoPrb = (weatherData && weatherData.effectiveIsoPrb != null)
     ? weatherData.effectiveIsoPrb
     : (ma.isothermProb || 0);
@@ -2122,7 +2131,7 @@ function cornWindow(pk,asp,f,month){
     terrainQ:tData.q,terrainRubric:tData,freezeQ:parseFloat(effFQ.toFixed(2)),windScour:parseFloat(windScour.toFixed(2)),
     effRad:parseFloat(effRad.toFixed(2)),note:ad.note,crustQ:parseFloat(crustQ.toFixed(2)),sweAdj:parseFloat(sweAdj.toFixed(3)),
     depthFactor:parseFloat(depthFactor.toFixed(2)),ageFactor:parseFloat(ageFactor.toFixed(2)),
-    rawFQ:parseFloat(rawFQ.toFixed(2)),matPen:matPen,isoPrb:isoPrb,packRipeness:isoPrb,
+    rawFQ:parseFloat(rawFQ.toFixed(2)),matPen:parseFloat(matPen.toFixed(3)),isoPrb:isoPrb,packRipeness:isoPrb,
     surfaceRipeness:(weatherData&&weatherData.surfaceRipeness!=null)?parseFloat(weatherData.surfaceRipeness.toFixed(2)):null,
     columnColdContent:(weatherData&&weatherData.columnColdContent!=null)?parseFloat(weatherData.columnColdContent.toFixed(2)):null,
     isoPrbIsLive:!!(weatherData && weatherData.effectiveIsoPrb!=null),
@@ -2133,6 +2142,7 @@ function cornWindow(pk,asp,f,month){
 // ── SCORE DRIVER NARRATIVE ────────────────────────────────────────────────
 function buildDrivers(w,f,month,asp){
   var ma=MONTH_ADJ[month]||MONTH_ADJ[4],mnames={3:"March",4:"April",5:"May",6:"June"},rows=[];
+  var liveFTC = (weatherData && weatherData.ftCycles != null) ? weatherData.ftCycles : 0;
   var peakElStr=PK[selectedPeak].el.toLocaleString();
   function head(num,title){ rows.push({type:'head',text:'Step '+num+' · '+title}); }
   function mod(title){  rows.push({type:'head',text:'Modifier · '+title}); }
@@ -2207,6 +2217,22 @@ function buildDrivers(w,f,month,asp){
           +'<span style="font-size:.68rem;color:'+cccColor+';font-weight:700;width:2.2rem;text-align:right">'+cccPct+'%</span>'
           +'<span style="font-size:.65rem;color:var(--muted)">Full</span></div>'
           +'<span style="font-size:.63rem;color:#456a82">Full-season column (30cm–full depth) · Mar 1 → target · Jennings et al. (2018)</span>'});
+      if (w.matPen < 0.04) {
+        rows.push({icon:'🌽', cls:'driver-pos',
+          text:'<strong>Pack structure excellent</strong> — cold reserve strong ('
+            + Math.round(w.columnColdContent*100) + '%), grain development advanced ('
+            + liveFTC + ' freeze-thaw cycles). Minimal maturity penalty.'});
+      } else if (w.matPen < 0.08) {
+        rows.push({icon:'📅', cls:'driver-neu',
+          text:'<strong>Pack maturing</strong> — cold reserve moderate ('
+            + Math.round(w.columnColdContent*100) + '%), grains developing ('
+            + liveFTC + ' freeze-thaw cycles). Moderate maturity effect.'});
+      } else {
+        rows.push({icon:'⚠️', cls:'driver-neg',
+          text:'<strong>Pack significantly matured</strong> — cold reserve low ('
+            + Math.round(w.columnColdContent*100) + '%). Refreeze bonds form weakly '
+            + 'regardless of overnight temperature.'});
+      }
     } else if(w.archiveFailed){
       rows.push({icon:'🏔️',cls:'driver-neu',text:'<strong>Column cold reserve: unavailable</strong> — archive fetch failed; column defaults to seasonal baseline.'});
     }
