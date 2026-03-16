@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v27 2026-03-16 UTC</title>
+<title>CornCast 🌽 v28 2026-03-16 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -564,10 +564,10 @@ var BASE_RAD={N:0.18,NE:0.55,E:0.88,SE:1.25,S:1.38,SW:1.20,W:0.72,NW:0.30};
 var BASE_SUN={N:null,NE:7.8,E:6.9,SE:7.3,S:9.5,SW:12.0,W:13.5,NW:15.2};
 var WIND_ASP={N:0.55,NE:0.45,E:0.35,SE:0.28,S:0.50,SW:0.72,W:1.00,NW:0.90};
 var MONTH_ADJ={
-  3:{radBoost:{N:.60,NE:.75,E:.90,SE:1.10,S:1.18,SW:1.08,W:.85,NW:.55},sunShift:{N:0,NE:.8,E:.5,SE:.3,S:-.2,SW:-.3,W:-.3,NW:.5},winFactor:1.1,freezeBonus:.08,isothermProb:0.05},
-  4:{radBoost:{N:1,NE:1,E:1,SE:1,S:1,SW:1,W:1,NW:1},sunShift:{N:0,NE:0,E:0,SE:0,S:0,SW:0,W:0,NW:0},winFactor:1.0,freezeBonus:.00,isothermProb:0.15},
-  5:{radBoost:{N:1.30,NE:1.25,E:1.10,SE:.95,S:.90,SW:.92,W:1.05,NW:1.15},sunShift:{N:0,NE:-.5,E:-.4,SE:-.2,S:.3,SW:.5,W:.4,NW:-.3},winFactor:.9,freezeBonus:-.05,isothermProb:0.40},
-  6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},winFactor:.8,freezeBonus:-.12,isothermProb:0.70},
+  3:{radBoost:{N:.60,NE:.75,E:.90,SE:1.10,S:1.18,SW:1.08,W:.85,NW:.55},sunShift:{N:0,NE:.8,E:.5,SE:.3,S:-.2,SW:-.3,W:-.3,NW:.5},isothermProb:0.05},
+  4:{radBoost:{N:1,NE:1,E:1,SE:1,S:1,SW:1,W:1,NW:1},sunShift:{N:0,NE:0,E:0,SE:0,S:0,SW:0,W:0,NW:0},isothermProb:0.15},
+  5:{radBoost:{N:1.30,NE:1.25,E:1.10,SE:.95,S:.90,SW:.92,W:1.05,NW:1.15},sunShift:{N:0,NE:-.5,E:-.4,SE:-.2,S:.3,SW:.5,W:.4,NW:-.3},isothermProb:0.40},
+  6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},isothermProb:0.70},
 };
 
 var selectedPeak=0,selectedAsp=null,allResults=[],leafletMap=null,pkMarkers=[];
@@ -2018,7 +2018,11 @@ function cornWindow(pk,asp,f,month){
   var elevB=(ad.ez-11500)/1800*0.18;
   // Widened range: 1.0 anchors at ~-5°F instead of ~8°F
   // 28°F → 0.09, 20°F → 0.32, 10°F → 0.60, 0°F → 0.89, -5°F → 1.0
-  var rawFQ=Math.max(0,Math.min(1,(30-f.lo)/35+elevB+(ma.freezeBonus||0)));
+  // CCC-native freeze bonus: cold-core pack amplifies surface refreeze;
+  // near-isothermal pack absorbs overnight cold before building a deep crust.
+  // Range: CCC=0.85→+0.05, CCC=0.60→0, CCC=0.35→-0.05, CCC=0.15→-0.09
+  var ccFreezeBonus = (liveCCC - 0.60) * 0.20;
+  var rawFQ=Math.max(0,Math.min(1,(30-f.lo)/35+elevB+ccFreezeBonus));
   // Freeze duration bonus: 0 at ≤2 hrs below 28°F, up to +0.15 at 8+ hrs
   if (weatherData && weatherData.freezeHours != null) {
     var freezeDurBonus = Math.min(0.15, Math.max(0, (weatherData.freezeHours - 2) * 0.025));
@@ -2096,7 +2100,12 @@ function cornWindow(pk,asp,f,month){
 
   var windDurPen=Math.max(0,(f.wi-18)*0.055*ad.wx);
   var rawDur=(crustQ*1.6)+(effRad*1.4)-((f.hi-32)*0.065)-windDurPen+sweDurBonus;
-  rawDur*=(ma.winFactor||1);
+  // Pack-state-native window factor: cold-core pack sustains corn window longer.
+  // High CCC = column absorbs surface heat slowly = longer window.
+  // Low CCC = near-isothermal pack conducts heat upward rapidly = shorter window.
+  // Range: CCC=0.95->1.135, CCC=0.60->1.03, CCC=0.35->0.955, CCC=0.15->0.895
+  var packWinFactor = 0.85 + liveCCC * 0.30;
+  rawDur *= packWinFactor;
   rawDur*=(1-isoPrb*0.25); // isothermal pack collapses window faster (spec §physics)
   var dur=Math.max(0.20,Math.min(4.0,rawDur));
   var we=ws+dur;
