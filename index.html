@@ -1010,7 +1010,7 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
 
   var archiveUrl = 'https://archive-api.open-meteo.com/v1/archive'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant,snow_depth'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
     +'&start_date='+cccStart+'&end_date='+yesterdayStr;
