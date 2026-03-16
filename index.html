@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v31 2026-03-16 UTC</title>
+<title>CornCast 🌽 v32 2026-03-16 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -502,16 +502,16 @@ function tq(sr,ap,we){return{sr:sr,ap:ap,we:we,q:(sr+ap+we)/9};}
 var PK=[
   // Brainard Lake cluster — coords from USGS National Map summit layer
   {n:"Mt. Toll",          la:40.0883,lo:-105.6339,el:12979,
-   asp:{N:{t:tq(1,2,2),wx:.65,sh:0,ez:12700,note:"N face icy"},NE:{t:tq(2,2,2),wx:.58,sh:.2,ez:12400,note:"NE aspect moderate"},E:{t:tq(3,3,3),wx:.52,sh:0,ez:12300,note:"E face, good morning corn"},SE:{t:tq(3,3,3),wx:.48,sh:0,ez:12100,note:"SE couloir, quality line"}}},
+   asp:{N:{t:tq(1,2,2),wx:.65,sh:0,ez:12489,note:"N face icy"},NE:{t:tq(2,2,2),wx:.58,sh:.2,ez:12400,note:"NE aspect moderate"},E:{t:tq(3,3,3),wx:.52,sh:0,ez:12300,note:"E face, good morning corn"},SE:{t:tq(3,3,3),wx:.48,sh:0,ez:12100,note:"SE couloir, quality line"}}},
   // Pawnee: summit is east of Pawnee Lake, on the ridge at ~-105.6394
   {n:"Pawnee Peak",       la:40.0813,lo:-105.6329,el:12943,
-   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12700,note:"N face limited"},NE:{t:tq(2,2,2),wx:.58,sh:.2,ez:12300,note:"NE bowl"},E:{t:tq(3,3,3),wx:.55,sh:0,ez:12200,note:"E face, accessible corn"},SE:{t:tq(3,3,3),wx:.50,sh:0,ez:12100,note:"SE — popular spring objective"}}},
+   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12700,note:"N face limited"},NE:{t:tq(2,2,2),wx:.58,sh:.2,ez:12071,note:"NE bowl"},E:{t:tq(3,3,3),wx:.55,sh:0,ez:12200,note:"E face, accessible corn"},SE:{t:tq(3,3,3),wx:.50,sh:0,ez:12100,note:"SE — popular spring objective"}}},
   // Audubon: summit on east side of ridge, confirmed USGS
   {n:"Mt. Audubon",       la:40.0994,lo:-105.6256,el:13233,
-   asp:{N:{t:tq(1,2,2),wx:.70,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12700,note:"Broad E face, consistent"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12500,note:"SE face, classic Audubon corn"},S:{t:tq(2,3,2),wx:.52,sh:0,ez:12400,note:"S face, early window"},W:{t:tq(2,2,1),wx:.62,sh:0,ez:12500,note:"W face, afternoon"}}},
+   asp:{N:{t:tq(1,2,2),wx:.70,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12216,note:"Broad E face, consistent"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12016,note:"SE face, classic Audubon corn"},S:{t:tq(2,3,2),wx:.52,sh:0,ez:12016,note:"S face, early window"},W:{t:tq(2,2,1),wx:.62,sh:0,ez:12500,note:"W face, afternoon"}}},
   // Paiute: summit on divide west of Paiute Lake
   {n:"Paiute Peak",       la:40.0980,lo:-105.6332,el:13088,
-   asp:{E:{t:tq(3,2,3),wx:.55,sh:0,ez:12300,note:"E face, lower elev melts earlier"},SE:{t:tq(3,3,3),wx:.50,sh:0,ez:12100,note:"SE, good but shorter window"},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12000,note:"S face, very early window"},SW:{t:tq(2,2,1),wx:.65,sh:0,ez:12000,note:"SW, afternoon"},W:{t:tq(1,2,1),wx:.70,sh:0,ez:12100,note:"W, late afternoon"}}},
+   asp:{E:{t:tq(3,2,3),wx:.55,sh:0,ez:12100,note:"E face, lower elev melts earlier"},SE:{t:tq(3,3,3),wx:.50,sh:0,ez:12100,note:"SE, good but shorter window"},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12000,note:"S face, very early window"},SW:{t:tq(2,2,1),wx:.65,sh:0,ez:12000,note:"SW, afternoon"},W:{t:tq(1,2,1),wx:.70,sh:0,ez:12100,note:"W, late afternoon"}}},
   // Isabelle Glacier cluster
   {n:"Arikaree Peak",     la:40.0464,lo:-105.6383,el:13146,
    asp:{N:{t:tq(1,1,2),wx:.75,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,2),wx:.58,sh:0,ez:12500,note:"E face, good corn potential"},SE:{t:tq(3,3,2),wx:.52,sh:0,ez:12400,note:"SE aspect, solid when frozen"},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12300,note:"S face moderate"}}},
@@ -524,39 +524,42 @@ var PK=[
   {n:"S. Arapaho Peak",   la:40.0200,lo:-105.6497,el:13397,
    asp:{E:{t:tq(3,3,3),wx:.50,sh:0,ez:12700,note:"E face, reliable morning corn"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12600,note:"Classic SE couloir — premier corn face"},S:{t:tq(3,3,2),wx:.52,sh:0,ez:12500,note:"S face, watch window timing"},SW:{t:tq(2,2,2),wx:.57,sh:0,ez:12500,note:"SW, afternoon window"}}},
   {n:"Navajo Peak",       la:40.0533,lo:-105.6467,el:13409,
-   asp:{N:{t:tq(1,1,1),wx:.90,sh:0,ez:13100,note:"Very exposed, icy N face"},NE:{t:tq(2,1,1),wx:.85,sh:0,ez:12900,note:"Airplane Gully — high wind, variable crust"},E:{t:tq(2,2,2),wx:.75,sh:0,ez:12700,note:"Rocky E face, patchy snow"},S:{t:tq(2,2,2),wx:.70,sh:0,ez:12500,note:"S face, melts fast"},SW:{t:tq(1,2,1),wx:.82,sh:0,ez:12500,note:"Exposed SW, slab prone"}}},
+   asp:{N:{t:tq(1,1,1),wx:.90,sh:0,ez:12424,note:"Very exposed, icy N face"},NE:{t:tq(2,1,1),wx:.85,sh:0,ez:12424,note:"Airplane Gully — high wind, variable crust"},E:{t:tq(2,2,2),wx:.75,sh:0,ez:12700,note:"Rocky E face, patchy snow"},S:{t:tq(2,2,2),wx:.70,sh:0,ez:12500,note:"S face, melts fast"},SW:{t:tq(1,2,1),wx:.82,sh:0,ez:12500,note:"Exposed SW, slab prone"}}},
   {n:"Apache Peak",       la:40.0583,lo:-105.6513,el:13441,
-   asp:{N:{t:tq(1,2,2),wx:.50,sh:.5,ez:13000,note:"N face, very late window"},NE:{t:tq(3,3,3),wx:.38,sh:.4,ez:12800,note:"Sheltered NE bowl — excellent corn above Isabelle Glacier"},E:{t:tq(3,3,3),wx:.36,sh:0,ez:12700,note:"Prime E face, best in the range"},SE:{t:tq(3,3,3),wx:.40,sh:0,ez:12600,note:"SE couloir, top-tier when frozen"}}},
+   asp:{N:{t:tq(1,2,2),wx:.50,sh:.5,ez:13000,note:"N face, very late window"},NE:{t:tq(3,3,3),wx:.38,sh:.4,ez:12800,note:"Sheltered NE bowl — excellent corn above Isabelle Glacier"},E:{t:tq(3,3,3),wx:.36,sh:0,ez:12440,note:"Prime E face, best in the range"},SE:{t:tq(3,3,3),wx:.40,sh:0,ez:12600,note:"SE couloir, top-tier when frozen"}}},
   // Shoshoni: summit east of Lake Isabelle on the divide
   {n:"Shoshoni Peak",     la:40.0672,lo:-105.6389,el:12967,
-   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12600,note:"N face marginal"},NE:{t:tq(3,3,3),wx:.55,sh:.3,ez:12400,note:"NE couloir / Shoshoni Bowl — classic lower-angle spring line"},SE:{t:tq(3,3,2),wx:.50,sh:0,ez:12100,note:"SE, short but quality window"},S:{t:tq(1,2,2),wx:.55,sh:0,ez:12000,note:"Sheer S face, near-vertical"}}},
+   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12383,note:"N face marginal"},NE:{t:tq(3,3,3),wx:.55,sh:.3,ez:12033,note:"NE couloir / Shoshoni Bowl — classic lower-angle spring line"},SE:{t:tq(3,3,2),wx:.50,sh:0,ez:12100,note:"SE, short but quality window"},S:{t:tq(1,2,2),wx:.55,sh:0,ez:12000,note:"Sheer S face, near-vertical"}}},
   {n:"Ogalalla Peak",     la:40.1703,lo:-105.6667,el:13333,
    asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N very exposed"},NE:{t:tq(2,2,1),wx:.72,sh:.3,ez:12800,note:"NE, high wind exposure"},E:{t:tq(3,2,2),wx:.62,sh:0,ez:12700,note:"E face, moderate quality"},SE:{t:tq(3,3,2),wx:.58,sh:0,ez:12500,note:"SE aspect"}}},
   // Western cluster
   {n:"Mt. Neva",          la:40.0186,lo:-105.6694,el:12814,
-   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12300,note:"NE aspect, moderate"},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12200,note:"E face, decent lower-angle corn"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12000,note:"SE couloir, popular objective"},N:{t:tq(1,1,2),wx:.58,sh:0,ez:12600,note:"N face minimal"}}},
+   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12300,note:"NE aspect, moderate"},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12200,note:"E face, decent lower-angle corn"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12357,note:"SE couloir, popular objective"},N:{t:tq(1,1,2),wx:.58,sh:0,ez:12600,note:"N face minimal"}}},
   {n:"Jasper Peak",       la:39.9945,lo:-105.6833,el:12923,
-   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12300,note:"NE bowl, moderate"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12200,note:"E face, decent corn"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12000,note:"SE couloir, known ski line"},N:{t:tq(1,1,2),wx:.60,sh:0,ez:12600,note:"N face very limited"}}},
+   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12300,note:"NE bowl, moderate"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12200,note:"E face, decent corn"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12249,note:"SE couloir, known ski line"},N:{t:tq(1,1,2),wx:.60,sh:0,ez:12600,note:"N face very limited"}}},
   {n:"Lone Eagle Peak",   la:40.0714,lo:-105.6603,el:11940,
-   asp:{E:{t:tq(2,3,3),wx:.42,sh:0,ez:11400,note:"E face, low elevation — early season only"},SE:{t:tq(3,3,3),wx:.38,sh:0,ez:11200,note:"SE, popular early spring objective"},S:{t:tq(2,3,2),wx:.45,sh:0,ez:11100,note:"S face, very early melt"}}},
+   asp:{E:{t:tq(2,3,3),wx:.42,sh:0,ez:11400,note:"E face, low elevation — early season only"},SE:{t:tq(3,3,3),wx:.38,sh:0,ez:11200,note:"SE, popular early spring objective"},S:{t:tq(2,3,2),wx:.45,sh:0,ez:11370,note:"S face, very early melt"}}},
   // RMNP / North cluster
   {n:"Sawtooth Mtn",      la:40.1269,lo:-105.6252,el:12304,
-   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11900,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.42,sh:0,ez:11700,note:"SE aspect, wide open"},S:{t:tq(2,3,2),wx:.48,sh:0,ez:11600,note:"S face, early melt"},SW:{t:tq(2,2,1),wx:.52,sh:0,ez:11600,note:"SW afternoon"}}},
+   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11652,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.42,sh:0,ez:11700,note:"SE aspect, wide open"},S:{t:tq(2,3,2),wx:.48,sh:0,ez:11600,note:"S face, early melt"},SW:{t:tq(2,2,1),wx:.52,sh:0,ez:11600,note:"SW afternoon"}}},
   {n:"Red Deer Mtn",      la:40.1120,lo:-105.6320,el:12375,
    asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12100,note:"NE aspect"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face moderate"},SE:{t:tq(3,3,3),wx:.45,sh:0,ez:11900,note:"SE couloir — ski line from Buchanan Pass"},S:{t:tq(2,2,2),wx:.50,sh:0,ez:11700,note:"S face"}}},
   {n:"St. Vrain Mtn",     la:40.1613,lo:-105.5851,el:12162,
    asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11700,note:"E face, accessible lower terrain"},SE:{t:tq(3,3,3),wx:.42,sh:0,ez:11500,note:"SE, widest window at this elevation"},S:{t:tq(2,2,2),wx:.48,sh:0,ez:11400,note:"S face very early melt"},W:{t:tq(1,2,1),wx:.55,sh:0,ez:11600,note:"W face"}}},
   {n:"Terra Tomah",       la:40.3097,lo:-105.6619,el:12718,
-   asp:{E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:11800,note:"SE, wide open approach"},S:{t:tq(2,3,2),wx:.50,sh:0,ez:11700,note:"S face early melt"},SW:{t:tq(2,2,1),wx:.54,sh:0,ez:11700,note:"SW afternoon"},W:{t:tq(1,2,1),wx:.60,sh:0,ez:11900,note:"W late afternoon"}}},
+   asp:{E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:11800,note:"SE, wide open approach"},S:{t:tq(2,3,2),wx:.50,sh:0,ez:11909,note:"S face early melt"},SW:{t:tq(2,2,1),wx:.54,sh:0,ez:11909,note:"SW afternoon"},W:{t:tq(1,2,1),wx:.60,sh:0,ez:11900,note:"W late afternoon"}}},
   // Longs Peak area
   {n:"Longs Peak",        la:40.2550,lo:-105.6153,el:14259,
    asp:{N:{t:tq(1,1,1),wx:.95,sh:0,ez:13800,note:"Diamond face — technical, rarely skied"},NE:{t:tq(3,3,2),wx:.58,sh:.7,ez:13400,note:"NE Trough — stays frozen late, classic line"},E:{t:tq(3,3,2),wx:.62,sh:0,ez:13300,note:"E lobe, high quality"},SE:{t:tq(3,3,2),wx:.60,sh:0,ez:13200,note:"SE bowl"},W:{t:tq(1,1,1),wx:.90,sh:0,ez:13500,note:"W face very exposed"},NW:{t:tq(1,1,1),wx:.92,sh:0,ez:13600,note:"NW wind-scoured"}}},
   {n:"Mt. Meeker",        la:40.2456,lo:-105.6061,el:13911,
    asp:{N:{t:tq(1,1,1),wx:.85,sh:0,ez:13500,note:"N face icy and technical"},NE:{t:tq(3,3,2),wx:.62,sh:.5,ez:13100,note:"NE face, high quality when frozen"},E:{t:tq(3,3,2),wx:.56,sh:0,ez:13000,note:"E face excellent corn"},S:{t:tq(3,3,3),wx:.54,sh:0,ez:12700,note:"The Loft — top-tier when it works"},SW:{t:tq(2,2,2),wx:.65,sh:0,ez:12800,note:"Loft SW approach"}}},
   {n:"Chiefs Head",       la:40.2308,lo:-105.6381,el:13579,
-   asp:{NE:{t:tq(3,3,3),wx:.44,sh:.5,ez:13000,note:"Premier NE face — remote but excellent"},E:{t:tq(3,3,3),wx:.46,sh:0,ez:12900,note:"E bowl, consistently best corn"},S:{t:tq(2,3,2),wx:.55,sh:0,ez:12700,note:"S face moderate quality"},SW:{t:tq(2,2,2),wx:.60,sh:0,ez:12600,note:"SW afternoon window"},NW:{t:tq(1,1,1),wx:.72,sh:0,ez:13200,note:"NW exposed ridge"}}},
+   asp:{NE:{t:tq(3,3,3),wx:.44,sh:.5,ez:12689,note:"Premier NE face — remote but excellent"},E:{t:tq(3,3,3),wx:.46,sh:0,ez:12689,note:"E bowl, consistently best corn"},S:{t:tq(2,3,2),wx:.55,sh:0,ez:12700,note:"S face moderate quality"},SW:{t:tq(2,2,2),wx:.60,sh:0,ez:12600,note:"SW afternoon window"},NW:{t:tq(1,1,1),wx:.72,sh:0,ez:12989,note:"NW exposed ridge"}}},
   {n:"Pagoda Mtn",        la:40.2431,lo:-105.6281,el:13497,
    asp:{N:{t:tq(1,1,2),wx:.75,sh:0,ez:13100,note:"N face minimal sun"},E:{t:tq(2,3,2),wx:.60,sh:0,ez:12900,note:"E face moderate quality"},SE:{t:tq(3,3,2),wx:.56,sh:0,ez:12700,note:"SE, reliable but not standout"},W:{t:tq(1,2,1),wx:.72,sh:0,ez:12900,note:"W face afternoon"}}},
+  {n:"Hallett Peak",     la:40.2981,lo:-105.6447,el:12713,
+   asp:{SE:{t:tq(3,3,2),wx:.44,sh:0,ez:11556,note:"Chaos Couloir — classic RMNP spring corn from Lake Haiyaha"},
+        E: {t:tq(3,3,2),wx:.50,sh:0,ez:11437,note:"East Couloir above Emerald Lake"}}},
 ];
 
 var AZ={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
@@ -2082,13 +2085,22 @@ function cornWindow(pk,asp,f,month){
   var radMult=BASE_RAD[asp]*((ma.radBoost||{})[asp]||1);
   if(BASE_SUN[asp]===null)return{ws:null,we:null,dur:0,q:0,inf:"N-facing: insufficient solar radiation",note:ad.note};
   var sunHit=BASE_SUN[asp]+((ma.sunShift||{})[asp]||0)+(ad.sh||0);
-  var elevB=(ad.ez-11500)/1800*0.18;
+  // Ski zone lapse correction: temperatures fetched are lapse-corrected
+  // to pk.el (summit). Apply delta correction to ad.ez (ski zone).
+  // The corn forms on the ski line, not the summit — this is the
+  // physically correct elevation for freeze quality and melt onset.
+  // Positive lapseAdj means ski zone is warmer (lower than summit).
+  var LAPSE_RATE = 3.5; // °F per 1000ft standard environmental lapse rate
+  var lapseAdj = (pk.el - ad.ez) / 1000 * LAPSE_RATE;
+  var f_lo = f.lo + lapseAdj;
+  var f_da = f.da + lapseAdj;
+  var f_hi = f.hi + lapseAdj;
   // Widened range: 1.0 anchors at ~-5°F instead of ~8°F
   // 28°F → 0.09, 20°F → 0.32, 10°F → 0.60, 0°F → 0.89, -5°F → 1.0
   // CCC-native freeze bonus: cold-core pack amplifies surface refreeze;
   // near-isothermal pack absorbs overnight cold before building a deep crust.
   // Range: CCC=0.85→+0.05, CCC=0.60→0, CCC=0.35→-0.05, CCC=0.15→-0.09
-  var rawFQ=Math.max(0,Math.min(1,(30-f.lo)/35+elevB+ccFreezeBonus));
+  var rawFQ=Math.max(0,Math.min(1,(30-f_lo)/35+ccFreezeBonus));
   // Freeze duration bonus: 0 at ≤2 hrs below 28°F, up to +0.15 at 8+ hrs
   if (weatherData && weatherData.freezeHours != null) {
     var freezeDurBonus = Math.min(0.15, Math.max(0, (weatherData.freezeHours - 2) * 0.025));
@@ -2140,9 +2152,9 @@ function cornWindow(pk,asp,f,month){
   effFQ=Math.max(0.03,effFQ*(1-matPen));
   var cloudAtt=1-(f.cm/100)*0.78;
   var effRad=radMult*cloudAtt;
-  var dth=f.hi-f.da;
+  var dth=f_hi-f_da;
   if(dth<=0)return{ws:null,we:null,dur:0,q:0,inf:"Daytime high ≤ dawn — no melt",note:ad.note};
-  var meltDelay=effFQ>0.20?Math.min(4.5,(effFQ*Math.max(0,33-f.da))/(effRad*Math.max(0.8,dth/8)+0.01)):0.25;
+  var meltDelay=effFQ>0.20?Math.min(4.5,(effFQ*Math.max(0,33-f_da))/(effRad*Math.max(0.8,dth/8)+0.01)):0.25;
   meltDelay=meltDelay*(1-isoPrb*0.55);
   var ws=Math.max(sunHit,sunHit+Math.min(4.2,meltDelay*1.05));
 
@@ -2198,7 +2210,7 @@ function cornWindow(pk,asp,f,month){
   }
 
   var windDurPen=Math.max(0,(f.wi-18)*0.055*ad.wx);
-  var rawDur=(crustQ*1.6)+(effRad*1.4)-((f.hi-32)*0.065)-windDurPen+sweDurBonus;
+  var rawDur=(crustQ*1.6)+(effRad*1.4)-((f_hi-32)*0.065)-windDurPen+sweDurBonus;
   // Pack-state-native window factor: cold-core pack sustains corn window longer.
   // High CCC = column absorbs surface heat slowly = longer window.
   // Low CCC = near-isothermal pack conducts heat upward rapidly = shorter window.
@@ -2217,7 +2229,7 @@ function cornWindow(pk,asp,f,month){
   if(effFQ>0.70)phys+=30;else if(effFQ>0.40)phys+=22;else if(effFQ>0.25)phys+=12;else if(effFQ>0.10)phys+=5;
   phys+=Math.min(20,effRad*16);phys+=Math.min(10,crustQ*10);
   if(dur>=2.5)phys+=5;else if(dur>=1.5)phys+=3;
-  phys-=Math.min(15,windScour*25);if(f.lo>30)phys-=8;
+  phys-=Math.min(15,windScour*25);if(f_lo>30)phys-=8;
   var tMult=0.50+tData.q*0.50;
   var rawScore=phys*tMult;
   rawScore+=(ad.ez-12000)/1600*3;
@@ -2226,8 +2238,8 @@ function cornWindow(pk,asp,f,month){
   rawScore *= lateOpenPenalty;
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
   var inf,qlabel;
-  if(f.lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
-  else if(f.lo>30){inf="⚠️ Marginal freeze — thin crust possible";qlabel="Poor";}
+  if(f_lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
+  else if(f_lo>30){inf="⚠️ Marginal freeze — thin crust possible";qlabel="Poor";}
   else if(f.ds>14&&f.sdp<=2){inf="⚠️ Old shallow snow ("+f.ds+" days, "+f.sdp+'") — weak crust';qlabel=q>=50?"Good":"Marginal";}
   else if(windScour>0.35){inf="⚠️ Wind scour likely — crust may be stripped";qlabel="Marginal";}
   else if(q>=75){inf="✅ Excellent corn — "+ad.note;qlabel="Excellent";}
