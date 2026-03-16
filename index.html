@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v28 2026-03-16 UTC</title>
+<title>CornCast 🌽 v28a 2026-03-16 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -2021,7 +2021,6 @@ function cornWindow(pk,asp,f,month){
   // CCC-native freeze bonus: cold-core pack amplifies surface refreeze;
   // near-isothermal pack absorbs overnight cold before building a deep crust.
   // Range: CCC=0.85→+0.05, CCC=0.60→0, CCC=0.35→-0.05, CCC=0.15→-0.09
-  var ccFreezeBonus = (liveCCC - 0.60) * 0.20;
   var rawFQ=Math.max(0,Math.min(1,(30-f.lo)/35+elevB+ccFreezeBonus));
   // Freeze duration bonus: 0 at ≤2 hrs below 28°F, up to +0.15 at 8+ hrs
   if (weatherData && weatherData.freezeHours != null) {
@@ -2041,6 +2040,7 @@ function cornWindow(pk,asp,f,month){
   var liveFTC = (weatherData && weatherData.ftCycles != null)
     ? weatherData.ftCycles : 0;
   var matPen = Math.max(0, Math.min(0.20, (1 - liveCCC) * 0.22 - liveFTC * 0.015));
+  var ccFreezeBonus = (liveCCC - 0.60) * 0.20;
   var baseIsoPrb = (weatherData && weatherData.effectiveIsoPrb != null)
     ? weatherData.effectiveIsoPrb
     : (ma.isothermProb || 0);
