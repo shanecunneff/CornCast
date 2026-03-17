@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v34 2026-03-17 UTC</title>
+<title>CornCast 🌽 v35 2026-03-17 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -991,6 +991,9 @@ function parseDailyJson(json, pk) {
       windDir: (d.winddirection_10m_dominant && d.winddirection_10m_dominant[i] != null) ? d.winddirection_10m_dominant[i] : null,
       snwdOmInches: (d.snow_depth && d.snow_depth[i] != null)
         ? Math.round(d.snow_depth[i] * 39.37)   // meters → inches
+        : null,
+      freezeLevelFt: (d.freezinglevel_height && d.freezinglevel_height[i] != null)
+        ? Math.round(d.freezinglevel_height[i] * 3.28084)  // meters → feet
         : null
     });
   }
@@ -1087,7 +1090,7 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
 
   var archiveUrl = 'https://archive-api.open-meteo.com/v1/archive'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant,freezinglevel_height'
     +'&hourly=wind_speed_10m,shortwave_radiation,direct_radiation'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
@@ -1095,7 +1098,7 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
 
   var forecastUrl = 'https://api.open-meteo.com/v1/forecast'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant,freezinglevel_height'
     +'&hourly=temperature_2m,cloudcover,wind_speed_10m,shortwave_radiation,direct_radiation'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
@@ -1476,6 +1479,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     windDir: targetDay ? (targetDay.windDir || null) : null,
     solarMorning:  targetDay ? (targetDay.solarMorning  || null) : null,
     directMorning: targetDay ? (targetDay.directMorning || null) : null,
+    freezeLevelFt: targetDay ? (targetDay.freezeLevelFt || null) : null,
     snotelTminUsed: snotelTminUsed,
     snotelTminRaw: snotelTminRaw,
     sweTrend: (currentSWEData && currentSWEData.sweTrend != null) ? currentSWEData.sweTrend : null,
@@ -2575,6 +2579,15 @@ function cornWindow(pk,asp,f,month){
   var depthIsoPrbAdj = (36 - snwdIn) / 36 * 0.15;
   var isoPrb = Math.max(0, Math.min(0.95, baseIsoPrb + depthIsoPrbAdj));
   effFQ=Math.max(0.03,effFQ*(1-matPen));
+  // Freezing level gate: if the overnight freezing level did not descend
+  // to ski zone elevation, no structural crust formed regardless of what
+  // the lapse-corrected summit temperature suggests.
+  // +300ft buffer absorbs terrain uncertainty and sensor noise.
+  // Activates only when freezing level is clearly ABOVE the ski zone —
+  // warm air mass that never reached the face overnight.
+  if (weatherData && weatherData.freezeLevelFt != null && weatherData.freezeLevelFt > ad.ez + 300) {
+    effFQ = Math.max(0.03, effFQ * 0.15);
+  }
   var cloudAtt=1-(f.cm/100)*0.78;
   var effRad;
   if (f.solarMorning != null && f.solarMorning > 0) {
@@ -2781,6 +2794,21 @@ function buildDrivers(w,f,month,asp){
 
   if (weatherData && weatherData.snotelTminUsed) {
     rows.push({icon:'🌡️',cls:'driver-pos',text:'Overnight low blended with SNOTEL observation ('+weatherData.snotelTminRaw+'°F at station) — corrects for inversion bias on clear, calm nights.'});
+  }
+  if (weatherData && weatherData.freezeLevelFt != null) {
+    var flFt = weatherData.freezeLevelFt;
+    var skiFt = PK[selectedPeak] && PK[selectedPeak].asp[selectedAsp]
+      ? PK[selectedPeak].asp[selectedAsp].ez : null;
+    if (skiFt && flFt > skiFt + 300) {
+      rows.push({icon:'⚠️',cls:'driver-neg',
+        text:'<strong>Freezing level ' + flFt.toLocaleString() + '\' — above ski zone ('
+          + skiFt.toLocaleString() + '\')</strong>. The overnight freeze did not physically '
+          + 'reach this face. Crust formation suppressed regardless of air temperature reading.'});
+    } else if (skiFt && flFt < skiFt - 500) {
+      rows.push({icon:'🧊',cls:'driver-pos',
+        text:'<strong>Freezing level well below ski zone (' + flFt.toLocaleString() + '\').</strong> '
+          + 'Confirmed freeze reached this face — solid crust foundation.'});
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

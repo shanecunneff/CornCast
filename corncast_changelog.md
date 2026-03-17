@@ -1,5 +1,23 @@
 # CornCast — Physics Changelog
 
+### v35 — Freezing level gate (2026-03-17 MST)
+**freezinglevel_height added to both archive and forecast daily=
+parameters.** Open-Meteo returns the elevation (meters, converted
+to feet) at which temperature crosses 0°C overnight.
+**Freezing level gate in cornWindow:** if freezinglevel_height
+shows the freezing level was above ski zone elevation + 300ft,
+effFQ is reduced to 15% of its computed value. This eliminates
+false positives on warm nights where lapse correction produces a
+technically sub-freezing summit temperature but the freeze never
+physically reached the face. The gate is a correction only —
+it cannot increase scores.
+**Driver narrative:** Step 1 now shows a warning when the
+freezing level was above ski zone elevation, or a confirmation
+note when it was well below. Users can see directly whether the
+overnight freeze was confirmed to have reached the terrain.
+No RAW_MAX recalibration needed — this change only reduces
+scores in edge cases.
+
 ### v33b — Physics calibration: packReadiness architecture (2026-03-17)
 Fundamental physics rework grounded in field literature
 (frontrangeskimo.com, OpenSnow, CU snow hydrology, Colbeck 1987/1997):
