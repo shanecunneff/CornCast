@@ -1,5 +1,13 @@
 # CornCast — Physics Changelog
 
+### v35a — hotfix: remove freezinglevel_height from archive URL (2026-03-17 MST)
+ERA5 archive API does not support freezinglevel_height. Adding it
+caused the archive fetch to fail entirely, breaking CCC, surface
+ripeness, and all weather data. Removed from archiveUrl daily=
+parameter. Forecast URL retains it — freezeLevelFt is now populated
+for forecast dates only (today → today+15). Past target dates fall
+back to null gracefully. Gate logic and driver narrative unchanged.
+
 ### v35 — Freezing level gate (2026-03-17 MST)
 **freezinglevel_height added to both archive and forecast daily=
 parameters.** Open-Meteo returns the elevation (meters, converted
