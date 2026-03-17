@@ -1,5 +1,14 @@
 # CornCast — Physics Changelog
 
+### v35b — hotfix: ripenessTrajectory index offset in weather strip (2026-03-17 MST)
+renderWeatherStrip was indexing wd.ripenessTrajectory with ti,
+where ti is an index into allDays (March 1 = index 0). But
+ripenessTrajectory starts January 1 and includes marchFirstIdx
+pre-season entries before March 1. This caused isFcst to always
+read from a pre-season archive entry, meaning forecast tiles were
+never rendered as forecast tiles. Fixed by offsetting the
+trajectory index by wd.marchFirstIdx.
+
 ### v35a — hotfix: remove freezinglevel_height from archive URL (2026-03-17 MST)
 ERA5 archive API does not support freezinglevel_height. Adding it
 caused the archive fetch to fail entirely, breaking CCC, surface
