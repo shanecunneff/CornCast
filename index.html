@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v33 2026-03-17 UTC</title>
+<title>CornCast 🌽 v33a 2026-03-17 UTC</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -2485,8 +2485,12 @@ function cornWindow(pk,asp,f,month){
   var ageFactor=Math.exp(-f.ds*0.10);
   var matScale=1-matPen*0.80;
   var stormCrustQ=depthFactor*ageFactor*matScale;
-  // packFloor: isothermal pack weakens consolidated bonds (spec §physics)
-  var packFloor=0.35*depthFactor*(1-matPen*0.90)*(1-isoPrb*0.40);
+  // packFloor: consolidated spring pack — full snowpack depth is the
+  // correct depth input here, not storm snow. A 40" consolidated pack
+  // has real refreeze potential regardless of days since last storm.
+  // Anchored at 36" (normal Indian Peaks spring ski zone depth).
+  var packFloorDepth=Math.min(1.0,faceSnwdInches/36);
+  var packFloor=0.35*packFloorDepth*(1-matPen*0.90)*(1-isoPrb*0.40);
   var crustQ=Math.max(stormCrustQ,packFloor,0.05);
 
   // SWE modifier — absolute thresholds (primary) with % of median fallback
