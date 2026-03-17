@@ -1023,6 +1023,51 @@ function parseDailyJson(json, pk) {
     // No hourly wind available at all — use fallback for every day
     days.forEach(function(d) { d.windMean = d.wind * 0.60; });
   }
+  // Compute daily morning solar radiation means from hourly shortwave + direct
+  // Morning window = 6 AM–noon (hours 6–11 inclusive) — when corn forms
+  // solarMorning: mean shortwave W/m² during morning window (primary)
+  // directMorning: mean direct radiation W/m² during morning window
+  // Fallback: null (cornWindow falls back to static BASE_RAD if absent)
+  if (json.hourly && json.hourly.time &&
+      (json.hourly.shortwave_radiation || json.hourly.direct_radiation)) {
+    var hTimes2 = json.hourly.time;
+    var hSW     = json.hourly.shortwave_radiation;
+    var hDir    = json.hourly.direct_radiation;
+    var swByDate = {}, dirByDate = {};
+    for (var si2 = 0; si2 < hTimes2.length; si2++) {
+      var sDate = hTimes2[si2].slice(0, 10);
+      var sHour = parseInt(hTimes2[si2].slice(11, 13), 10);
+      if (sHour < 6 || sHour > 11) continue; // morning window only
+      if (hSW && hSW[si2] !== null) {
+        if (!swByDate[sDate]) swByDate[sDate] = [];
+        swByDate[sDate].push(hSW[si2]);
+      }
+      if (hDir && hDir[si2] !== null) {
+        if (!dirByDate[sDate]) dirByDate[sDate] = [];
+        dirByDate[sDate].push(hDir[si2]);
+      }
+    }
+    days.forEach(function(d) {
+      var swVals = swByDate[d.date];
+      var dirVals = dirByDate[d.date];
+      if (swVals && swVals.length > 0) {
+        var sum = 0;
+        for (var vi = 0; vi < swVals.length; vi++) sum += swVals[vi];
+        d.solarMorning = sum / swVals.length;
+      } else {
+        d.solarMorning = null;
+      }
+      if (dirVals && dirVals.length > 0) {
+        var dsum = 0;
+        for (var di2 = 0; di2 < dirVals.length; di2++) dsum += dirVals[di2];
+        d.directMorning = dsum / dirVals.length;
+      } else {
+        d.directMorning = null;
+      }
+    });
+  } else {
+    days.forEach(function(d) { d.solarMorning = null; d.directMorning = null; });
+  }
   return days;
 }
 
@@ -1043,7 +1088,7 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
   var archiveUrl = 'https://archive-api.open-meteo.com/v1/archive'
     +'?latitude='+pk.la+'&longitude='+pk.lo
     +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
-    +'&hourly=wind_speed_10m'
+    +'&hourly=wind_speed_10m,shortwave_radiation,direct_radiation'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
     +'&start_date='+cccStart+'&end_date='+yesterdayStr;
@@ -1051,7 +1096,7 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
   var forecastUrl = 'https://api.open-meteo.com/v1/forecast'
     +'?latitude='+pk.la+'&longitude='+pk.lo
     +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
-    +'&hourly=temperature_2m,cloudcover,wind_speed_10m'
+    +'&hourly=temperature_2m,cloudcover,wind_speed_10m,shortwave_radiation,direct_radiation'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
     +'&start_date='+todayStr+'&end_date='+fmtDate(fcastEnd)
@@ -1328,7 +1373,9 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
       isForecast: false,
       isPreSeason: true,
       tmin: dp.tmin, tmax: dp.tmax, snowfall: dp.snowfall||0,
-      windMean: dp.windMean || dp.wind * 0.60
+      windMean: dp.windMean || dp.wind * 0.60,
+      solarMorning:  dp.solarMorning  || null,
+      directMorning: dp.directMorning || null,
     });
   }
 
@@ -1358,7 +1405,9 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
       isForecast: sortedEntries[j].isForecast,
       isPreSeason: false,
       tmin: d.tmin, tmax: d.tmax, snowfall: d.snowfall||0,
-      windMean: d.windMean  || d.wind  * 0.60
+      windMean: d.windMean  || d.wind  * 0.60,
+      solarMorning:  d.solarMorning  || null,
+      directMorning: d.directMorning || null,
     });
   }
 
@@ -1425,6 +1474,8 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     forecastFailed: forecastFailed,
     todayStr: todayStr,
     windDir: targetDay ? (targetDay.windDir || null) : null,
+    solarMorning:  targetDay ? (targetDay.solarMorning  || null) : null,
+    directMorning: targetDay ? (targetDay.directMorning || null) : null,
     snotelTminUsed: snotelTminUsed,
     snotelTminRaw: snotelTminRaw,
     sweTrend: (currentSWEData && currentSWEData.sweTrend != null) ? currentSWEData.sweTrend : null,
@@ -1723,6 +1774,8 @@ function computeDailyCornScores(traj, marchFirstIdx, pk, asp, swePct) {
       hi:    t.tmax,
       da:    t.tmin + 2,              // dawn temp: tmin + 2°F offset
       wi:    t.windMean || (t.wind || 0) * 0.60,  // daily mean wind
+      solarMorning:  t.solarMorning  || null,
+      directMorning: t.directMorning || null,
       cn:    t.cloud || 0,            // overnight cloud ≈ daily mean
       cm:    (t.cloud || 0) * 0.75,   // morning cloud ≈ 75% of daily
       ds:    stormState[i].daysSince,
@@ -2523,7 +2576,20 @@ function cornWindow(pk,asp,f,month){
   var isoPrb = Math.max(0, Math.min(0.95, baseIsoPrb + depthIsoPrbAdj));
   effFQ=Math.max(0.03,effFQ*(1-matPen));
   var cloudAtt=1-(f.cm/100)*0.78;
-  var effRad=radMult*cloudAtt;
+  var effRad;
+  if (f.solarMorning != null && f.solarMorning > 0) {
+    // Real solar radiation from Open-Meteo hourly data
+    // Normalized to the same 0–2 scale as existing BASE_RAD multipliers.
+    // SOLAR_NORM = 420 W/m²: typical clear SE April morning at Indian Peaks.
+    // Aspect and seasonal variation are already captured in the real data —
+    // BASE_RAD and radBoost are only used in the fallback path below.
+    var SOLAR_NORM = 420;
+    effRad = f.solarMorning / SOLAR_NORM;
+    effRad = Math.max(0.05, Math.min(2.8, effRad));
+  } else {
+    // Fallback: static aspect multiplier × cloud attenuation (unchanged)
+    effRad = radMult * cloudAtt;
+  }
   var dth=f_hi-f_da;
   if(dth<=0)return{ws:null,we:null,dur:0,q:0,inf:"Daytime high ≤ dawn — no melt",note:ad.note};
   // Melt delay cap 2.0h: SE face with 1.3× radiation resolves even a 2°F crust
@@ -2795,8 +2861,10 @@ function buildDrivers(w,f,month,asp){
   var aspRadPct=Math.round(aspRad*100);
   var effRadPct=Math.round(w.effRad*100);
   var aspCls=aspRadPct>=120?'driver-pos':aspRadPct>=80?'driver-neu':aspRadPct>=45?'driver-neu':'driver-neg';
+  var solarSrc = (w.effRad && f.solarMorning != null)
+    ? ' <span style="font-size:.65rem;color:var(--teal)">[📡 live solar]</span>' : '';
   rows.push({icon:'☀️',cls:aspCls,
-    text:'<strong>'+asp+'-facing aspect: '+aspRadPct+'% of flat-ground radiation in '+mnames[month]+'.</strong> '
+    text:'<strong>'+asp+'-facing aspect: '+aspRadPct+'% of flat-ground radiation in '+mnames[month]+'.'+solarSrc+'</strong> '
     +(aspRadPct>=120?'Direct, near-perpendicular solar loading — maximum melt energy per square foot.'
      :aspRadPct>=80?'Good angled solar input — effective melt energy for this time of year.'
      :aspRadPct>=45?'Oblique solar angle — slower melt rate; timing is tighter.'
