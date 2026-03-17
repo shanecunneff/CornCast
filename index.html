@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v35a 2026-03-17 MST</title>
+<title>CornCast 🌽 v35b 2026-03-17 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -1547,8 +1547,13 @@ function renderWeatherStrip(wd, targetDate) {
     var d = days[ti];
     var isTarget = d.date === targetDate;
     var isToday  = d.date === today;
-    var isFcst   = (wd.ripenessTrajectory && wd.ripenessTrajectory[ti])
-                   ? wd.ripenessTrajectory[ti].isForecast : (todayIdxS >= 0 && ti >= todayIdxS);
+    // ti indexes into allDays (starts March 1), but ripenessTrajectory
+    // starts January 1 and includes marchFirstIdx pre-season entries.
+    // Offset by marchFirstIdx to align the two arrays correctly.
+    var trajOffset = wd.marchFirstIdx || 0;
+    var trajEntry  = (wd.ripenessTrajectory && wd.ripenessTrajectory[ti + trajOffset])
+                     ? wd.ripenessTrajectory[ti + trajOffset] : null;
+    var isFcst     = trajEntry ? trajEntry.isForecast : (todayIdxS >= 0 && ti >= todayIdxS);
 
     // Background color by max temp — archive slightly more saturated than forecast
     var bgColor, hiColor;
