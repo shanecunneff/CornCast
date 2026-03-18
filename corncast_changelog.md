@@ -1,5 +1,23 @@
 # CornCast — Physics Changelog
 
+### v36 — Ensemble forecast confidence bands (2026-03-18 MST)
+**New: GFS ensemble fetch** added as a 4th parallel request in
+fetchWeatherData, using Open-Meteo ensemble API with gfs_seamless
+(31 members). Fails silently — if unavailable, app runs exactly
+as before with no confidence bands visible.
+**ensembleBands computed in processWeatherData:** For each
+forecast date, collects temperature_2m_min/max values across all
+GFS ensemble members, sorts them, and computes lapse-corrected
+P10/P50/P90 percentiles. Passed through as wd.ensembleBands.
+**Confidence bands in drawCornScoreChart:** For forecast bars
+days 5–15, runs cornWindow with P10 and P90 overnight low inputs
+to compute a score range. Draws a thin semi-transparent white
+band extending above and below the main bar proportional to
+ensemble spread. First 4 forecast days are high-confidence and
+show no band. Band opacity scales with ensemble spread width.
+Chart legend updated to note "White range = ensemble uncertainty
+(days 5–15)."
+
 ### v35d — hotfix: remove freezinglevel_height from forecastUrl (2026-03-18 MST)
 freezinglevel_height is not reliably supported by Open-Meteo's
 models=best_match endpoint. Including it in forecastUrl daily=

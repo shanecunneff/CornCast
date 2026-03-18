@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v35d 2026-03-18 MST</title>
+<title>CornCast 🌽 v36 2026-03-18 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -1113,12 +1113,22 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
       resolve((result && !result.error && result.days) ? result : null);
     });
   });
-
-  Promise.all([archiveP, forecastP, snwdP]).then(function(results) {
+  // Ensemble forecast: GFS 31-member ensemble for forecast uncertainty bands
+  // Fails silently — null means no confidence bands, app works as before
+  var ensembleUrl = 'https://ensemble-api.open-meteo.com/v1/ensemble'
+    +'?latitude='+pk.la+'&longitude='+pk.lo
+    +'&daily=temperature_2m_min,temperature_2m_max'
+    +'&temperature_unit=fahrenheit'
+    +'&timezone=America%2FDenver'
+    +'&start_date='+todayStr+'&end_date='+fmtDate(fcastEnd)
+    +'&models=gfs_seamless';
+  var ensembleP = fetchJsonWithTimeout(ensembleUrl, 10000).catch(function(){return null;});
+  Promise.all([archiveP, forecastP, snwdP, ensembleP]).then(function(results) {
     var archiveJson = results[0];
     var forecastJson = results[1];
     var snwdData = results[2];
-    processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb);
+    var ensembleJson = results[3];
+    processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb, ensembleJson);
   });
 }
 
@@ -1140,7 +1150,7 @@ function parseSnotelTmin(csvText, targetDate) {
   return null;
 }
 
-function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb) {
+function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb, ensembleJson) {
   var tgt = new Date(targetDate + 'T12:00:00');
   var month = tgt.getMonth() + 1;
   var archiveFailed = !archiveJson;
@@ -1449,7 +1459,63 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     snwdStationsForGrad.push({ elevFt: omGridElev, snwdIn: snwdOmInches });
   }
   var depthGradient = elevationDepthGradient(snwdStationsForGrad);
-
+  // ── Ensemble P10/P90 temperature percentiles for confidence bands ──
+  // GFS ensemble returns temperature_2m_min/max with member suffixes in daily object
+  // e.g. temperature_2m_min_member01 ... temperature_2m_min_member31
+  // Collect all member arrays, compute P10/P90 per date index.
+  // ensembleBands: array of {date, loP10, loP90, hiP10, hiP90} for forecast dates
+  var ensembleBands = null;
+  if (ensembleJson && ensembleJson.daily && ensembleJson.daily.time) {
+    try {
+      var eDates = ensembleJson.daily.time;
+      var eDaily = ensembleJson.daily;
+      // Collect all member arrays for tmin and tmax
+      var loMembers = [], hiMembers = [];
+      Object.keys(eDaily).forEach(function(key) {
+        if (key.indexOf('temperature_2m_min') === 0 && Array.isArray(eDaily[key])) {
+          loMembers.push(eDaily[key]);
+        }
+        if (key.indexOf('temperature_2m_max') === 0 && Array.isArray(eDaily[key])) {
+          hiMembers.push(eDaily[key]);
+        }
+      });
+      if (loMembers.length >= 3 && hiMembers.length >= 3) {
+        ensembleBands = [];
+        for (var ei = 0; ei < eDates.length; ei++) {
+          // Collect values across members for this date index
+          var loVals = [], hiVals = [];
+          loMembers.forEach(function(arr) {
+            if (arr[ei] !== null && arr[ei] !== undefined) loVals.push(arr[ei]);
+          });
+          hiMembers.forEach(function(arr) {
+            if (arr[ei] !== null && arr[ei] !== undefined) hiVals.push(arr[ei]);
+          });
+          loVals.sort(function(a,b){return a-b;});
+          hiVals.sort(function(a,b){return a-b;});
+          // Apply same lapse correction as parseDailyJson
+          var gridElev = (ensembleJson.elevation != null) ? ensembleJson.elevation * 3.28084 : GRID_ELEV_FT;
+          function lapse(v) { return elevCorrectTemp(v, pk.el, gridElev); }
+          function pct(arr, p) {
+            if (!arr.length) return null;
+            var idx = (p / 100) * (arr.length - 1);
+            var lo2 = Math.floor(idx), hi2 = Math.ceil(idx);
+            return arr[lo2] + (arr[hi2] - arr[lo2]) * (idx - lo2);
+          }
+          ensembleBands.push({
+            date:  eDates[ei],
+            loP10: loVals.length ? lapse(pct(loVals, 10)) : null,
+            loP50: loVals.length ? lapse(pct(loVals, 50)) : null,
+            loP90: loVals.length ? lapse(pct(loVals, 90)) : null,
+            hiP10: hiVals.length ? lapse(pct(hiVals, 10)) : null,
+            hiP90: hiVals.length ? lapse(pct(hiVals, 90)) : null,
+            spread: loVals.length ? (pct(loVals, 90) - pct(loVals, 10)) : 0
+          });
+        }
+      }
+    } catch(e) {
+      ensembleBands = null; // fail silently
+    }
+  }
   cb({
     surfaceRipeness: surfaceRipeness,
     columnColdContent: columnColdContent,
@@ -1487,7 +1553,8 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     morningCloud: morningCloud !== undefined ? morningCloud : null,
     snwdOmInches: snwdOmInches,
     depthGradient: depthGradient,
-    swePct: swePct
+    swePct: swePct,
+    ensembleBands: ensembleBands
   });
 }
 
@@ -2404,6 +2471,81 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
     }
   }
 
+  // ── Ensemble confidence bands (forecast days 5–15 only) ──
+  var ensembleBands = wd.ensembleBands;
+  if (ensembleBands && ensembleBands.length) {
+    // Build date→band lookup
+    var bandByDate = {};
+    ensembleBands.forEach(function(b) { bandByDate[b.date] = b; });
+    for (var ci = 0; ci < N; ci++) {
+      var cs = scores[ci];
+      if (!cs.isForecast || cs.isPreSeason || cs.score <= 0) continue;
+      // Only show bands beyond day 4 — first 4 days are high confidence
+      var daysFromToday = todayIdx >= 0 ? ci - todayIdx : 99;
+      if (daysFromToday < 5) continue;
+      var band = bandByDate[cs.date];
+      if (!band || band.loP10 === null || band.loP90 === null) continue;
+      // Run cornWindow with P10 and P90 overnight lows to get score range
+      // Save/restore weatherData.effectiveIsoPrb for the synthetic call
+      var savedIsoPrb2 = null;
+      if (window.weatherData) {
+        savedIsoPrb2 = window.weatherData.effectiveIsoPrb;
+        // Find matching trajectory entry for isoPrb
+        var trajIdx2 = wd.marchFirstIdx + ci;
+        if (wd.ripenessTrajectory[trajIdx2]) {
+          window.weatherData.effectiveIsoPrb = wd.ripenessTrajectory[trajIdx2].effectiveIsoPrb;
+        }
+      }
+      var tEntry = wd.ripenessTrajectory[wd.marchFirstIdx + ci] || {};
+      var fBase = {
+        da: null, wi: tEntry.windMean || 5,
+        cn: tEntry.cloud || 0,
+        cm: (tEntry.cloud || 0) * 0.75,
+        ds: 14, sdp: 3, swePct: wd.swePct || null,
+        solarMorning: tEntry.solarMorning || null,
+        directMorning: tEntry.directMorning || null,
+        sl: false
+      };
+      // P10 low = colder night = higher score bound
+      var fP10 = Object.assign({}, fBase, {
+        lo: band.loP10, hi: band.hiP10 || (band.loP10 + 30), da: band.loP10 + 6
+      });
+      var fP90 = Object.assign({}, fBase, {
+        lo: band.loP90, hi: band.hiP90 || (band.loP90 + 30), da: band.loP90 + 6
+      });
+      var month2 = new Date(cs.date + 'T12:00:00').getMonth() + 1;
+      var rP10 = cornWindow(pk, asp, fP10, month2);
+      var rP90 = cornWindow(pk, asp, fP90, month2);
+      if (window.weatherData && savedIsoPrb2 !== null) {
+        window.weatherData.effectiveIsoPrb = savedIsoPrb2;
+      }
+      if (!rP10 || !rP90) continue;
+      // Score bounds: P10 lo = colder = higher score; P90 lo = warmer = lower score
+      var scoreHigh = Math.max(rP10.q, rP90.q);
+      var scoreLow  = Math.min(rP10.q, rP90.q);
+      if (scoreHigh <= scoreLow + 3) continue; // spread too small to show
+      // Draw range bar — thin outline above/below main bar
+      var cbx  = barLeft(ci);
+      var cbw  = barW();
+      var yHigh = yScore(Math.min(100, scoreHigh));
+      var yLow  = yScore(Math.max(0,   scoreLow));
+      // Opacity scales with ensemble spread — wider spread = more visible band
+      var bandOpacity = Math.min(0.35, 0.10 + (band.spread / 20) * 0.25);
+      ctx.fillStyle = 'rgba(255,255,255,' + bandOpacity + ')';
+      // Upper extension (above main bar)
+      var yMain = yScore(cs.score);
+      if (yHigh < yMain - 1) {
+        ctx.fillRect(cbx, yHigh, cbw, yMain - yHigh);
+      }
+      // Lower extension (below main bar, down to low score)
+      var yMainBot = PAD.top + cH;
+      var yLowBot  = yScore(scoreLow);
+      if (yLowBot > PAD.top + cH - (scoreLow/100)*cH + 2) {
+        ctx.fillRect(cbx, PAD.top + cH - (cs.score/100)*cH, cbw,
+                     Math.max(0, (yLowBot - (PAD.top + cH - (cs.score/100)*cH))));
+      }
+    }
+  }
   // ── Today vertical marker ──
   if(todayIdx >= 0) {
     var tx = xPos(todayIdx);
@@ -3198,7 +3340,7 @@ function renderResult(pk,asp,w,aspComps,f,month){
     h+='<div id="corn-score-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px">';
     h+='<canvas id="corn-score-canvas" style="display:block;height:160px"></canvas>';
     h+='</div>';
-    h+='<div style="font-size:.64rem;color:#456a82;margin-top:.3rem">Faded bars = forecast · Score uses daily mean wind · aspect: '+(selectedAsp||'?')+'</div>';
+    h+='<div style="font-size:.64rem;color:#456a82;margin-top:.3rem">Faded bars = forecast · White range = ensemble uncertainty (days 5–15) · aspect: '+(selectedAsp||'?')+'</div>';
   }
   h+='</div>';
 
