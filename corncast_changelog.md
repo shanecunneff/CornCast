@@ -1,5 +1,18 @@
 # CornCast — Physics Changelog
 
+### v35d — hotfix: remove freezinglevel_height from forecastUrl (2026-03-18 MST)
+freezinglevel_height is not reliably supported by Open-Meteo's
+models=best_match endpoint. Including it in forecastUrl daily=
+caused the entire forecast fetch to return an HTTP error, which
+was caught as null. This emptied forecastDays, leaving allDays
+with archive data only (through yesterday). Any selected date
+from today onward was not found in allDays, causing the strip
+to appear frozen and the beyondWindow warning to fire even for
+dates within the 16-day window.
+Removed from forecastUrl. The freezeLevelFt gate in cornWindow
+receives null and is safely bypassed. The v35c beyondWindow
+detection and isFcst simplification remain correct and intact.
+
 ### v35c — hotfix: strip tracking + isFcst simplification (2026-03-17 MST)
 Two fixes to renderWeatherStrip:
 **isFcst simplification:** Replaced the marchFirstIdx offset
