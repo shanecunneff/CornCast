@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v35b 2026-03-17 MST</title>
+<title>CornCast 🌽 v35c 2026-03-17 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -1539,7 +1539,20 @@ function renderWeatherStrip(wd, targetDate) {
     if(days[i].date===targetDate) targetIdx=i;
     if(days[i].date===today)      todayIdxS=i;
   }
-  if(targetIdx < 0) targetIdx = days.length - 1;
+  // Detect if selected date is beyond the available data window (today+15 max)
+  var beyondWindow = (targetIdx < 0);
+  if(beyondWindow) {
+    // Anchor on today or the last available day — strip shows current forecast
+    targetIdx = (todayIdxS >= 0) ? todayIdxS : days.length - 1;
+    // Show a note in the label bar so the user knows what they are seeing
+    var lastDay = days[days.length - 1];
+    var lastDt = new Date(lastDay.date + 'T12:00:00');
+    var MNAMES2 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var lastDayStr = MNAMES2[lastDt.getMonth()] + ' ' + lastDt.getDate();
+    labelEl.innerHTML += ' <span style="color:#ffa502;font-size:.65rem">· '
+      + '⚠️ Forecast data available through ' + lastDayStr
+      + ' — select a date within 16 days for tile data</span>';
+  }
   var showStart = Math.max(0, targetIdx - 10);
   var showEnd   = Math.min(days.length, targetIdx + 5); // target + 4 forward
 
@@ -1547,13 +1560,9 @@ function renderWeatherStrip(wd, targetDate) {
     var d = days[ti];
     var isTarget = d.date === targetDate;
     var isToday  = d.date === today;
-    // ti indexes into allDays (starts March 1), but ripenessTrajectory
-    // starts January 1 and includes marchFirstIdx pre-season entries.
-    // Offset by marchFirstIdx to align the two arrays correctly.
-    var trajOffset = wd.marchFirstIdx || 0;
-    var trajEntry  = (wd.ripenessTrajectory && wd.ripenessTrajectory[ti + trajOffset])
-                     ? wd.ripenessTrajectory[ti + trajOffset] : null;
-    var isFcst     = trajEntry ? trajEntry.isForecast : (todayIdxS >= 0 && ti >= todayIdxS);
+    // d.isForecast is set directly on each allDays entry in processWeatherData
+    // and is the authoritative source — no index offset needed
+    var isFcst = d.isForecast || false;
 
     // Background color by max temp — archive slightly more saturated than forecast
     var bgColor, hiColor;

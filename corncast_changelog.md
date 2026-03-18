@@ -1,5 +1,19 @@
 # CornCast — Physics Changelog
 
+### v35c — hotfix: strip tracking + isFcst simplification (2026-03-17 MST)
+Two fixes to renderWeatherStrip:
+**isFcst simplification:** Replaced the marchFirstIdx offset
+calculation introduced in v35b with direct use of d.isForecast,
+which is already set correctly on each allDays entry by
+processWeatherData. No index math needed.
+**Strip tracks selected date:** When the selected date is beyond
+the 16-day forecast window (today+15), targetIdx was silently
+falling back to days.length-1 for every out-of-range date,
+making the strip appear frozen regardless of which future date
+was selected. Fixed by detecting the out-of-range case, anchoring
+the strip on today's position, and showing an amber note in the
+label bar: "Forecast data available through [date]."
+
 ### v35b — hotfix: ripenessTrajectory index offset in weather strip (2026-03-17 MST)
 renderWeatherStrip was indexing wd.ripenessTrajectory with ti,
 where ti is an index into allDays (March 1 = index 0). But
