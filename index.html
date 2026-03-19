@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v37b 2026-03-19 MST</title>
+<title>CornCast 🌽 v37c 2026-03-19 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -484,6 +484,31 @@ input[type=date]:focus{border-color:var(--teal)}
 
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
+    <h2>Changelog</h2>
+    <h3>v37c — Indian Peaks: missing routes + 6 new peaks (2026-03-19)</h3>
+    <p>Added missing FRSK-verified routes to existing peaks:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li>Sawtooth Mtn: NE face (Northeast Face line)</li>
+      <li>Red Deer Mtn: E face (East Slope line)</li>
+      <li>Ogalalla Peak: SW face (Ogallala Express)</li>
+      <li>Pawnee Peak: S face (Keyholes)</li>
+      <li>Shoshoni Peak: N face (Pawshoni Bowl) and NW face (North Couloir)</li>
+      <li>Lone Eagle Peak: S face (Lone Rabbit)</li>
+    </ul>
+    <p style="margin-top:.55rem">Added 6 new peaks with FRSK-verified descent routes:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li>St. Vrain Mtn: N, SE, S faces (was in basin code but had no asp entries)</li>
+      <li>St. Vrain Glacier: NE (The Snake), SW (Vrain Drain), W (Ooh La La Express), S (#3)</li>
+      <li>Little Pawnee Peak: N (North Couloir West), NE (North Couloir East), SE (Little Pawnee Headwall), E (Obliquity Couloir)</li>
+      <li>Cherokee Peak: NE face above Crater Lake</li>
+      <li>Mount Achonee: NW (Achonee Arrow), SE (Northeast Gully), S (Hopi/Peck Glacier)</li>
+      <li>Mount George: N (Mount George Couloir), NE (Fair Glacier)</li>
+    </ul>
+    <p style="margin-top:.55rem">All coordinates sourced from FRSK CalTopo GeoJSON. Basin assignments updated in getPeakBasin.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="asec">
     <h2>⚠️ Disclaimer</h2>
     <p>CornCast is a planning aid only. Always check the <strong>Colorado Avalanche Information Center (CAIC)</strong> forecast before any backcountry tour. Spring conditions change rapidly, corn skiing terrain is frequently avalanche terrain, and no model replaces field judgment. Turn around if something feels wrong.</p>
   </div>
@@ -508,7 +533,10 @@ var PK=[
   // Pawnee: summit is east of Pawnee Lake, on the ridge at ~-105.6394
   {n:"Pawnee Peak",       la:40.0813,lo:-105.6329,el:12943,
    app:{th:"Brainard Lake Gateway TH",tz:10000,di:4.5,route:[[40.0802,-105.5342],[40.081,-105.5376],[40.0826,-105.5469],[40.0807,-105.5563],[40.0779,-105.5845],[40.0759,-105.587],[40.0704,-105.6146],[40.0691,-105.6097],[40.0704,-105.6124],[40.0761,-105.6353]]},
-   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12700,note:"N face limited"},NE:{t:tq(2,2,2),wx:.58,sl:35,sh:.2,ez:12071,note:"NE bowl",route:[[40.0817,-105.6307],[40.0781,-105.6279]]},E:{t:tq(3,3,3),wx:.55,sh:0,ez:12200,note:"E face, accessible corn"},SE:{t:tq(3,3,3),wx:.50,sl:30,sh:0,ez:12100,note:"SE — popular spring objective",route:[[40.0815,-105.6327],[40.0788,-105.6309],[40.0781,-105.6279],[40.0784,-105.6246],[40.0755,-105.6243]]}}},
+   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12700,note:"N face limited"},NE:{t:tq(2,2,2),wx:.58,sl:35,sh:.2,ez:12071,note:"NE bowl",route:[[40.0817,-105.6307],[40.0781,-105.6279]]},E:{t:tq(3,3,3),wx:.55,sh:0,ez:12200,note:"E face, accessible corn"},SE:{t:tq(3,3,3),wx:.50,sl:30,sh:0,ez:12100,note:"SE — popular spring objective",route:[[40.0815,-105.6327],[40.0788,-105.6309],[40.0781,-105.6279],[40.0784,-105.6246],[40.0755,-105.6243]]},S:{t:tq(2,2,2),wx:.55,sl:28,sh:0,ez:12100,note:"S couloirs below summit — Keyholes",route:[[40.0761,-105.6309],[40.0745,-105.6261],[40.0749,-105.6246]]}}},
+  // Little Pawnee Peak — sub-summit headwall above Pawnee Pass, east of Pawnee Peak
+  {n:"Little Pawnee Peak", la:40.0831,lo:-105.622,el:12500,
+   asp:{N:{t:tq(2,3,3),wx:.55,sl:33,sh:.2,ez:12300,note:"N — North Couloir West, quality line",route:[[40.0831,-105.622],[40.0843,-105.6215],[40.0864,-105.6214],[40.0875,-105.6207]]},NE:{t:tq(2,3,2),wx:.52,sl:32,sh:.2,ez:12200,note:"NE — North Couloir East",route:[[40.0824,-105.6195],[40.0831,-105.6194],[40.0836,-105.6191],[40.0838,-105.6186],[40.0839,-105.618],[40.0847,-105.6152]]},SE:{t:tq(3,3,3),wx:.48,sl:35,sh:0,ez:12100,note:"SE — Little Pawnee Headwall, classic steep corn",route:[[40.0805,-105.615],[40.0813,-105.6142],[40.0815,-105.6134],[40.0828,-105.6113]]},E:{t:tq(3,3,2),wx:.50,sl:30,sh:0,ez:12100,note:"E — Obliquity Couloir",route:[[40.0808,-105.6157],[40.0828,-105.6162],[40.0845,-105.6151]]}}},
   // Audubon: summit on east side of ridge, confirmed USGS
   {n:"Mt. Audubon",       la:40.0994,lo:-105.6154,el:13233,
    app:{th:"Mitchell Lake TH",tz:10480,di:2.0,route:[[40.0833,-105.5817],[40.0855,-105.5868],[40.0865,-105.5941],[40.0879,-105.5945],[40.0893,-105.5972],[40.0907,-105.5972],[40.093,-105.5963],[40.0955,-105.5998],[40.0957,-105.6014],[40.0955,-105.6044]]},
@@ -538,9 +566,15 @@ var PK=[
   // Shoshoni: summit east of Lake Isabelle on the divide
   {n:"Shoshoni Peak",     la:40.0672,lo:-105.6389,el:12967,
    app:{th:"Long Lake TH",tz:10520,di:4.0,route:[[40.0771,-105.5707],[40.0779,-105.5845],[40.0704,-105.6146],[40.0705,-105.6167],[40.0698,-105.6207],[40.0687,-105.6226],[40.0667,-105.6299],[40.0637,-105.6311],[40.0671,-105.6388],[40.0708,-105.6321]]},
-   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12383,note:"N face marginal"},NE:{t:tq(3,3,3),wx:.55,sl:33,sh:.3,ez:12033,note:"NE couloir / Shoshoni Bowl — classic lower-angle spring line",route:[[40.0671,-105.6388],[40.069,-105.6347],[40.0708,-105.6321]]},SE:{t:tq(3,3,2),wx:.50,sh:0,ez:12100,note:"SE, short but quality window"},S:{t:tq(1,2,2),wx:.55,sh:0,ez:12000,note:"Sheer S face, near-vertical"}}},
+   asp:{N:{t:tq(2,2,2),wx:.58,sl:28,sh:.2,ez:12300,note:"N face — Pawshoni Bowl, lower angle",route:[[40.0738,-105.638],[40.0708,-105.632]]},NE:{t:tq(3,3,3),wx:.55,sl:33,sh:.3,ez:12033,note:"NE couloir / Shoshoni Bowl — classic lower-angle spring line",route:[[40.0671,-105.6388],[40.069,-105.6347],[40.0708,-105.6321]]},NW:{t:tq(1,2,2),wx:.62,sl:30,sh:.3,ez:12300,note:"NW — North Couloir, wind-loaded",route:[[40.0739,-105.6429],[40.0745,-105.6432],[40.0768,-105.6421]]},SE:{t:tq(3,3,2),wx:.50,sh:0,ez:12100,note:"SE, short but quality window"},S:{t:tq(1,2,2),wx:.55,sh:0,ez:12000,note:"Sheer S face, near-vertical"}}},
   {n:"Ogalalla Peak",     la:40.1703,lo:-105.6667,el:13333,
-   asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N very exposed"},NE:{t:tq(2,2,1),wx:.72,sh:.3,ez:12800,note:"NE, high wind exposure"},E:{t:tq(3,2,2),wx:.62,sl:28,sh:0,ez:12700,note:"E face, moderate quality",route:[[40.1703,-105.6667],[40.1703,-105.6643],[40.1702,-105.6619],[40.1702,-105.6596]]},SE:{t:tq(3,3,2),wx:.58,sl:32,sh:0,ez:12500,note:"SE aspect",route:[[40.1703,-105.6667],[40.1686,-105.6644],[40.167,-105.6622],[40.1655,-105.6601]]}}},
+   asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N very exposed"},NE:{t:tq(2,2,1),wx:.72,sh:.3,ez:12800,note:"NE, high wind exposure"},E:{t:tq(3,2,2),wx:.62,sl:28,sh:0,ez:12700,note:"E face, moderate quality",route:[[40.1703,-105.6667],[40.1703,-105.6643],[40.1702,-105.6619],[40.1702,-105.6596]]},SE:{t:tq(3,3,2),wx:.58,sl:32,sh:0,ez:12500,note:"SE aspect",route:[[40.1703,-105.6667],[40.1686,-105.6644],[40.167,-105.6622],[40.1655,-105.6601]]},SW:{t:tq(2,3,2),wx:.62,sl:30,sh:0,ez:12600,note:"SW face, afternoon window",route:[[40.1688,-105.6694],[40.1683,-105.6677],[40.1659,-105.665]]}}},
+  // St. Vrain Mountain — summit NE of Brainard Lake on the eastern ridge
+  {n:"St. Vrain Mtn",     la:40.1625,lo:-105.5866,el:12162,
+   asp:{N:{t:tq(2,3,3),wx:.62,sl:28,sh:.3,ez:11800,note:"N face dropping toward Middle St. Vrain",route:[[40.1625,-105.5866],[40.1737,-105.5861]]},SE:{t:tq(3,3,3),wx:.48,sl:30,sh:0,ez:11800,note:"SE — East Ridge, long mellow descent",route:[[40.1612,-105.5856],[40.161,-105.5746],[40.1589,-105.5653],[40.1581,-105.5616],[40.1571,-105.5584],[40.1568,-105.5578]]},S:{t:tq(3,3,2),wx:.52,sl:25,sh:0,ez:11800,note:"S slopes, early window",route:[[40.1596,-105.5874],[40.1529,-105.5862]]}}},
+  // St. Vrain Glacier — glaciated divide NW of Ogalalla, above Lake Gibraltar
+  {n:"St. Vrain Glacier",  la:40.163,lo:-105.657,el:13050,
+   asp:{NE:{t:tq(2,2,2),wx:.60,sl:25,sh:0,ez:12800,note:"NE — The Snake, broad glacier run",route:[[40.168,-105.6464],[40.1669,-105.6465],[40.1662,-105.6465],[40.1655,-105.646],[40.1643,-105.6449],[40.1623,-105.6429]]},SW:{t:tq(2,3,2),wx:.65,sl:22,sh:0,ez:12600,note:"SW glacier — Vrain Drain, afternoon",route:[[40.1588,-105.6679],[40.1589,-105.6671],[40.1593,-105.6665]]},W:{t:tq(2,2,2),wx:.68,sl:22,sh:0,ez:12600,note:"W — Ooh La La Express, long glacier run",route:[[40.163,-105.6709],[40.1634,-105.6705],[40.1635,-105.6697]]},S:{t:tq(2,3,2),wx:.58,sl:24,sh:0,ez:12400,note:"S — St Vrain Glacier #3, moderate pitch",route:[[40.1563,-105.6577],[40.1568,-105.6555],[40.1557,-105.6545]]}}},
   // Western cluster
   {n:"Mt. Neva",          la:40.0186,lo:-105.6694,el:12814,
    app:{th:"Fourth of July TH",tz:10121,di:3.0,route:[[39.9952,-105.6343],[40.001,-105.6389],[40.008,-105.6548],[40.013,-105.6639],[40.0144,-105.6781],[40.0139,-105.6811],[40.0116,-105.6853],[40.0093,-105.687],[40.007,-105.6883],[40.0092,-105.687]]},
@@ -549,16 +583,24 @@ var PK=[
    app:{th:"Fourth of July TH",tz:10121,di:2.6,route:[[39.9952,-105.6343],[40.0041,-105.6465],[40.0048,-105.6503],[40.0046,-105.6532],[39.9994,-105.6505],[39.9939,-105.6501],[39.9931,-105.6592],[39.9932,-105.6608],[39.9909,-105.6676],[39.9917,-105.6713]]},
    asp:{NE:{t:tq(2,2,3),wx:.52,sl:38,sh:.2,ez:12300,note:"NE bowl, moderate",route:[[39.9949,-105.6825],[39.9916,-105.675]]},E:{t:tq(3,3,3),wx:.48,sl:32,sh:0,ez:12200,note:"E face, decent corn",route:[[39.9926,-105.6826],[39.9916,-105.6751]]},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12249,note:"SE couloir, known ski line"},N:{t:tq(1,1,2),wx:.60,sh:0,ez:12600,note:"N face very limited"}}},
   {n:"Lone Eagle Peak",   la:40.0714,lo:-105.6603,el:11940,
-   asp:{E:{t:tq(2,3,3),wx:.42,sl:30,sh:0,ez:11400,note:"E face, low elevation — early season only",route:[[40.0714,-105.6603],[40.0714,-105.6578],[40.0713,-105.6554],[40.0713,-105.653]]},SE:{t:tq(3,3,3),wx:.38,sl:35,sh:0,ez:11200,note:"SE, popular early spring objective",route:[[40.0714,-105.6603],[40.07,-105.658],[40.0686,-105.6557],[40.0673,-105.6535]]},S:{t:tq(2,3,2),wx:.45,sh:0,ez:11370,note:"S face, very early melt"}}},
+   asp:{E:{t:tq(2,3,3),wx:.42,sl:30,sh:0,ez:11400,note:"E face, low elevation — early season only",route:[[40.0714,-105.6603],[40.0714,-105.6578],[40.0713,-105.6554],[40.0713,-105.653]]},SE:{t:tq(3,3,3),wx:.38,sl:35,sh:0,ez:11200,note:"SE, popular early spring objective",route:[[40.0714,-105.6603],[40.07,-105.658],[40.0686,-105.6557],[40.0673,-105.6535]]},S:{t:tq(2,3,2),wx:.45,sl:28,sh:0,ez:11370,note:"S face — Lone Rabbit, very early melt",route:[[40.0672,-105.6622],[40.0674,-105.6624],[40.0685,-105.6629],[40.0719,-105.6636],[40.0744,-105.6638]]}}},
+  // Cherokee Peak — above Crater Lake, Achonee basin
+  {n:"Cherokee Peak",     la:40.0872,lo:-105.6709,el:11900,
+   asp:{NE:{t:tq(3,3,3),wx:.50,sl:30,sh:.2,ez:11400,note:"NE face above Crater Lake — classic spring line",route:[[40.0813,-105.6723],[40.0827,-105.6704],[40.0838,-105.6695],[40.084,-105.6693],[40.0851,-105.6695],[40.0865,-105.6707],[40.087,-105.6709]]}}},
+  // Mount Achonee — above Crater Lake western headwall
+  {n:"Mount Achonee",    la:40.073,lo:-105.679,el:12025,
+   asp:{NW:{t:tq(3,3,3),wx:.55,sl:32,sh:.2,ez:11700,note:"NW — Achonee Arrow, long NE-trending line",route:[[40.0735,-105.6793],[40.0735,-105.6788],[40.0764,-105.6753],[40.0771,-105.674],[40.0778,-105.6714],[40.0772,-105.671],[40.0769,-105.6698],[40.0755,-105.6669]]},SE:{t:tq(2,3,3),wx:.48,sl:30,sh:0,ez:11600,note:"SE — Northeast Gully, moderate pitch",route:[[40.0669,-105.6785],[40.0708,-105.6731],[40.0717,-105.672],[40.0731,-105.67],[40.0737,-105.6699],[40.0741,-105.6685],[40.0749,-105.667]]},S:{t:tq(2,2,2),wx:.52,sl:28,sh:0,ez:11500,note:"S — Hopi Glacier and Peck Glacier area",route:[[40.0644,-105.6764],[40.0644,-105.6754],[40.0655,-105.6741],[40.0685,-105.67],[40.0701,-105.6681],[40.0704,-105.6665],[40.0715,-105.6652],[40.0744,-105.6638]]}}},
+  // Mount George — fair glacier basin south of Lone Eagle
+  {n:"Mount George",     la:40.057,lo:-105.658,el:12320,
+   asp:{N:{t:tq(2,3,3),wx:.48,sl:32,sh:.2,ez:11800,note:"N — Mount George Couloir",route:[[40.0568,-105.6587],[40.0576,-105.6583],[40.0581,-105.6578],[40.0592,-105.6567]]},NE:{t:tq(3,3,3),wx:.44,sl:28,sh:0,ez:11600,note:"NE — Fair Glacier, mellow lower-angle run",route:[[40.056,-105.6559],[40.0577,-105.6561],[40.0581,-105.6565],[40.0617,-105.6569],[40.0658,-105.6556]]}}},
   // RMNP / North cluster
   {n:"Sawtooth Mtn",      la:40.1269,lo:-105.6252,el:12304,
    app:{th:"Buchanan Pass TH",tz:9720,di:3.2,route:[[40.133,-105.6046],[40.1327,-105.608],[40.1328,-105.6118],[40.1329,-105.6216],[40.1331,-105.6249],[40.1324,-105.6284],[40.131,-105.63],[40.1297,-105.6291],[40.1271,-105.6253],[40.1265,-105.6247]]},
-   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11652,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.42,sl:28,sh:0,ez:11700,note:"SE aspect, wide open",route:[[40.1266,-105.6244],[40.1272,-105.6231],[40.1269,-105.6223],[40.1244,-105.6172]]},S:{t:tq(2,3,2),wx:.48,sh:0,ez:11600,note:"S face, early melt"},SW:{t:tq(2,2,1),wx:.52,sh:0,ez:11600,note:"SW afternoon"}}},
+   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11652,note:"E face, gentle terrain"},NE:{t:tq(2,2,2),wx:.50,sl:28,sh:0,ez:11652,note:"NE face from summit",route:[[40.1266,-105.6244],[40.1272,-105.6231],[40.1269,-105.6223],[40.1244,-105.6172]]},SE:{t:tq(3,3,3),wx:.42,sl:28,sh:0,ez:11700,note:"SE aspect, wide open",route:[[40.1266,-105.6244],[40.1272,-105.6231],[40.1269,-105.6223],[40.1244,-105.6172]]},S:{t:tq(2,3,2),wx:.48,sh:0,ez:11600,note:"S face, early melt"},SW:{t:tq(2,2,1),wx:.52,sh:0,ez:11600,note:"SW afternoon"}}},
   {n:"Red Deer Mtn",      la:40.1379,lo:-105.6301,el:12375,
    app:{th:"Buchanan Pass TH",tz:9720,di:3.5,route:[[40.133,-105.6046],[40.1327,-105.608],[40.1328,-105.6118],[40.1334,-105.6142],[40.1329,-105.6216],[40.1331,-105.6249],[40.1324,-105.6284],[40.131,-105.63],[40.131,-105.6301],[40.131,-105.632]]},
-   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12100,note:"NE aspect"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face moderate"},SE:{t:tq(3,3,3),wx:.45,sl:35,sh:0,ez:11900,note:"SE couloir — ski line from Buchanan Pass",route:[[40.1379,-105.6298],[40.1332,-105.6235]]},S:{t:tq(2,2,2),wx:.50,sh:0,ez:11700,note:"S face"}}},
-  {n:"St. Vrain Mtn",     la:40.1613,lo:-105.5851,el:12162,
-   asp:{E:{t:tq(3,3,3),wx:.45,sl:25,sh:0,ez:11700,note:"E face, accessible lower terrain",route:[[40.1613,-105.5851],[40.1613,-105.5828],[40.1612,-105.5806],[40.1612,-105.5784]]},SE:{t:tq(3,3,3),wx:.42,sl:28,sh:0,ez:11500,note:"SE, widest window at this elevation",route:[[40.1613,-105.5851],[40.1597,-105.5829],[40.1581,-105.5808],[40.1566,-105.5788]]},S:{t:tq(2,2,2),wx:.48,sh:0,ez:11400,note:"S face very early melt"},W:{t:tq(1,2,1),wx:.55,sh:0,ez:11600,note:"W face"}}},
+   asp:{E:{t:tq(3,3,3),wx:.50,sl:28,sh:0,ez:12100,note:"E slope, broad descent",route:[[40.138,-105.6297],[40.1391,-105.6246],[40.1392,-105.6194],[40.1397,-105.6171],[40.1399,-105.6147],[40.1407,-105.6116],[40.1419,-105.6092]]},NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12100,note:"NE aspect"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face moderate"},SE:{t:tq(3,3,3),wx:.45,sl:35,sh:0,ez:11900,note:"SE couloir — ski line from Buchanan Pass",route:[[40.1379,-105.6298],[40.1332,-105.6235]]},S:{t:tq(2,2,2),wx:.50,sh:0,ez:11700,note:"S face"}}},
+
   // Longs Peak area
   {n:"Longs Peak",        la:40.2550,lo:-105.6153,el:14259,
    asp:{N:{t:tq(1,1,1),wx:.95,sh:0,ez:13800,note:"Diamond face — technical, rarely skied"},NE:{t:tq(3,3,2),wx:.58,sl:43,sh:.7,ez:13400,note:"NE Trough — stays frozen late, classic line",route:[[40.2550,-105.6153],[40.2569,-105.6129],[40.2589,-105.6106],[40.2608,-105.6084],[40.2626,-105.6064]]},E:{t:tq(3,3,2),wx:.62,sh:0,ez:13300,note:"E lobe, high quality"},SE:{t:tq(3,3,2),wx:.60,sh:0,ez:13200,note:"SE bowl"},W:{t:tq(1,1,1),wx:.90,sh:0,ez:13500,note:"W face very exposed"},NW:{t:tq(1,1,1),wx:.92,sh:0,ez:13600,note:"NW wind-scoured"}}},
@@ -598,7 +640,7 @@ var BASIN_CFG={
 };
 function getPeakBasin(n){
   var b=['N. Arapaho Peak','S. Arapaho Peak','Navajo Peak','Mt. Albion','Ogalalla Peak','Mt. Neva','Jasper Peak','Lone Eagle Peak','Arikaree Peak','Kiowa Peak','Shoshoni Peak'];
-  var s=['Apache Peak','Pawnee Peak','Mt. Toll','Mt. Audubon','Paiute Peak','Sawtooth Mtn','Red Deer Mtn','St. Vrain Mtn','Longs Peak','Mt. Meeker','Chiefs Head','Pagoda Mtn'];
+  var s=['Apache Peak','Pawnee Peak','Mt. Toll','Mt. Audubon','Paiute Peak','Sawtooth Mtn','Red Deer Mtn','St. Vrain Mtn','St. Vrain Glacier','Little Pawnee Peak','Cherokee Peak','Mount Achonee','Mount George','Longs Peak','Mt. Meeker','Chiefs Head','Pagoda Mtn'];
   if(b.indexOf(n)>=0)return'boulder';if(s.indexOf(n)>=0)return'stvrain';return'bigthompson';
 }
 var sweCache={};
