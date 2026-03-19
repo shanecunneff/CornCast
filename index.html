@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v39 2026-03-19 MST</title>
+<title>CornCast 🌽 v41 2026-03-19 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -203,7 +203,7 @@ input[type=date]:focus{border-color:var(--teal)}
       <div style="font-size:.72rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem">📡 Weather Input Guide</div>
       <div style="font-size:.74rem;color:var(--muted);line-height:1.55">
         Fields marked <span style="color:var(--teal);font-weight:600">auto</span> are pre-filled from Open-Meteo when a date and peak are selected — override any value manually if local conditions differ.<br>
-        <strong style="color:var(--text)">Dawn Temp:</strong> exact 6 AM hourly if target is within 15 days of today; otherwise estimated as overnight low +2°F (typical pre-dawn offset). <strong style="color:var(--text)">Clouds:</strong> Overnight = midnight–5 AM · Morning = 6 AM–noon. <strong style="color:var(--text)">Snow depth/days</strong> = estimated from gridded snowfall (verify against SNOTEL or OpenSnow). Tile strip icons: 🧊≤18° 🧊great freeze / ❄️≤25° good / 🌡️≤29° marginal / 💧≤32° weak / 🔴no freeze.
+        <strong style="color:var(--text)">Dawn Temp:</strong> exact 6 AM hourly if target is within 15 days of today; otherwise estimated as overnight low +2°F (typical pre-dawn offset). <strong style="color:var(--text)">Clouds:</strong> Overnight = midnight–5 AM · Morning = 6 AM–noon. <strong style="color:var(--text)">Snow depth/days</strong> = SNOTEL SNWD sensor for past dates; Open-Meteo + 1.5× orographic uplift for future dates. Tile strip icons: 🧊≤18° 🧊great freeze / ❄️≤25° good / 🌡️≤29° marginal / 💧≤32° weak / 🔴no freeze.
       </div>
     </div>
     <div class="field"><label>Overnight Low °F</label><input type="number" id="flo" value="22" min="-10" max="45"></div>
@@ -266,7 +266,7 @@ input[type=date]:focus{border-color:var(--teal)}
   <h2>About CornCast</h2>
 
   <div class="asec">
-    <p>CornCast is a departure-time calculator for spring corn snow ski touring in the Indian Peaks Wilderness and Rocky Mountain National Park. Select a peak and aspect, enter your overnight forecast and route details, and CornCast tells you when to leave the trailhead to arrive during the corn window — and when to expect it to turn to slush.</p>
+    <p>CornCast is a departure-time calculator for spring corn snow ski touring in the Indian Peaks Wilderness and Rocky Mountain National Park. Select a peak and named descent line from the 155 FRSK-mapped ski descents across 40 peaks, enter your overnight forecast and route details, and CornCast tells you when to leave the trailhead to arrive during the corn window — and when to expect it to turn to slush.</p>
   </div>
 
   <!-- ═══════════════════════════════════════════════ -->
@@ -290,7 +290,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>Sky clarity matters as much as temperature.</strong> On clear nights, the snow surface radiates heat directly to a cold sky and receives very little back — so the snow surface can be 2–5°F colder than the air thermometer reads. Clouds reverse this: they act as a warm blanket, radiating heat back down. A clear 22°F night builds a meaningfully deeper crust than a cloudy 22°F night even though the thermometer reads the same. CornCast applies up to a 2× effective freeze bonus for a clear sky versus fully overcast.<br><br>
         <strong>Elevation compounds the cold.</strong> Air temperature drops roughly 3–4°F per 1,000' of elevation gain. The app lapse-corrects all weather data to the peak's actual elevation — a face at 13,500' refreezes harder than one at 12,000' even when the forecast originates from the same grid point.
       </div>
-      <div class="formula-box">rawFQ = (30 − overnightLow) / 35 + elevBonus<br>effectiveFQ = rawFQ × (0.50 + 0.50 × clearSkyFraction) − windScour<br><br>clearSkyFraction = (100 − overnightCloudPct) / 100<br>elevBonus ≈ +0.18 per 1,800' above 11,500'<br>→ Colder + clearer + higher = deeper, harder freeze</div>
+      <div class="formula-box">f_lo = overnightLow + lapseAdj   [ski zone temp; lapseAdj = (summit − skiZone)/1000 × 3.5°F]<br>rawFQ = (30 − f_lo) / 35 + ccFreezeBonus<br>ccFreezeBonus: CCC≥0.65 → +0.05  ·  CCC≤0.35 → −0.09  [cold pack amplifies; depleted absorbs]<br>rawFQ += freezeDurBonus   [0 at ≤2 hrs below 28°F, up to +0.15 at 8+ hrs]<br>freezeQ = rawFQ × (0.50 + 0.50 × clearSkyFraction)<br>effFQ = max(0.03, freezeQ − windScour)<br>effFQ = max(0.03, effFQ × (1 − matPen))   [matPen 0–20%; grain age degrades bonds]<br>→ Colder + clearer + cold-core pack + sustained hours = deeper, harder freeze</div>
       <div class="pipe-ref">Male &amp; Granger (1981), Water Resources Research 17(3) — snow surface energy exchange and longwave radiative balance; Pomeroy &amp; Brun (2001), Snow Ecology, Cambridge — physical properties of snow</div>
       <div class="pipe-feeds">↓ Sets the thermal debt that solar energy must repay before corn can open (Step 4)</div>
     </div>
@@ -305,7 +305,7 @@ input[type=date]:focus{border-color:var(--teal)}
         There is a second effect: the <em>thermal state</em> of the full snowpack column also degrades through the season. A March snowpack at 12,000' is cold all the way to the bottom — the overnight freeze can penetrate 30–50cm, creating a deep structural crust. By late May or June, the entire column is often <em>isothermal</em> — uniformly at 32°F with no cold reserve. The overnight freeze can now only penetrate 5–10cm into the surface, creating a thin veneer regardless of how cold it got. The corn window still opens, but it opens faster and closes sooner.<br><br>
         CornCast applies both effects as graduated monthly penalties.
       </div>
-      <div class="formula-box">         March  April  May    June<br>Grain rounding penalty:    0%     6%    14%    22%   → weakens freeze and crust bonds<br>Isothermal probability:    5%    15%    40%    70%   → thins crust, accelerates onset</div>
+      <div class="formula-box">When live Open-Meteo archive is available (primary model):<br>matPen = max(0, min(0.20, (1 − CCC) × 0.22 − ftCycles × 0.015))<br>isoPrb = surfaceRipeness × 0.60 + columnRipeness × 0.40 + depthAdj<br><br>Fallback when archive fails (calendar defaults only):<br>         March  April  May    June<br>matPen:    0%     6%    14%    22%<br>isoPrb:    5%    15%    40%    70%</div>
       <div class="pipe-ref">Colbeck (1987), IAHS 162 — crystal metamorphism in seasonal snow; Armstrong &amp; Brun (2008), Snow and Climate, Cambridge; Clow et al. (2012), JGR Atmospheres — Front Range snowpack trends at elevation</div>
     </div>
 
@@ -317,7 +317,7 @@ input[type=date]:focus{border-color:var(--teal)}
         While overnight cold builds the refreeze crust, wind is simultaneously trying to erode it — physically breaking fragile ice bonds before they can consolidate. This effect is most significant on west and northwest-facing terrain, which bears the full brunt of Colorado's prevailing westerly flow. East and southeast faces are typically sheltered by the terrain behind them.<br><br>
         The model applies a wind scour penalty above about 12 mph. That penalty is scaled by two factors: the compass direction of the face (west is most exposed, southeast least) and a per-face micro-terrain rating that distinguishes a sheltered cirque bowl from an exposed ridge crest. The wind threshold is higher when computing window duration (18 mph) than when computing freeze quality (12 mph) — the corn surface, once formed, is less fragile than the crust forming overnight.
       </div>
-      <div class="formula-box">Aspect wind exposure: W=1.00 · NW=0.90 · SW=0.72 · N=0.55 · S=0.50 · NE=0.45 · E=0.35 · SE=0.28</div>
+      <div class="formula-box">Aspect wind exposure: W=1.00 · NW=0.90 · SW=0.72 · N=0.55 · S=0.50 · NE=0.45 · E=0.35 · SE=0.28<br><br>Wind direction advection (when live wind direction available):<br>windScour × max(0.5,  1 + cos(windAngle − faceAngle) × 0.5)<br>Windward (direct): ×1.5 · Crosswind: ×1.0 · Lee: ×0.5</div>
     </div>
 
     <!-- modifier: Two-Layer Snowpack Ripeness -->
@@ -359,7 +359,7 @@ input[type=date]:focus{border-color:var(--teal)}
         The melt clock doesn't start until direct sunlight reaches the snow surface. An east face gets direct sun as soon as the sun clears the horizon — around 6:45–7:00 AM in April. A south face must wait while the sun rotates around through the northeastern sky; it typically isn't illuminating a south face until around 9:30 AM. A west face waits until early afternoon.<br><br>
         Local terrain introduces an additional delay that pure solar geometry can't predict. A ridge to the east can block morning light on an otherwise east-facing bowl by 20–60 minutes. Apache Peak's northeast bowl, for example, sits behind a ridge crest that delays direct sun until approximately 8:30 AM in April — over 40 minutes later than the solar geometry alone would suggest. These terrain shade delays are hand-coded from field observation for each face in the model.
       </div>
-      <div class="formula-box">April sun-hit times at 40°N:<br>E ~6:54 AM · NE ~7:48 AM · SE ~7:18 AM · S ~9:30 AM · SW ~12:00 PM · W ~1:30 PM<br>+ per-face terrain shade delay (Apache NE: +24 min · Longs NE Trough: +42 min)</div>
+      <div class="formula-box">April sun-hit times at 40°N:<br>E ~6:54 AM · NE ~7:48 AM · SE ~7:18 AM · S ~9:30 AM · SW ~12:00 PM · W ~1:30 PM<br>+ per-line terrain shade delay (sh field on each named descent line)<br>Examples: Isabelle Glacier sh=0.4h · Shoshoni Bowl sh=0.3h · Apache Couloir sh=0.1h<br>Derived from field observation and CalTopo terrain analysis for each FRSK line.</div>
       <div class="pipe-feeds">↓ Sets the earliest possible corn open time — the melt clock starts here (Step 4)</div>
     </div>
 
@@ -373,7 +373,7 @@ input[type=date]:focus{border-color:var(--teal)}
         The rate at which that debt is repaid depends on two things: how much solar energy is arriving at the surface (driven by aspect, cloud cover, and the radiation calculations in Steps 2–3) and how quickly the morning air is warming (dawn temperature to afternoon high). A bright, sunny aspect on a clear morning with rapidly rising temperatures pays off the debt quickly. A heavily clouded northeast face in March may never pay it off during reasonable skiing hours — the model caps melt delay at 4.5 hours for exactly this reason.<br><br>
         One notable interaction: a snowpack that is already isothermal actually speeds up corn onset. Because the pack had no cold reserve, the overnight crust was thinner to begin with, so the thermal debt is smaller. The corn opens sooner — but the same thin crust means the window will close sooner too.
       </div>
-      <div class="formula-box">meltDelay = (freezeQuality × degrees below freezing at dawn)<br>           ÷ (solar radiation × morning warm-up rate)<br><br>→ Capped at 4.5 hours<br>→ cornOpens = sunHitTime + meltDelay</div>
+      <div class="formula-box">f_da = dawnTemp + lapseAdj   [ski zone dawn temp]<br>meltDelay = (effFQ × max(0, 33 − f_da))<br>           ÷ (effRad × max(1.0, morningRise/6) + 0.01)<br>meltDelay × (1 − isoMeltFactor)   [isoPrb>0.50 shrinks delay: thin crust thaws fast]<br>→ Capped at 2.0 hours<br>→ cornOpens = max(sunHitTime, sunHitTime + meltDelay × 1.05)</div>
       <div class="pipe-output">📍 OUTPUT A: Corn Opens = sun hits face + melt delay</div>
       <div class="pipe-ref">Kustas &amp; Rango (1994), Water Resources Research 30(5) — simplified energy budget for snowmelt onset</div>
       <div class="pipe-feeds">↓ Subtract your approach time from Corn Opens to get your trailhead departure time</div>
@@ -390,7 +390,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>Consolidated spring pack (more than ~10 days since the last storm)</strong> behaves differently. Once grains have rounded and stabilized into large melt-freeze polycrystals, the aging process essentially stops — grain size no longer changes. What matters then is whether there is enough surface material to refreeze at all, and whether the seasonal maturity penalties have weakened the bonds. A deep consolidated April pack still produces real corn. A thin consolidated June pack produces marginal corn regardless of how cold the night was.<br><br>
         The model takes whichever score is higher — the fresh storm calculation or the consolidated pack floor.
       </div>
-      <div class="formula-box">Storm layer:  crustQ = (depth÷8) × exp(−days×0.10) × seasonal_scale<br>              [8" is full potential; halves every 7 days; scaled by month]<br><br>Consolidated: crustQ = 0.35 × (depth÷8) × seasonal_scale<br>              [floor for aged pack — grain size stable, bonds still real]<br><br>Result = whichever is higher (minimum 0.05)<br><br>Snow Surface % in results = this value — answers "how much good snow material<br>is available to refreeze?" Not a holistic quality score by itself.</div>
+      <div class="formula-box">Storm layer:  crustQ = (stormDepth÷8) × exp(−days×0.10) × (1 − matPen×0.80)<br>              [8" is full potential; halves every 7 days]<br><br>Pack floor:   crustQ = 0.35 × (faceSnwdIn÷36) × (1−matPen×0.90) × (1−isoPrb×0.40)<br>              [uses full-pack depth at ski zone from elevation gradient — NOT storm depth]<br>              [faceSnwdIn from SNOTEL+OM regression adjusted for SR wind-loading]<br><br>crustQ = max(stormLayer, packFloor, 0.05)<br>crustQ += sweAdj          [−0.12 to +0.07 from absolute SWE inches]<br>crustQ += ftBonus         [up to +0.12 for 4+ freeze-thaw cycles in 14 days]<br>crustQ × densityMult      [0.85–1.08 from SWE÷depth ratio]<br><br>Snow Surface % = final crustQ — "how much material is available to refreeze?"</div>
       <div class="pipe-ref">Fierz et al. (2009), UNESCO-IHP — International Classification for Seasonal Snow, melt-freeze grain classification; Colbeck (1986), Acta Metallurgica 34 — grain coarsening in wet snow; Colbeck (1979), J. Colloid Interface Science — ice-to-ice bond strength; Colbeck (1997), CRREL Report 97-10 — sintering and grain equilibrium</div>
       <div class="pipe-feeds">↓ Primary driver of window duration (Step 6) and contributes directly to final score</div>
     </div>
@@ -419,7 +419,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>A counterintuitive result:</strong> higher-radiation aspects (SE, S) tend to produce slightly longer windows than lower-radiation aspects for the same crust quality. Intense, uniform solar loading melts the surface consistently across the whole face — every square meter enters the corn state at the same time. Low-radiation faces melt patchily, creating inconsistent micro-conditions across the slope even though the aggregate window technically hasn't closed.<br><br>
         A warm afternoon high accelerates the transition to slush: a 55°F day burns through a corn window faster than a 42°F day. Wind above about 18 mph mechanically disrupts the softened surface and shortens the window.
       </div>
-      <div class="formula-box">duration = crust quality × 1.6   [dominant — deeper crust = longer window]<br>         + radiation × 1.4       [uniform melt = consistent corn across face]<br>         − temp above 32°F × 0.065  [warmer afternoon = faster slush transition]<br>         − wind penalty           [above 18 mph disrupts softened surface]<br>         ± SWE and column bonus<br><br>→ Clamped 0.2 – 4.0 hours<br>→ cornCloses = cornOpens + duration</div>
+      <div class="formula-box">rawDur = crustQ × 1.6 + effRad × 1.4<br>       − max(0, (f_hi_skizone − 46) × 0.085)   [penalty starts at 46°F, not 32°F]<br>       − windDurPenalty                          [above 18 mph; scaled by aspect + per-line exposure]<br>       + sweDurBonus                             [−0.30 to +0.18 h from SWE inches]<br>rawDur × (0.72 + packReadiness × 0.48)          [pack cycling quality multiplier]<br>rawDur × (1 − isoPrb × 0.25)                    [isothermal pack collapses window faster]<br>→ Clamped 0.2 – 4.0 hours<br>→ cornCloses = cornOpens + duration</div>
       <div class="pipe-output">📍 OUTPUT B: Corn Closes = corn opens + duration</div>
       <div class="pipe-feeds">↓ Corn Opens and Corn Closes together define the window; your arrival must fall between them</div>
     </div>
@@ -444,7 +444,7 @@ input[type=date]:focus{border-color:var(--teal)}
     <!-- ── FINAL SCORE ── -->
     <div class="pipe-step final-step">
       <div class="pipe-header"><span class="pipe-num">✓</span><span class="pipe-title">Final Score (0–100)</span></div>
-      <div class="pipe-explain">All pipeline outputs combine into a single score. The raw number is normalized so that the range's benchmark corn objective — South Arapaho Peak's SE couloir in March under near-perfect conditions — scores 100. That peak and aspect was chosen because it is widely regarded as the premier spring corn objective in the Indian Peaks: a clean, well-sheltered SE couloir with reliable coverage and consistent solar exposure from first light through mid-morning. A score of 80 means conditions are strongly in your favor. A score of 30 means you might find corn in sheltered pockets but shouldn't plan your day around it.</div>
+      <div class="pipe-explain">All pipeline outputs combine into a single score. The raw number is normalized so that a benchmark SE-facing corn objective at 12,500' in March under near-perfect conditions scores 100. The calibration target represents a clean, well-sheltered southeast couloir with reliable coverage and consistent solar exposure from first light through mid-morning — representative of the premier spring corn conditions in the Indian Peaks. A score of 80 means conditions are strongly in your favor. A score of 30 means you might find corn in sheltered pockets but shouldn't plan your day around it.</div>
       <div class="formula-box">Score bands:<br>  75–100  Excellent — deep uniform freeze, 2+ hr window, classic spring skiing<br>  50–74   Good — reliable corn, 1–2 hr window, may vary slightly across face<br>  25–49   Marginal — short window, thin crust, or patchy; worth checking<br>  0–24    Poor — theoretical window only; too short to plan around<br><br>Three metrics shown in results:<br>  Terrain %    — mountain quality (snow retention × aspect purity × wind shelter)<br>  Freeze %     — overnight cold strength (how hard the crust bonded)<br>  Snow Surface % — depth &amp; freshness of snow available to refreeze<br>  These are the three physical inputs; the score combines all of them.<br><br>Benchmark: S. Arapaho SE · March · 2°F overnight · clear sky · 3 mph wind · 10" snow / 1 day old</div>
     </div>
   </div>
@@ -479,7 +479,7 @@ input[type=date]:focus{border-color:var(--teal)}
     <p>CornCast is a planning tool, not a sensor. Several things it cannot fully account for:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
       <li><strong>Terrain factor is hand-coded</strong>, not derived from GIS or DEM analysis. The snow retention, aspect purity, and wind shelter ratings are informed judgments — treat them as a strong starting point, especially for faces you haven't skied before.</li>
-      <li><strong>Single-aspect computation.</strong> A long descent often spans multiple aspects — N to E to SE — each with different opening and closing times. CornCast scores only the aspect you select.</li>
+      <li><strong>Single-line computation.</strong> CornCast scores one named descent line at a time. A long descent often spans multiple aspects — N to E to SE — each with different opening and closing times. The selected line's aspect is used for the entire window calculation.</li>
       <li><strong>No dust-on-snow modeling.</strong> Dust layers on the surface lower albedo and can accelerate corn onset by 20–45 minutes while compressing the window. Check the Desert Dust page at CAIC or OpenSnow for dust events.</li>
       <li><strong>Column cold content is calibrated, not validated.</strong> The coefficients governing how quickly the deep snowpack gains and loses cold content are physically motivated estimates — they have not been validated against observational data from Niwot Ridge or other Front Range alpine sites at ski-zone elevations.</li>
       <li><strong>Isothermal probability is a seasonal estimate.</strong> A drought year can isothermalize the pack 2–4 weeks earlier than the monthly baseline. A high-SWE cold spring may stay cold-core well into June. The model adjusts for SWE but cannot detect true isothermal state without real-time temperature sensors in the snowpack.</li>
@@ -491,6 +491,19 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v41 — Physics accuracy audit + full UX/narrative update (2026-03-19)</h3>
+    <p>Comprehensive audit of every physics step shown to the user. All driver rows and About tab formula boxes now accurately reflect the actual model implementation:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>Bug fix:</strong> <code>ad.note</code> undefined in adapter — "Excellent corn — undefined" fixed.</li>
+      <li><strong>Lapse correction surfaced:</strong> Step 1 and Step 4 drivers now show ski zone temperatures (summit low + lapseAdj), not just the summit forecast value the user entered.</li>
+      <li><strong>Step 1:</strong> Added ccFreezeBonus (CCC modifies rawFQ ±0.09) and matPen (cuts effFQ up to 20%) as visible rows. About formula box corrected — elevBonus removed (never existed), ccFreezeBonus/freezeDurBonus/matPen added.</li>
+      <li><strong>Step 2–3:</strong> aspRadPct now includes monthly radBoost multiplier (was April-only accurate). Live solar path correctly described — cloud attenuation not re-applied when shortwave data is direct from Open-Meteo.</li>
+      <li><strong>Step 4:</strong> isoPrb melt factor shown — isothermal pack shortens melt delay. About formula box cap corrected from 4.5h to 2.0h; isoMeltFactor added.</li>
+      <li><strong>Step 5:</strong> Complete rewrite. Driver now shows which mode dominated (storm crust vs consolidated pack floor) and explains that the pack floor uses full snowpack depth from the elevation gradient — not storm snow depth. sweAdj, ftBonus, and densityMult all shown. About formula box corrected — consolidated formula now uses faceSnwdIn÷36, all modifiers shown.</li>
+      <li><strong>Step 6:</strong> isoPrb ×0.25 collapse factor, sweDurBonus (±0.30h), and packReadiness multiplier all surfaced. About formula box corrected — threshold fixed (32°F→46°F), coefficient fixed (0.065→0.085), missing terms added.</li>
+      <li><strong>Result tab:</strong> "All Aspects" table replaced with "All Lines" showing all named descents on the same peak sorted by score.</li>
+      <li><strong>About tab:</strong> Seasonal Maturity modifier now distinguishes live model (CCC/ftCycles-based) from calendar fallback. Wind Scour shows v40 direction advection formula. Step 3 formula removes hardcoded old peak names. Known Limitations updated for named lines and SRTM elevation data.</li>
+    </ul>
     <h3>v39+v40 — Elevation enrichment + Wind direction advection (2026-03-19)</h3>
     <p>Two physics improvements implemented together:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -504,7 +517,7 @@ input[type=date]:focus{border-color:var(--teal)}
       <li><strong>Plan tab:</strong> replaced peak+aspect-grid UI with cascading Peak → Line dropdowns. Lines are listed by name with aspect in parentheses for disambiguation. Selecting a line highlights its polyline on the map in teal.</li>
       <li><strong>Map:</strong> polyline tooltips now show the FRSK line name (e.g. "Skywalker Couloir") instead of "S. Arapaho Peak · SE". Peak markers retain pie chart visual, now built from LINES data aggregated by aspect.</li>
       <li><strong>Popup:</strong> lines table replaces aspects table.</li>
-      <li>Lines now have correct aspects from geometry (e.g. Skywalker is SW not SE). ez/sl are estimates — v39 will compute from Open-Meteo elevation API.</li>
+      <li>Lines now have correct aspects computed from CalTopo geometry. Ski floor elevation (ez) and slope angle (sl) are computed from SRTM elevation data via Open-Meteo at app launch.</li>
     </ul>
     <h3>v37d — East Portal / Moffat area peaks (2026-03-19)</h3>
     <p>Added 11 new peaks covering the South Boulder Creek / Rogers Pass / Rollins Pass / Berthoud Pass corridor, all with FRSK-verified routes:</p>
@@ -1180,7 +1193,7 @@ function crustPreview(){
   var cq=df*af;
   var desc=cq>=0.75?'Excellent crust potential':cq>=0.50?'Good crust potential':cq>=0.30?'Moderate — aging reducing quality':cq>=0.15?'Weak — thin or old snow':'Very weak — minimal refreeze crust expected';
   var col=cq>=0.75?'#2ed573':cq>=0.50?'#ffd166':cq>=0.30?'#ffa502':'#ff4757';
-  document.getElementById('crust-prev').innerHTML='<span style="color:'+col+';font-weight:600">'+desc+'</span> <span style="color:var(--muted);font-size:.68rem">(depth factor '+df.toFixed(2)+' × age factor '+af.toFixed(2)+' = '+cq.toFixed(2)+')</span>';
+  document.getElementById('crust-prev').innerHTML='<span style="color:'+col+';font-weight:600">'+desc+'</span> <span style="color:var(--muted);font-size:.68rem">(storm layer: '+df.toFixed(2)+' × '+af.toFixed(2)+' = '+cq.toFixed(2)+' — full model also uses consolidated pack floor)</span>';
 }
 
 // ── v39: Open-Meteo elevation enrichment ─────────────────────────────────
@@ -3354,7 +3367,9 @@ function buildDrivers(w,f,month,asp){
   var ma=MONTH_ADJ[month]||MONTH_ADJ[4],mnames={3:"March",4:"April",5:"May",6:"June"},rows=[];
   var liveFTC = (weatherData && weatherData.ftCycles != null) ? weatherData.ftCycles : 0;
   var _bdPk=selectedLineIdx>=0?getPKMeta(LINES[selectedLineIdx].pk):PEAKS[0];
-  var peakElStr=_bdPk.el.toLocaleString();
+  var _bdLine=selectedLineIdx>=0?LINES[selectedLineIdx]:null;
+  var skiFtStr=_bdLine?((_bdLine.elTop||_bdLine.ez||_bdPk.el).toLocaleString()+"'"):(_bdPk.el.toLocaleString()+"'");
+  var peakElStr=skiFtStr;
   function head(num,title){ rows.push({type:'head',text:'Step '+num+' · '+title}); }
   function mod(title){  rows.push({type:'head',text:'Modifier · '+title}); }
 
@@ -3363,12 +3378,24 @@ function buildDrivers(w,f,month,asp){
   // Inputs: overnight low → sky clarity amplifies → wind scour degrades
   // Output: effectiveFQ — the thermal debt solar energy must repay
   // ─────────────────────────────────────────────────────────────────────────
+  if(_bdLine){
+    rows.push({icon:'📍',cls:'driver-neu',text:'<strong>'+_bdLine.n+'</strong> · '+_bdLine.pk+' · '+_bdLine.asp+'-facing'
+      +(_bdLine.ez?' · ski zone '+_bdLine.ez.toLocaleString()+"'":'')+(_bdLine.sl?' · '+_bdLine.sl+'° slope':'')});
+  }
   head(1,'Overnight Freeze Quality');
 
-  if(f.lo<=18)       rows.push({icon:'🧊',cls:'driver-pos',text:'<strong>Overnight low '+f.lo+'°F — excellent freeze.</strong> This cold builds a deep, reinforced ice matrix at the surface. The thicker the crust, the longer the corn window lasts before collapsing to slush.'});
-  else if(f.lo<=24)  rows.push({icon:'❄️',cls:'driver-pos',text:'<strong>Overnight low '+f.lo+'°F — good freeze.</strong> Solid refreeze. A reliable crust will form, though not as deep as a sub-20° night.'});
-  else if(f.lo<=29)  rows.push({icon:'🌡️',cls:'driver-neu',text:'<strong>Overnight low '+f.lo+'°F — marginal freeze.</strong> The crust will be thin and the window shorter than ideal. A few degrees colder makes a meaningful difference here.'});
-  else               rows.push({icon:'⚠️',cls:'driver-neg',text:'<strong>Overnight low '+f.lo+'°F — weak or no freeze.</strong> Near or above 32°F overnight. Little to no ice crust will form — the essential first step for corn is absent.'});
+  var _lapseAdj=_bdLine?Math.round((_bdPk.el-(_bdLine.ez||_bdPk.el))/1000*3.5):0;
+  var _skiLo=f.lo+_lapseAdj;
+  var _lapseNote=_lapseAdj>0?' ('+_skiLo+'°F at ski zone after +'+_lapseAdj+'° lapse correction)':(_lapseAdj<0?' ('+_skiLo+'°F at ski zone)':'');
+  if(f.lo<=18)       rows.push({icon:'🧊',cls:'driver-pos',text:'<strong>Overnight low '+f.lo+'°F — excellent freeze'+_lapseNote+'.</strong> This cold builds a deep, reinforced ice matrix at the surface. The thicker the crust, the longer the corn window lasts before collapsing to slush.'});
+  else if(f.lo<=24)  rows.push({icon:'❄️',cls:'driver-pos',text:'<strong>Overnight low '+f.lo+'°F — good freeze'+_lapseNote+'.</strong> Solid refreeze. A reliable crust will form, though not as deep as a sub-20° night.'});
+  else if(f.lo<=29)  rows.push({icon:'🌡️',cls:'driver-neu',text:'<strong>Overnight low '+f.lo+'°F — marginal freeze'+_lapseNote+'.</strong> The crust will be thin and the window shorter than ideal. A few degrees colder makes a meaningful difference here.'});
+  else               rows.push({icon:'⚠️',cls:'driver-neg',text:'<strong>Overnight low '+f.lo+'°F — weak or no freeze'+_lapseNote+'.</strong> Near or above 32°F overnight. Little to no ice crust will form — the essential first step for corn is absent.'});
+  if(w.columnColdContent!==null&&!w.archiveFailed){
+    var ccb=w.columnColdContent>=0.65?'+0.02 to +0.05 bonus (cold-core pack amplifies refreeze)':w.columnColdContent<=0.35?'−0.05 to −0.09 penalty (depleted pack absorbs cold before building crust)':null;
+    if(ccb) rows.push({icon:'🏔️',cls:w.columnColdContent>=0.65?'driver-pos':'driver-neg',text:'<strong>Cold reserve (CCC '+Math.round(w.columnColdContent*100)+'%)</strong> applies a freeze quality modifier: '+ccb+'.'});
+  }
+  if(w.matPen>0.04) rows.push({icon:'📅',cls:w.matPen>0.10?'driver-neg':'driver-neu',text:'<strong>Seasonal maturity penalty ('+Math.round(w.matPen*100)+'%)</strong> reduces effective freeze quality after cloud and wind — grain rounding weakens ice bonds regardless of how cold it got.'});
 
   if(f.cn<=15)       rows.push({icon:'🌟',cls:'driver-pos',text:'<strong>Clear overnight sky ('+f.cn+'% cloud).</strong> The snow surface radiates heat directly to the cold sky and receives almost nothing back — the surface can be 2–5°F colder than the air thermometer reads. Strong amplifier on top of the low temperature.'});
   else if(f.cn<=40)  rows.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partly cloudy overnight ('+f.cn+'% cloud).</strong> Partial cloud moderates radiative cooling. The freeze will not penetrate quite as deep as a clear night at the same temperature.'});
@@ -3507,18 +3534,20 @@ function buildDrivers(w,f,month,asp){
   head('2–3','Solar Input & Sun-Hit Time');
 
   var aspRad=BASE_RAD[asp]||0.5;
-  var aspRadPct=Math.round(aspRad*100);
+  var radBoostMult=((ma.radBoost||{})[asp]||1);
+  var aspRadPct=Math.round(aspRad*radBoostMult*100);
   var effRadPct=Math.round(w.effRad*100);
   var aspCls=aspRadPct>=120?'driver-pos':aspRadPct>=80?'driver-neu':aspRadPct>=45?'driver-neu':'driver-neg';
-  var solarSrc = (w.effRad && f.solarMorning != null)
-    ? ' <span style="font-size:.65rem;color:var(--teal)">[📡 live solar]</span>' : '';
+  var isLiveSolar=(f.solarMorning!=null&&f.solarMorning>0);
+  var solarSrc = isLiveSolar?' <span style="font-size:.65rem;color:var(--teal)">[📡 live solar]</span>':'';
+  var cloudNote=isLiveSolar?'Live shortwave radiation from Open-Meteo already incorporates actual cloud cover — no separate attenuation step. Effective radiation: <strong>'+effRadPct+'%</strong> of benchmark.':'After '+f.cm+'% morning cloud attenuation: <strong>'+effRadPct+'% effective</strong>.';
   rows.push({icon:'☀️',cls:aspCls,
     text:'<strong>'+asp+'-facing aspect: '+aspRadPct+'% of flat-ground radiation in '+mnames[month]+'.'+solarSrc+'</strong> '
     +(aspRadPct>=120?'Direct, near-perpendicular solar loading — maximum melt energy per square foot.'
      :aspRadPct>=80?'Good angled solar input — effective melt energy for this time of year.'
      :aspRadPct>=45?'Oblique solar angle — slower melt rate; timing is tighter.'
      :'Low radiation aspect — sun strikes at a shallow angle, minimal melt energy. Corn onset is sensitive to any cloud cover.')
-    +' After '+f.cm+'% morning cloud attenuation: <strong>'+effRadPct+'% effective</strong>.'});
+    +' '+cloudNote});
 
   if(f.cm<=15)      rows.push({icon:'🌞',cls:'driver-pos',text:'<strong>Clear morning sky ('+f.cm+'% cloud).</strong> Full solar loading reaches the face — rapid, predictable corn onset and uniform melt across the slope.'});
   else if(f.cm<=40) rows.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partial morning clouds ('+f.cm+'%).</strong> Some solar attenuation. Onset slightly delayed; melt may be less consistent across the face.'});
@@ -3530,16 +3559,19 @@ function buildDrivers(w,f,month,asp){
   // ─────────────────────────────────────────────────────────────────────────
   head(4,'Melt Onset → Corn Opens');
 
-  var dth=f.hi-f.da;
-  var debtCls=f.da<=28?'driver-neu':f.da<=33?'driver-neu':'driver-neg';
-  var debtNote=f.da<=20?'very cold at dawn — large thermal debt, delayed onset; but freeze was correspondingly deep'
-    :f.da<=28?'cool at dawn — moderate thermal debt, typical spring timing'
-    :f.da<=32?'near-freezing at dawn — small thermal debt, corn opens earlier; the overnight crust was likely thin'
-    :'above freezing at dawn — no thermal debt; surface opens immediately but the overnight freeze was already compromised';
+  var _skiDa=f.da+_lapseAdj;
+  var _skiHi=f.hi+_lapseAdj;
+  var dth=_skiHi-_skiDa;
+  var debtCls=_skiDa<=28?'driver-neu':_skiDa<=33?'driver-neu':'driver-neg';
+  var debtNote=_skiDa<=20?'very cold at dawn at ski zone — large thermal debt, delayed onset; but freeze was correspondingly deep'
+    :_skiDa<=28?'cool at dawn at ski zone — moderate thermal debt, typical spring timing'
+    :_skiDa<=32?'near-freezing at dawn at ski zone — small thermal debt, corn opens earlier; the overnight crust was likely thin'
+    :'above freezing at dawn at ski zone — no thermal debt; surface opens immediately but the overnight freeze was already compromised';
+  var _daNote=_lapseAdj>0?' ('+_skiDa+'°F at ski zone)':'';
   rows.push({icon:'🌅',cls:debtCls,
-    text:'<strong>Dawn temp '+f.da+'°F → High '+f.hi+'°F ('+dth+'°F morning rise).</strong> '+debtNote
+    text:'<strong>Dawn temp '+f.da+'°F'+_daNote+' → High '+f.hi+'°F ('+dth+'°F morning rise at ski zone).</strong> '+debtNote
     +'. The '+dth+'°F rise rate is '+(dth>=20?'steep — thermal debt clears quickly, corn opens promptly':dth>=12?'moderate — typical spring payoff timing':'shallow — slow debt repayoff; onset may be late or incomplete on low-radiation aspects')+'.'});
-
+  if(w.isoPrb>0.50) rows.push({icon:'🌡️',cls:'driver-neu',text:'Near-isothermal pack (isoPrb '+Math.round(w.isoPrb*100)+'%) shortens melt delay — thin overnight crust thaws quickly. Corn opens earlier but the window closes sooner for the same reason.'});
   if(w.ws > 13.0) rows.push({icon:'⚠️',cls:'driver-neg',text:'Window opens at '+ht(w.ws)+' — afternoon opening increases exposure to heat buildup and convective risk.'});
   else if(w.ws > 11.5) rows.push({icon:'🕐',cls:'driver-neu',text:'Window opens late morning — plan approach accordingly.'});
 
@@ -3550,61 +3582,61 @@ function buildDrivers(w,f,month,asp){
   // ─────────────────────────────────────────────────────────────────────────
   head(5,'Snow Surface — Material to Refreeze');
 
+  // Determine which mode dominated: storm crust vs consolidated pack floor
+  var _stormCrustQ=w.depthFactor*w.ageFactor*(1-w.matPen*0.80);
+  var _packFloorBase=0.35; // packFloor anchored at 0.35 × packFloorDepth × maturity × isoFactor
+  var _stormDominates=(_stormCrustQ>=_packFloorBase||f.ds<=10);
   var cqPct=Math.round(w.crustQ*100);
-  if(f.sdp>=8&&f.ds<=3)        rows.push({icon:'🌨️',cls:'driver-pos',text:'<strong>Deep fresh snow ('+f.sdp+'" · '+f.ds+' day'+(f.ds===1?'':'s')+' old) — snow surface '+cqPct+'%.</strong> Fine angular grains with large surface area bond tightly when frozen. Best possible raw material: thick, well-bonded crust, longest window potential.'});
-  else if(f.sdp>=4&&f.ds<=7)   rows.push({icon:'🌨️',cls:'driver-pos',text:'<strong>Recent storm snow ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> Grains have begun rounding but angular facets remain. Good crust potential — enough depth to sustain a real window.'});
-  else if(f.sdp<=2&&f.ds>0)    rows.push({icon:'🟠',cls:'driver-neg',text:'<strong>Shallow snow ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> A thin layer ages out in 24–48 hours. Even with an excellent overnight freeze, 1–2" produces only a weak patchy crust — not enough material for a reliable window.'});
-  else if(f.ds>10&&f.sdp>=12)  rows.push({icon:'🏔️',cls:'driver-neu',text:'<strong>Consolidated spring pack ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> Grains have stabilized as large melt-freeze polycrystals — the aging process has plateaued. Cold nights still rebuild real ice bonds, but the crust is thinner than fresh storm snow. Expect a shorter window that opens earlier.'});
-  else if(f.ds>10&&f.sdp<12)   rows.push({icon:'🟠',cls:'driver-neg',text:'<strong>Old shallow snow ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> Limited refreeze material in an aging thin pack. Short window expected regardless of freeze quality.'});
-  else                          rows.push({icon:'🌨️',cls:'driver-neu',text:'<strong>Recent snowfall ('+f.sdp+'" · '+f.ds+' days old) — snow surface '+cqPct+'%.</strong> Moderate crust potential.'});
 
+  if(_stormDominates){
+    if(f.sdp>=8&&f.ds<=3)      rows.push({icon:'🌨️',cls:'driver-pos',text:'<strong>Deep fresh storm snow ('+f.sdp+'" · '+f.ds+' day'+(f.ds===1?'':'s')+' old)</strong> dominates the snow surface score ('+cqPct+'%). Fine angular grains bond tightly when frozen — best raw material for a deep, reliable crust.'});
+    else if(f.sdp>=4&&f.ds<=7) rows.push({icon:'🌨️',cls:'driver-pos',text:'<strong>Recent storm snow ('+f.sdp+'" · '+f.ds+' days old)</strong> dominates snow surface ('+cqPct+'%). Grains partly rounded but enough fresh facets remain for solid refreeze bonding.'});
+    else if(f.sdp<=2)          rows.push({icon:'🟠',cls:'driver-neg',text:'<strong>Shallow storm snow ('+f.sdp+'" · '+f.ds+' days old)</strong> limits snow surface to '+cqPct+'%. A thin layer ages in 24–48 hrs — insufficient material for a reliable window even with a hard freeze. The consolidated pack floor provides the actual refreeze base.'});
+    else                       rows.push({icon:'🌨️',cls:'driver-neu',text:'<strong>Storm snow ('+f.sdp+'" · '+f.ds+' days old)</strong> sets snow surface at '+cqPct+'%. Moderate crust potential.'});
+  } else {
+    // Consolidated pack floor dominates
+    var _faceDepth=(weatherData&&weatherData.depthGradient)?Math.round(Math.max(0,weatherData.depthGradient.a+weatherData.depthGradient.b*(_bdLine?_bdLine.ez:12000))):(f.snwdInches||36);
+    rows.push({icon:'🏔️',cls:cqPct>=30?'driver-neu':'driver-neg',
+      text:'<strong>Consolidated pack floor dominates — snow surface '+cqPct+'%.</strong> '
+      +'Storm snow ('+f.sdp+'" · '+f.ds+' days) has aged past the storm-crust threshold. '
+      +'The '+_faceDepth+'" full snowpack at ski zone elevation provides the refreeze base: '
+      +'<code>0.35 × ('+_faceDepth+'"/36) × seasonal maturity × isothermal factor</code>. '
+      +'Grains are large rounded polycrystals — bonds form but thinner than fresh snow.'});
+  }
+
+  // SWE modifier
   if(f.swePct!==null&&f.swePct!==undefined){
     var adjPts=Math.round(w.sweAdj*100);
-    var sweEff=Math.abs(adjPts)>0?' Snow surface adjusted '+(adjPts>0?'+':'')+adjPts+' pts from basin SWE.':' No SWE adjustment to snow surface.';
-    if(f.swePct<60)       rows.push({icon:'📉',cls:'driver-neg',text:'<strong>Low basin SWE ('+f.swePct+'% of median — '+sweLabel(f.swePct)+').</strong> Below-normal snowpack suggests a thinner, more cycle-worn surface — weaker crust and possibly patchy coverage on steeper terrain.'+sweEff});
-    else if(f.swePct>=115)rows.push({icon:'📈',cls:'driver-pos',text:'<strong>Strong basin SWE ('+f.swePct+'% of median — '+sweLabel(f.swePct)+').</strong> Above-normal pack means deeper snow with more cold reserve — marginally better crust material and a slightly longer window.'+sweEff});
-    else                  rows.push({icon:'📊',cls:'driver-neu',text:'<strong>Basin SWE '+f.swePct+'% of median ('+sweLabel(f.swePct)+').</strong> Near-normal snowpack — no significant effect on snow surface or window duration.'+sweEff});
+    var sweEff=Math.abs(adjPts)>1?' Snow surface '+(adjPts>0?'boosted +':'')+adjPts+' pts by SWE.':' SWE near normal — no adjustment.';
+    if(f.swePct<60)        rows.push({icon:'📉',cls:'driver-neg',text:'<strong>Low basin SWE ('+f.swePct+'% of median).</strong> Thin pack = more fatigued surface, weaker crust.'+sweEff});
+    else if(f.swePct>=115) rows.push({icon:'📈',cls:'driver-pos',text:'<strong>Strong basin SWE ('+f.swePct+'% of median).</strong> Deep snowpack = more cold reserve, better crust material.'+sweEff});
+    else if(Math.abs(adjPts)>1) rows.push({icon:'📊',cls:'driver-neu',text:'<strong>Basin SWE '+f.swePct+'% of median.</strong>'+sweEff});
   } else {
     rows.push({icon:'📡',cls:'driver-neu',text:'<strong>Basin SWE: unavailable.</strong> Running without live snowpack data. Check NRCS SNOTEL manually.'});
   }
 
+  // Freeze-thaw cycle bonus
   if(weatherData && weatherData.ftCycles >= 2) {
     var ftC = weatherData.ftCycles;
-    if(ftC >= 4) rows.push({icon:'🔄',cls:'driver-pos',text:'<strong>'+ftC+' freeze-thaw cycles in the past 14 days — well-developed polycrystal structure.</strong> Best possible corn material.'});
-    else rows.push({icon:'🔄',cls:'driver-neu',text:'<strong>'+ftC+' freeze-thaw cycles — grains developing good corn structure.</strong>'});
+    var ftBonus=Math.round(Math.min(0.12,ftC*0.03)*100);
+    if(ftC >= 4) rows.push({icon:'🔄',cls:'driver-pos',text:'<strong>'+ftC+' freeze-thaw cycles in past 14 days (+'+ftBonus+' pts to snow surface).</strong> Well-developed polycrystal structure — best possible corn grain size and bonding.'});
+    else         rows.push({icon:'🔄',cls:'driver-neu',text:'<strong>'+ftC+' freeze-thaw cycles (+'+ftBonus+' pts to snow surface).</strong> Grains developing melt-freeze polycrystal structure.'});
   }
 
+  // Pack density
   if (w.packDensity != null) {
     var pd = w.packDensity;
-    if (pd >= 0.28 && pd <= 0.45) {
-      rows.push({icon:'🌽', cls:'driver-pos',
-        text:'<strong>Pack density ' + pd.toFixed(2) + ' — ideal corn range.</strong> '
-          + 'Large melt-freeze polycrystals with strong refreeze bonding. '
-          + 'Crystal structure is well-suited to the corn cycle.'});
-    } else if (pd > 0.50) {
-      rows.push({icon:'💧', cls:'driver-neg',
-        text:'<strong>Dense, saturated pack (density ' + pd.toFixed(2) + ').</strong> '
-          + 'High liquid water content — pack near-isothermal. '
-          + 'Refreeze bonding weaker despite cold overnight temperatures.'});
-    } else if (pd < 0.18) {
-      rows.push({icon:'❄️', cls:'driver-neu',
-        text:'<strong>Light, unconsolidated pack (density ' + pd.toFixed(2) + ').</strong> '
-          + 'Low density indicates loose, unbonded crystal structure. '
-          + 'Crust forms but bonds weakly when refrozen.'});
-    }
+    var densLabel=pd>=0.28&&pd<=0.45?'ideal corn density (×1.08)':pd>0.50?'saturated (×0.90 — isothermal risk)':pd<0.18?'unconsolidated (×0.85 — weak bonds)':'near-normal';
+    var densCls=pd>=0.28&&pd<=0.45?'driver-pos':pd>0.50||pd<0.18?'driver-neg':'driver-neu';
+    rows.push({icon:'⚖️',cls:densCls,text:'<strong>Pack density '+pd.toFixed(2)+' — '+densLabel+'.</strong> SWE÷depth ratio reflects crystal structure and free water content. Ideal range 0.28–0.45 = large polycrystals, strong refreeze bonding.'});
   }
 
+  // Depth source note
   if (weatherData && (weatherData.depthGradient || weatherData.snwdOmInches != null)) {
-    var depthNote = '';
-    if (weatherData.depthGradient) {
-      var grad = weatherData.depthGradient;
-      depthNote = '📏 Ski zone depth estimated from ' + grad.n + '-point elevation gradient.';
-    } else if (weatherData.snwdOmInches != null) {
-      depthNote = '📏 Snow depth from Open-Meteo grid (' + weatherData.snwdOmInches + '" at grid elevation).';
-    }
-    if (depthNote) {
-      rows.push({icon:'📏', cls:'driver-neu', text: depthNote});
-    }
+    var depthNote='';
+    if(weatherData.depthGradient){var g=weatherData.depthGradient;depthNote='Ski zone depth from '+g.n+'-point elevation gradient (SNOTEL + Open-Meteo).';}
+    else if(weatherData.snwdOmInches!=null){depthNote='Snow depth from Open-Meteo grid ('+weatherData.snwdOmInches+'" at grid elev) — no elevation gradient available.';}
+    if(depthNote) rows.push({icon:'📏',cls:'driver-neu',text:depthNote});
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -3618,13 +3650,30 @@ function buildDrivers(w,f,month,asp){
     :w.dur>=1.5?'solid window — reliable timing margin for most approaches'
     :w.dur>=0.75?'short window — thin crust or limited solar loading; timing precision matters'
     :'very short window — marginal conditions; difficult to reliably hit on the mountain';
+  var _skiHiDur=_skiHi;
   rows.push({icon:'⏱️',cls:durCls,
     text:'<strong>Window duration: '+w.dur+' hrs — '+durNote+'.</strong> '
-    +'Crust depth is the dominant term (thicker crust = longer melt-through time). '
-    +'Afternoon high of '+f.hi+'°F '+(f.hi>=52?'accelerates slush transition significantly':f.hi>=44?'moderately accelerates slush transition':'has limited effect on slush transition')+'. '
+    +'Crust depth × radiation are the dominant inputs. '
+    +'Ski zone high of '+Math.round(_skiHiDur)+'°F '+((_skiHiDur)>=52?'(threshold 46°F well exceeded — rapid slush transition)':(_skiHiDur)>=46?'(above 46°F threshold — window penalty active)':'(below 46°F threshold — minimal slush acceleration)')+'. '
+    +(w.isoPrb>0.25?'Isothermal factor ('+Math.round(w.isoPrb*100)+'%) compresses window by ×'+(1-w.isoPrb*0.25).toFixed(2)+'. ':'')
+    +(w.sweDurBonus>0.05?'SWE depth bonus adds +'+w.sweDurBonus.toFixed(2)+'h. ':w.sweDurBonus<-0.05?'Low SWE removes '+Math.abs(w.sweDurBonus).toFixed(2)+'h. ':'')
     +'Column cold reserve '+(w.columnColdContent!==null&&!w.archiveFailed?'('+Math.round(w.columnColdContent*100)+'%) ':'')+'buffers against rapid isothermal collapse.'});
-
-  if(f.wi>=18) rows.push({icon:'💨',cls:'driver-neg',text:'<strong>Wind '+f.wi+' mph shortens the window.</strong> Above 18 mph, wind mechanically disrupts the softened corn surface. Duration penalty on this '+asp+' aspect: −'+w.windDurPen.toFixed(2)+' hrs.'});
+  if(f.wi>=18) rows.push({icon:'💨',cls:'driver-neg',text:'<strong>Wind '+f.wi+' mph shortens the window.</strong> Above 18 mph, wind mechanically disrupts the softened corn surface. Duration penalty: −'+w.windDurPen.toFixed(2)+' hrs.'});
+  if(w.packReadiness!=null){
+    var pr=Math.round(w.packReadiness*100);
+    var prCls=pr>=85?'driver-pos':pr>=65?'driver-neu':'driver-neg';
+    var prNote=pr>=85?'Peak cycling zone — pack in optimal melt-freeze state. Duration boosted.'
+      :pr>=65?'Good cycling range — reliable windows expected.'
+      :pr>=45?'Outside optimal range — pack either pre-corn (March) or near-isothermal (late June).'
+      :'Low pack readiness — window duration reduced.';
+    rows.push({icon:'🌽',cls:prCls,text:'<strong>Pack Readiness: '+pr+'% — '+prNote+'</strong>'
+      +'<br><div style="display:flex;align-items:center;gap:.4rem;margin-top:.22rem">'
+      +'<span style="font-size:.65rem;color:var(--muted);flex-shrink:0">Low</span>'
+      +'<div class="pr-bar-wrap"><div class="pr-bar" style="width:'+pr+'%;background:linear-gradient(90deg,#1a3a5c,#00d4aa)"></div></div>'
+      +'<span style="font-size:.68rem;color:var(--teal);font-weight:700;width:2.2rem;text-align:right">'+pr+'%</span>'
+      +'<span style="font-size:.65rem;color:var(--muted)">Peak</span></div>'
+      +'<span style="font-size:.63rem;color:#456a82">Grain maturity 40% · Cycling reliability 35% · Cold reserve range 25% · Multiplies duration and score</span>'});
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // STEP 7 — TERRAIN FACTOR
@@ -3681,7 +3730,7 @@ window.CA=function(){
   var pkMeta=getPKMeta(line.pk);
   // Adapter: build a shape cornWindow expects from the named line
   var pk={n:pkMeta.n,la:pkMeta.la,lo:pkMeta.lo,el:pkMeta.el,asp:{}};
-  pk.asp[line.asp]={t:line.tq,wx:WIND_ASP[line.asp]||0.5,sl:line.sl,ez:line.ez,sh:line.sh||0};
+  pk.asp[line.asp]={t:line.tq,wx:WIND_ASP[line.asp]||0.5,sl:line.sl,ez:line.ez,sh:line.sh||0,note:line.n};
   var asp=line.asp;
   var f=gf(),month=+document.getElementById('sel-month').value;
   var primary=cornWindow(pk,asp,f,month);
@@ -3839,16 +3888,20 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
   h+='</div>';
 
   // Aspect comparison
-  h+='<div class="result-card"><h2 style="margin-bottom:.42rem">All Aspects — '+pk.n+'</h2>';
-  h+='<table class="asp-table"><tr><th>Aspect</th><th>Opens</th><th>Window</th><th>Quality</th><th>Score</th></tr>';
-  aspComps.forEach(function(r){
-    var isSel=r.asp===asp;
-    h+='<tr style="'+(isSel?'background:rgba(0,212,170,0.07)':'')+'">';
-    h+='<td style="font-weight:'+(isSel?700:400)+';color:'+(isSel?'var(--teal)':'var(--text)')+'">'+r.asp+(isSel?' ◀':'')+'</td>';
-    h+='<td>'+ht(r.ws)+'</td><td>'+r.dur+'h</td><td style="color:'+qc(r.q)+'">'+r.qlabel+'</td>';
-    h+='<td><span style="color:'+qc(r.q)+';font-weight:700">'+r.q+'</span></td></tr>';
-  });
-  h+='</table></div>';
+  var peakLines=allResults.filter(function(r){return r.pk===pk.n;}).sort(function(a,b){return b.q-a.q;});
+  if(peakLines.length>1){
+    h+='<div class="result-card"><h2 style="margin-bottom:.42rem">All Lines — '+pk.n+'</h2>';
+    h+='<table class="asp-table"><tr><th>Line</th><th>Asp</th><th>Opens</th><th>Dur</th><th>Score</th></tr>';
+    peakLines.forEach(function(r){
+      var isSel=(r.lineIdx===selectedLineIdx);
+      h+='<tr style="'+(isSel?'background:rgba(0,212,170,0.07)':'')+'">';
+      h+='<td style="font-weight:'+(isSel?700:400)+';color:'+(isSel?'var(--teal)':'var(--text)')+'">'+r.lineName+(isSel?' ◀':'')+'</td>';
+      h+='<td style="color:var(--muted)">'+r.asp+'</td>';
+      h+='<td>'+ht(r.ws)+'</td><td>'+r.dur+'h</td>';
+      h+='<td><span style="color:'+qc(r.q)+';font-weight:700">'+r.q+'</span></td></tr>';
+    });
+    h+='</table></div>';
+  }
   el.innerHTML=h;
   // Draw ripeness chart after DOM is ready
   if(weatherData && weatherData.ripenessTrajectory && weatherData.ripenessTrajectory.length) {
