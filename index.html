@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v38 2026-03-19 MST</title>
+<title>CornCast 🌽 v39 2026-03-19 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -491,6 +491,12 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v39+v40 — Elevation enrichment + Wind direction advection (2026-03-19)</h3>
+    <p>Two physics improvements implemented together:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>v39 — Open-Meteo elevation enrichment:</strong> At app init, batch-queries the Open-Meteo /v1/elevation API (SRTM dataset) for the top and bottom coordinates of every LINES entry. Overwrites hand-estimated <code>ez</code> (ski floor elevation) and <code>sl</code> (slope degrees) with geodetically correct values. Computed as: ez = bottom point elevation in feet; sl = atan(vertical_drop / hdist) in degrees. Fails silently — hand estimates remain if API is unavailable.</li>
+      <li><strong>v40 — Wind direction advection:</strong> <code>weatherData.windDir</code> (already fetched from Open-Meteo) now modifies windScour in cornWindow. Computes the angle between the wind vector and the face normal to determine windward (+1), crosswind (0), or lee (−1) exposure. Windward faces receive up to 1.5× scour; lee faces as low as 0.5×. Driver narrative now shows wind direction and face alignment context.</li>
+    </ul>
     <h3>v38 — Named Lines data model (2026-03-19)</h3>
     <p>Replaced the PK[].asp{} model with a flat LINES[] array where each FRSK-named ski descent is its own first-class object. Key changes:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -1177,6 +1183,56 @@ function crustPreview(){
   document.getElementById('crust-prev').innerHTML='<span style="color:'+col+';font-weight:600">'+desc+'</span> <span style="color:var(--muted);font-size:.68rem">(depth factor '+df.toFixed(2)+' × age factor '+af.toFixed(2)+' = '+cq.toFixed(2)+')</span>';
 }
 
+// ── v39: Open-Meteo elevation enrichment ─────────────────────────────────
+// Batch-queries /v1/elevation for top+bottom of every LINES entry.
+// Overwrites hand-estimated ez and sl with SRTM-derived values.
+// Fails silently — hand estimates remain if fetch fails or is slow.
+// API limit: ~100 coords per request. Batch size 90 is safe.
+function fetchLineElevations() {
+  // Build flat arrays of [lat, lon] for top and bottom of each line
+  var tops = LINES.map(function(l){ return l.route[0]; });
+  var bots = LINES.map(function(l){ return l.route[l.route.length-1]; });
+  var all = tops.concat(bots); // [top0, top1, ..., topN, bot0, bot1, ..., botN]
+  var N = LINES.length;
+
+  var BATCH = 90;
+  var batches = [];
+  for (var i = 0; i < all.length; i += BATCH) {
+    batches.push(all.slice(i, i + BATCH));
+  }
+
+  var elevResults = new Array(all.length).fill(null);
+
+  var promises = batches.map(function(batch, bi) {
+    var lats = batch.map(function(c){ return c[0]; }).join(',');
+    var lons = batch.map(function(c){ return c[1]; }).join(',');
+    var url = 'https://api.open-meteo.com/v1/elevation?latitude=' + lats + '&longitude=' + lons;
+    return fetchJsonWithTimeout(url, 8000)
+      .then(function(json) {
+        if (!json || !json.elevation) return;
+        json.elevation.forEach(function(elM, j) {
+          var globalIdx = bi * BATCH + j;
+          if (elM != null) elevResults[globalIdx] = elM * 3.28084; // m → ft
+        });
+      })
+      .catch(function(){}); // silent fail per batch
+  });
+
+  Promise.all(promises).then(function() {
+    LINES.forEach(function(line, i) {
+      var topFt = elevResults[i];
+      var botFt = elevResults[N + i];
+      if (topFt == null || botFt == null) return; // keep estimate
+      var vertDrop = Math.max(0, topFt - botFt);
+      line.ez = Math.round(botFt);
+      line.elTop = Math.round(topFt);
+      if (line.hdist > 50) {
+        line.sl = Math.round(Math.atan(vertDrop / line.hdist) * 180 / Math.PI);
+      }
+    });
+  });
+}
+
 // ── UI ────────────────────────────────────────────────────────────────────
 function buildUI(){
   // Set default date to tomorrow, clamped to Mar–Jun
@@ -1200,6 +1256,7 @@ function buildUI(){
   ['fdi','fga'].forEach(function(id){document.getElementById(id).addEventListener('input',updatePacePreview);});
   ['fsdp','fds'].forEach(function(id){document.getElementById(id).addEventListener('input',crustPreview);});
   updatePacePreview();crustPreview();
+  fetchLineElevations();
 }
 function buildUI_LEGACY(){}
 window.onDateChange=function(){ triggerWeatherFetch(); };
@@ -3083,6 +3140,18 @@ function cornWindow(pk,asp,f,month){
   }
   var freezeQ=rawFQ*(0.50+0.50*(100-f.cn)/100);
   var windScour=Math.max(0,(f.wi-12)*0.012*(WIND_ASP[asp]||0.5)*ad.wx);
+  // v40: wind direction advection — refine windScour based on face geometry
+  // windDir is meteorological FROM-direction. Compute angle between wind
+  // vector and face normal to determine windward vs lee exposure.
+  // windAdvFactor: +1=direct face wind (enhance scour), 0=crosswind, -1=lee (reduce scour)
+  // Effect capped at ×1.5 windward, ×0.5 lee — never inverts scour to zero.
+  if (weatherData && weatherData.windDir != null) {
+    var windTo = (weatherData.windDir + 180) % 360; // direction wind is going TO
+    var angDiff = (windTo - (AZ[asp] || 0) + 360) % 360;
+    if (angDiff > 180) angDiff -= 360; // [-180, 180]
+    var windAdvFactor = Math.cos(angDiff * Math.PI / 180);
+    windScour = windScour * Math.max(0.5, 1 + windAdvFactor * 0.5);
+  }
   var effFQ=Math.max(0.03,freezeQ-windScour);
   var baseIsoPrb = (weatherData && weatherData.effectiveIsoPrb != null)
     ? weatherData.effectiveIsoPrb
@@ -3266,6 +3335,7 @@ function cornWindow(pk,asp,f,month){
   else{inf="🔴 Poor — "+ad.note;qlabel="Poor";}
   return{ws:parseFloat(ws.toFixed(2)),we:parseFloat(we.toFixed(2)),dur:parseFloat(dur.toFixed(1)),q:q,qlabel:qlabel,inf:inf,
     terrainQ:tData.q,terrainRubric:tData,freezeQ:parseFloat(effFQ.toFixed(2)),windScour:parseFloat(windScour.toFixed(2)),
+    windDir:(weatherData&&weatherData.windDir!=null)?weatherData.windDir:null,
     effRad:parseFloat(effRad.toFixed(2)),note:ad.note,crustQ:parseFloat(crustQ.toFixed(2)),sweAdj:parseFloat(sweAdj.toFixed(3)),
     depthFactor:parseFloat(depthFactor.toFixed(2)),ageFactor:parseFloat(ageFactor.toFixed(2)),
     rawFQ:parseFloat(rawFQ.toFixed(2)),matPen:parseFloat(matPen.toFixed(3)),isoPrb:isoPrb,packRipeness:isoPrb,
@@ -3321,6 +3391,22 @@ function buildDrivers(w,f,month,asp){
   if(f.wi>=22)       rows.push({icon:'💨',cls:'driver-neg',text:'<strong>High wind ('+f.wi+' mph) — crust scour.</strong> Wind physically erodes developing ice bonds before they consolidate. The '+asp+' aspect has '+Math.round((WIND_ASP[asp]||0.5)*100)+'% wind exposure. Freeze quality reduced by '+Math.round(w.windScour*100)+' pts.'});
   else if(f.wi>=14)  rows.push({icon:'💨',cls:'driver-neu',text:'<strong>Moderate wind ('+f.wi+' mph).</strong> Some scour effect on crust formation, more significant on exposed ridge or summit terrain.'});
   else               rows.push({icon:'🍃',cls:'driver-pos',text:'<strong>Light wind ('+f.wi+' mph).</strong> Negligible scour — overnight freeze builds undisturbed.'});
+  // v40: wind direction advection note
+  if (w.windDir != null) {
+    var wdDirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    var wdLabel = wdDirs[Math.round(w.windDir / 22.5) % 16];
+    var windTo = (w.windDir + 180) % 360;
+    var angDiff = (windTo - (AZ[asp]||0) + 360) % 360;
+    if (angDiff > 180) angDiff -= 360;
+    var advFactor = Math.cos(angDiff * Math.PI / 180);
+    if (advFactor > 0.5) {
+      rows.push({icon:'💨',cls:'driver-neg',text:'Wind from '+wdLabel+' — blowing <strong>directly onto</strong> this '+asp+' face. Windward exposure amplifies crust scour.'});
+    } else if (advFactor < -0.5) {
+      rows.push({icon:'🛡️',cls:'driver-pos',text:'Wind from '+wdLabel+' — this '+asp+' face is in the <strong>lee</strong>. Reduced scour; wind-loaded snow may be deeper here.'});
+    } else {
+      rows.push({icon:'💨',cls:'driver-neu',text:'Wind from '+wdLabel+' — <strong>crosswind</strong> relative to this '+asp+' face. Minimal direct loading or scour effect.'});
+    }
+  }
 
   if (weatherData && weatherData.freezeHours != null) {
     var fh = weatherData.freezeHours;
