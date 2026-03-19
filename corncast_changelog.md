@@ -1,5 +1,29 @@
 # CornCast — Physics Changelog
 
+### v37a — Peak coordinate fixes, approach lines removed (2026-03-19)
+
+Fixed incorrect summit coordinates for 6 peaks identified via
+USGS Topo / GNIS verification:
+- Hallett Peak: was 2.5mi too far east (40.2981/-105.6447 →
+  40.3033/-105.6861)
+- Terra Tomah: was 5.5mi too far south/east — peak removed from
+  PK array entirely. Terra Tomah is a remote RMNP peak accessible
+  only from Trail Ridge Road west side with no practical spring
+  corn approach for Front Range users.
+- Pagoda Mtn: minor 0.4mi correction (40.2431 → 40.2492)
+- Mt. Meeker: minor 0.2mi correction (40.2456 → 40.2486)
+- Mt. Audubon: longitude correction (-105.6256 → -105.6246)
+- Red Deer Mtn: latitude correction from wrong drainage
+  (40.1120 → 40.1379)
+
+Route coordinate top-points updated to match corrected summit
+locations for all fixed peaks.
+
+Approach polylines removed from map rendering — approach route
+data (app field) preserved in PK array for future implementation
+when accurate trail GPS data is available. Approach legend entry
+removed.
+
 ### v37 — Ski descent polylines + approach routes (2026-03-19)
 
 Added ski line polylines to the Map tab. After calculating conditions,
