@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v37c 2026-03-19 MST</title>
+<title>CornCast 🌽 v37d 2026-03-19 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -485,6 +485,22 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v37d — East Portal / Moffat area peaks (2026-03-19)</h3>
+    <p>Added 11 new peaks covering the South Boulder Creek / Rogers Pass / Rollins Pass / Berthoud Pass corridor, all with FRSK-verified routes:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li>Challenger Glacier (12,600'): W (Challenger), SW (Skyscraper), S (King Lake Bowl)</li>
+      <li>Rollins Pass (11,671'): E/NW (Corona Pass), SE (Jenny Lake Bowl), S (Forest Lake Bowl)</li>
+      <li>Mount Epworth (12,200'): S face</li>
+      <li>Radiobeacon (12,400'): N (Northeast Couloir), NE (North Face), E (North Chutes), SE (East Face), NW (Forest Lake Bowl South), SW (Frosty Bowl)</li>
+      <li>Crater Peak (12,000'): N/NW/SW (Crater Couloirs ×3)</li>
+      <li>Heartbeat Peak (12,200'): E (Heartbeat Bowls), N (Icebox Express), S (Heart Lake Face)</li>
+      <li>James Peak (13,294'): NW (North Slopes), N (Sky Pilot), E (St. Mary's Glacier), SE</li>
+      <li>Mount Bancroft (13,250'): S (Bancroft Bowl), E (Ohman Lake), NE, W (Bear Claw), SW</li>
+      <li>Mount Eva (13,130'): S (Eva Bowl), SE (South Couloir), N</li>
+      <li>Witter Peak (13,018'): S (Welcome Couloir), NW</li>
+      <li>Mount Flora (13,132'): NE (Northeast Bowls), N, S (South Chute)</li>
+    </ul>
+    <p style="margin-top:.55rem">All coordinates from FRSK CalTopo GeoJSON. Basin assignments (South Boulder Creek watershed) updated in getPeakBasin.</p>
     <h3>v37c — Indian Peaks: missing routes + 6 new peaks (2026-03-19)</h3>
     <p>Added missing FRSK-verified routes to existing peaks:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -613,6 +629,40 @@ var PK=[
   {n:"Hallett Peak",     la:40.3033,lo:-105.6861,el:12713,
    asp:{SE:{t:tq(3,3,2),wx:.44,sl:40,sh:0,ez:11556,note:"Chaos Couloir — classic RMNP spring corn from Lake Haiyaha",route:[[40.3033,-105.6861],[40.3010,-105.6820],[40.2988,-105.6780],[40.2965,-105.6741],[40.2942,-105.6703],[40.2920,-105.6665]]},
         E: {t:tq(3,3,2),wx:.50,sl:35,sh:0,ez:11437,note:"East Couloir above Emerald Lake",route:[[40.3033,-105.6861],[40.3040,-105.6830],[40.3047,-105.6800],[40.3053,-105.6769],[40.3060,-105.6739]]}}},
+  // ── East Portal / Moffat Tunnel area ─────────────────────────────────────
+  // Challenger Glacier — above King Lake, accessed via Devil's Thumb Trail
+  {n:"Challenger Glacier", la:39.960,lo:-105.688,el:12600,
+   asp:{W:{t:tq(3,3,3),wx:.55,sl:32,sh:0,ez:12400,note:"W — Challenger Glacier, long open run",route:[[39.96,-105.6883],[39.9619,-105.6862],[39.9634,-105.6855],[39.9647,-105.6851]]},SW:{t:tq(3,3,3),wx:.52,sl:30,sh:0,ez:12200,note:"SW — Skyscraper Glacier",route:[[39.9564,-105.688],[39.9551,-105.6871],[39.9533,-105.6863]]},S:{t:tq(2,3,2),wx:.58,sl:28,sh:0,ez:12000,note:"S — King Lake Bowl",route:[[39.9534,-105.6894],[39.9511,-105.6882],[39.9486,-105.6877]]}}},
+  // Rollins Pass — ski terrain off the Divide at Corona Pass / Rollins Pass
+  {n:"Rollins Pass",       la:39.935,lo:-105.681,el:11671,
+   asp:{E:{t:tq(3,3,3),wx:.50,sl:25,sh:0,ez:11500,note:"E — Corona Pass, mellow rolling terrain",route:[[39.9351,-105.6806],[39.9361,-105.6802],[39.9371,-105.6801],[39.9391,-105.6798],[39.9413,-105.6798]]},NW:{t:tq(2,3,2),wx:.62,sl:28,sh:0,ez:11500,note:"NW — Corona Pass upper bowl",route:[[39.9364,-105.6832],[39.9381,-105.6834],[39.9394,-105.6828],[39.9406,-105.6823],[39.9417,-105.681]]},SE:{t:tq(3,3,3),wx:.48,sl:28,sh:0,ez:11400,note:"SE — Jenny Lake Bowl",route:[[39.9293,-105.677],[39.9295,-105.6767],[39.9297,-105.6745],[39.9298,-105.6722],[39.9299,-105.6709],[39.9306,-105.6699]]},S:{t:tq(2,3,2),wx:.52,sl:25,sh:0,ez:11400,note:"S — Forest Lake Bowl North",route:[[39.927,-105.6791],[39.926,-105.6783],[39.9253,-105.6779],[39.9246,-105.6779],[39.9231,-105.6784],[39.9226,-105.6783],[39.9212,-105.6787],[39.9204,-105.6773]]}}},
+  // Mount Epworth — prominent sub-summit above Forest Lake
+  {n:"Mount Epworth",     la:39.924,lo:-105.695,el:12200,
+   asp:{S:{t:tq(2,3,2),wx:.55,sl:30,sh:0,ez:12000,note:"S face — Mount Epworth run",route:[[39.9228,-105.695],[39.9242,-105.6925],[39.9253,-105.6916],[39.9264,-105.691]]}}},
+  // Radiobeacon — sub-summit of James Peak massif, above Forest Lakes
+  {n:"Radiobeacon",       la:39.918,lo:-105.683,el:12400,
+   asp:{N:{t:tq(3,3,3),wx:.55,sl:35,sh:.2,ez:12200,note:"N — Northeast Couloir, prime NE-facing spring corn",route:[[39.9187,-105.6829],[39.9191,-105.6824],[39.9194,-105.6821],[39.9198,-105.6819],[39.9201,-105.6818],[39.9201,-105.6814],[39.9201,-105.6811],[39.9204,-105.6773]]},NE:{t:tq(3,3,3),wx:.50,sl:32,sh:.2,ez:12100,note:"NE — North Face, excellent spring aspect",route:[[39.9182,-105.6828],[39.9184,-105.6822],[39.9186,-105.6817],[39.9188,-105.6813],[39.9192,-105.6808],[39.9195,-105.6804],[39.9198,-105.68],[39.9202,-105.6775]]},E:{t:tq(3,3,2),wx:.48,sl:30,sh:0,ez:12000,note:"E — North Chutes",route:[[39.9179,-105.6786],[39.9182,-105.6782],[39.9186,-105.6782],[39.919,-105.6783],[39.9195,-105.6781],[39.9201,-105.6774]]},SE:{t:tq(3,3,3),wx:.45,sl:35,sh:0,ez:12000,note:"SE — East Face, classic SE corn",route:[[39.9174,-105.6822],[39.917,-105.6809],[39.9168,-105.6794],[39.9169,-105.6761],[39.9178,-105.675],[39.9188,-105.674],[39.9205,-105.6737]]},NW:{t:tq(2,3,2),wx:.60,sl:28,sh:.2,ez:12200,note:"NW — Forest Lake Bowl South",route:[[39.9245,-105.6805],[39.9231,-105.6784],[39.9223,-105.6783],[39.9211,-105.6787],[39.9205,-105.6773]]},SW:{t:tq(1,2,2),wx:.65,sl:28,sh:0,ez:11700,note:"SW — Frosty Bowl",route:[[39.9128,-105.6865],[39.9115,-105.6832],[39.9105,-105.678]]}}},
+  // Crater Peak — above the Crater Lakes basin, Rogers Pass area
+  {n:"Crater Peak",       la:39.900,lo:-105.689,el:12000,
+   asp:{N:{t:tq(3,3,3),wx:.55,sl:32,sh:.2,ez:11800,note:"N — Crater Couloirs, classic steep N-facing spring line",route:[[39.9031,-105.6887],[39.9029,-105.6885],[39.9024,-105.6883],[39.9023,-105.6883],[39.9021,-105.6881],[39.902,-105.6881],[39.9014,-105.6874],[39.9008,-105.6852]]},NW:{t:tq(3,3,3),wx:.58,sl:35,sh:.3,ez:11700,note:"NW — Crater Couloirs NW line",route:[[39.9016,-105.6904],[39.9016,-105.69],[39.9014,-105.6898],[39.9014,-105.6893],[39.9012,-105.6884],[39.9007,-105.6854]]},SW:{t:tq(2,2,2),wx:.62,sl:30,sh:0,ez:11700,note:"SW — Crater Couloirs SW line",route:[[39.8983,-105.6917],[39.8983,-105.6911],[39.8983,-105.6908],[39.8985,-105.6902],[39.8987,-105.689],[39.8995,-105.6876]]}}},
+  // Heartbeat Peak — above Heart Lake, accessible from Rogers Pass Trail
+  {n:"Heartbeat Peak",    la:39.881,lo:-105.699,el:12200,
+   asp:{E:{t:tq(3,3,3),wx:.50,sl:30,sh:0,ez:12000,note:"E — Heartbeat Bowls, excellent E-facing corn",route:[[39.8834,-105.6981],[39.8827,-105.695],[39.8828,-105.6939],[39.8823,-105.693],[39.8798,-105.6922]]},N:{t:tq(2,3,2),wx:.58,sl:28,sh:.2,ez:11900,note:"N — Icebox Express",route:[[39.8852,-105.6991],[39.886,-105.6975]]},S:{t:tq(2,2,2),wx:.55,sl:28,sh:0,ez:11800,note:"S — Heart Lake Face",route:[[39.8763,-105.6994],[39.8758,-105.6982],[39.8755,-105.6967],[39.8754,-105.6952]]}}},
+  // James Peak — major Front Range 13er, excellent spring corn NW and E faces
+  {n:"James Peak",        la:39.842,lo:-105.677,el:13294,
+   asp:{NW:{t:tq(3,3,3),wx:.62,sl:30,sh:.2,ez:13000,note:"NW — Starbright / North Slopes, classic steep NW corn",route:[[39.852,-105.6903],[39.8595,-105.691],[39.8641,-105.6904],[39.8652,-105.6897],[39.8667,-105.6886],[39.8685,-105.6871],[39.8706,-105.6865],[39.8709,-105.6863]]},N:{t:tq(2,3,2),wx:.65,sl:28,sh:.3,ez:12900,note:"N — Sky Pilot / Shooting Star, upper N ridge lines",route:[[39.852,-105.6898],[39.8524,-105.6893],[39.853,-105.6888],[39.8535,-105.6885]]},E:{t:tq(3,3,3),wx:.48,sl:28,sh:0,ez:12600,note:"E — St. Mary's Glacier, popular spring ski descent",route:[[39.839,-105.6534],[39.8385,-105.6517],[39.8379,-105.6503],[39.8372,-105.6493],[39.8365,-105.6477],[39.8361,-105.6471],[39.8351,-105.6462]]},SE:{t:tq(3,3,2),wx:.45,sl:30,sh:0,ez:12500,note:"SE — Southeast Slope",route:[[39.8519,-105.6903],[39.8481,-105.6887],[39.8467,-105.6841],[39.8451,-105.6746],[39.8442,-105.6721],[39.8432,-105.6702],[39.8409,-105.6662]]}}},
+  // Mount Bancroft — 13er east of James Peak, W face drops to Winter Park
+  {n:"Mount Bancroft",    la:39.838,lo:-105.700,el:13250,
+   asp:{S:{t:tq(3,3,3),wx:.52,sl:32,sh:0,ez:13000,note:"S — Bancroft Bowl, premier corn face",route:[[39.8374,-105.6998],[39.8344,-105.692],[39.834,-105.6886],[39.8339,-105.685],[39.8344,-105.6826],[39.8349,-105.68]]},E:{t:tq(3,3,2),wx:.48,sl:28,sh:0,ez:12800,note:"E — Ohman Lake Couloirs, good AM aspect",route:[[39.8386,-105.6906],[39.8387,-105.6898],[39.8387,-105.689],[39.8392,-105.6873],[39.8395,-105.6859]]},NE:{t:tq(2,3,2),wx:.50,sl:25,sh:.1,ez:12600,note:"NE — Sweet Caroline",route:[[39.8389,-105.6945],[39.8358,-105.6897]]},W:{t:tq(2,2,1),wx:.70,sl:30,sh:0,ez:12900,note:"W — Bear Claw, drops into Fraser drainage",route:[[39.8405,-105.7135],[39.8408,-105.7156],[39.8413,-105.7168],[39.8421,-105.7191],[39.8425,-105.7211],[39.8425,-105.7268]]},SW:{t:tq(1,2,1),wx:.72,sl:28,sh:0,ez:12700,note:"SW — Southeast Slopes (W-side descent)",route:[[39.8378,-105.7129],[39.8363,-105.7111],[39.8344,-105.7104],[39.8323,-105.709],[39.8307,-105.7064],[39.8247,-105.699],[39.8235,-105.6979],[39.8227,-105.695]]}}},
+  // Mount Eva — 13er, S and E faces above Loch Lomond
+  {n:"Mount Eva",         la:39.827,lo:-105.719,el:13130,
+   asp:{S:{t:tq(3,3,3),wx:.52,sl:30,sh:0,ez:12800,note:"S — Eva Bowl, classic spring corn",route:[[39.8245,-105.7229],[39.8203,-105.7172]]},SE:{t:tq(3,3,2),wx:.48,sl:32,sh:0,ez:12700,note:"SE — South Couloir, steeper line",route:[[39.825,-105.7134],[39.8236,-105.7128],[39.8206,-105.712]]},N:{t:tq(1,2,1),wx:.68,sl:28,sh:.3,ez:12900,note:"N face, late season only",route:[[39.8387,-105.7158],[39.8401,-105.7179],[39.8413,-105.7194],[39.8418,-105.7211],[39.8425,-105.7268]]}}},
+  // Witter Peak — 13er south of Eva
+  {n:"Witter Peak",       la:39.814,lo:-105.713,el:13018,
+   asp:{S:{t:tq(3,3,3),wx:.52,sl:32,sh:0,ez:12700,note:"S — Welcome Couloir, prime spring line",route:[[39.8137,-105.7129],[39.8156,-105.7097],[39.8163,-105.7083],[39.8167,-105.7067],[39.8164,-105.7017]]},NW:{t:tq(2,3,2),wx:.62,sl:28,sh:.2,ez:12700,note:"NW face above Loch Lomond",route:[[39.8174,-105.719],[39.8203,-105.7171]]}}},
+  // Mount Flora — northernmost of the Berthoud Pass 13ers
+  {n:"Mount Flora",       la:39.805,lo:-105.736,el:13132,
+   asp:{NE:{t:tq(3,3,3),wx:.55,sl:28,sh:.2,ez:12800,note:"NE — Northeast Bowls, excellent aspect",route:[[39.8051,-105.7358],[39.8059,-105.733],[39.8059,-105.733]]},N:{t:tq(2,3,2),wx:.60,sl:25,sh:.2,ez:12700,note:"N — upper Northeast Bowls",route:[[39.8119,-105.7331],[39.8122,-105.7299],[39.8117,-105.7257]]},S:{t:tq(2,2,2),wx:.55,sl:30,sh:0,ez:12700,note:"S — South Chute toward Berthoud Pass",route:[[39.8043,-105.7358],[39.8019,-105.7367],[39.7997,-105.7372],[39.7979,-105.7373],[39.7972,-105.7366],[39.7961,-105.7357]]}}},
 ];
 
 var AZ={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
@@ -639,7 +689,7 @@ var BASIN_CFG={
     stations:[{id:'322',name:'Bear Lake',elev:9475},{id:'551',name:'Joe Wright',elev:10020}]},
 };
 function getPeakBasin(n){
-  var b=['N. Arapaho Peak','S. Arapaho Peak','Navajo Peak','Mt. Albion','Ogalalla Peak','Mt. Neva','Jasper Peak','Lone Eagle Peak','Arikaree Peak','Kiowa Peak','Shoshoni Peak'];
+  var b=['N. Arapaho Peak','S. Arapaho Peak','Navajo Peak','Mt. Albion','Ogalalla Peak','Mt. Neva','Jasper Peak','Lone Eagle Peak','Arikaree Peak','Kiowa Peak','Shoshoni Peak','Challenger Glacier','Rollins Pass','Mount Epworth','Radiobeacon','Crater Peak','Heartbeat Peak','James Peak','Mount Bancroft','Mount Eva','Witter Peak','Mount Flora'];
   var s=['Apache Peak','Pawnee Peak','Mt. Toll','Mt. Audubon','Paiute Peak','Sawtooth Mtn','Red Deer Mtn','St. Vrain Mtn','St. Vrain Glacier','Little Pawnee Peak','Cherokee Peak','Mount Achonee','Mount George','Longs Peak','Mt. Meeker','Chiefs Head','Pagoda Mtn'];
   if(b.indexOf(n)>=0)return'boulder';if(s.indexOf(n)>=0)return'stvrain';return'bigthompson';
 }
