@@ -485,6 +485,8 @@ input[type=date]:focus{border-color:var(--teal)}
       <li><strong>Isothermal probability is a seasonal estimate.</strong> A drought year can isothermalize the pack 2–4 weeks earlier than the monthly baseline. A high-SWE cold spring may stay cold-core well into June. The model adjusts for SWE but cannot detect true isothermal state without real-time temperature sensors in the snowpack.</li>
       <li><strong>SNOTEL via proxy.</strong> The NRCS data server does not allow direct browser requests. CornCast routes through public CORS proxies, which occasionally fail. The model runs without SWE adjustment if all proxies fail — results are labeled accordingly.</li>
       <li><strong>Forecast uncertainty grows fast.</strong> Beyond 5–7 days, GFS and ECMWF model skill drops sharply in mountain terrain. Use CornCast for planning direction at long range, not precision timing.</li>
+      <li><strong>No convective risk modeling.</strong> Spring and early summer afternoons in the Colorado Front Range bring rapidly developing thunderstorms, often building over the peaks by noon with lightning by early afternoon. CornCast does not model convective risk. A result showing a 12:30 PM corn window on a June day may be physically correct while being inadvisable. Always set a turnaround time based on weather observation, not just the corn window.</li>
+      <li><strong>SNOTEL elevation gap.</strong> The highest SNOTEL station for the Indian Peaks (Niwot Ridge) sits at 11,480'. Most corn skiing occurs between 12,000' and 13,500'. Extrapolating snow depth and SWE to ski zone elevation uses a two-point regression with significant uncertainty. Wind-loading creates face-to-face depth variation no remote sensor captures — the accuracy ceiling for face-specific depth estimation is approximately 70% of real variance.</li>
     </ul>
   </div>
 
@@ -3634,8 +3636,8 @@ function buildDrivers(w,f,month,asp){
   // Depth source note
   if (weatherData && (weatherData.depthGradient || weatherData.snwdOmInches != null)) {
     var depthNote='';
-    if(weatherData.depthGradient){var g=weatherData.depthGradient;depthNote='Ski zone depth from '+g.n+'-point elevation gradient (SNOTEL + Open-Meteo).';}
-    else if(weatherData.snwdOmInches!=null){depthNote='Snow depth from Open-Meteo grid ('+weatherData.snwdOmInches+'" at grid elev) — no elevation gradient available.';}
+    if(weatherData.depthGradient){var g=weatherData.depthGradient;depthNote='Ski zone depth from '+g.n+'-point elevation gradient (SNOTEL + Open-Meteo). Thin packs advance effective isothermal state; deep packs retard it.';}
+    else if(weatherData.snwdOmInches!=null){depthNote='Snow depth from Open-Meteo grid ('+weatherData.snwdOmInches+'" at grid elev) — no elevation gradient available. Depth adjustment to isothermal probability uses this single-point estimate.';}
     if(depthNote) rows.push({icon:'📏',cls:'driver-neu',text:depthNote});
   }
 
