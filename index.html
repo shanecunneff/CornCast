@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v37d 2026-03-19 MST</title>
+<title>CornCast 🌽 v38 2026-03-19 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -162,7 +162,13 @@ input[type=date]:focus{border-color:var(--teal)}
   <h2>Tour Planning</h2>
   <div class="form-grid">
     <div class="field full"><label>Target Peak</label><select id="sel-peak" onchange="onPeakChange()"></select></div>
-    <div class="field full"><label>Target Aspect</label><div class="asp-grid" id="asp-grid"></div></div>
+    <div class="field full">
+      <label>Descent Line</label>
+      <select id="sel-line" onchange="onLineChange()">
+        <option value="">— select peak first —</option>
+      </select>
+    </div>
+    <div id="approach-hint" style="font-size:.67rem;color:var(--muted);margin-bottom:.3rem;min-height:1rem"></div>
     <div class="sdiv"></div>
     <div class="field full">
       <label>🗓 Target Date</label>
@@ -485,6 +491,15 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v38 — Named Lines data model (2026-03-19)</h3>
+    <p>Replaced the PK[].asp{} model with a flat LINES[] array where each FRSK-named ski descent is its own first-class object. Key changes:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>Data model:</strong> 155 named lines across 40 peaks. Each line has: name (from FRSK), peak assignment, aspect, tq, sh, ez, sl, hdist, and route waypoints. Physics unchanged — asp field drives all BASE_RAD/BASE_SUN/WIND_ASP/MONTH_ADJ lookups as before.</li>
+      <li><strong>Plan tab:</strong> replaced peak+aspect-grid UI with cascading Peak → Line dropdowns. Lines are listed by name with aspect in parentheses for disambiguation. Selecting a line highlights its polyline on the map in teal.</li>
+      <li><strong>Map:</strong> polyline tooltips now show the FRSK line name (e.g. "Skywalker Couloir") instead of "S. Arapaho Peak · SE". Peak markers retain pie chart visual, now built from LINES data aggregated by aspect.</li>
+      <li><strong>Popup:</strong> lines table replaces aspects table.</li>
+      <li>Lines now have correct aspects from geometry (e.g. Skywalker is SW not SE). ez/sl are estimates — v39 will compute from Open-Meteo elevation API.</li>
+    </ul>
     <h3>v37d — East Portal / Moffat area peaks (2026-03-19)</h3>
     <p>Added 11 new peaks covering the South Boulder Creek / Rogers Pass / Rollins Pass / Berthoud Pass corridor, all with FRSK-verified routes:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -665,6 +680,250 @@ var PK=[
    asp:{NE:{t:tq(3,3,3),wx:.55,sl:28,sh:.2,ez:12800,note:"NE — Northeast Bowls, excellent aspect",route:[[39.8051,-105.7358],[39.8059,-105.733],[39.8059,-105.733]]},N:{t:tq(2,3,2),wx:.60,sl:25,sh:.2,ez:12700,note:"N — upper Northeast Bowls",route:[[39.8119,-105.7331],[39.8122,-105.7299],[39.8117,-105.7257]]},S:{t:tq(2,2,2),wx:.55,sl:30,sh:0,ez:12700,note:"S — South Chute toward Berthoud Pass",route:[[39.8043,-105.7358],[39.8019,-105.7367],[39.7997,-105.7372],[39.7979,-105.7373],[39.7972,-105.7366],[39.7961,-105.7357]]}}},
 ];
 
+// ── PEAKS — summit metadata only ────────────────────────────────────────
+var PEAKS=[
+  {n:'Apache Peak',la:40.0583,lo:-105.6513,el:13441,basin:'stvrain'},
+  {n:'Arikaree Peak',la:40.0464,lo:-105.6383,el:13146,basin:'stvrain'},
+  {n:'Challenger Glacier',la:39.96,lo:-105.688,el:12600,basin:'boulder'},
+  {n:'Cherokee Peak',la:40.0872,lo:-105.6709,el:11900,basin:'boulder'},
+  {n:'Chiefs Head',la:40.2308,lo:-105.6381,el:13579,basin:'bigthompson'},
+  {n:'Crater Peak',la:39.9,lo:-105.689,el:12000,basin:'boulder'},
+  {n:'Hallett Peak',la:40.3033,lo:-105.6861,el:12713,basin:'bigthompson'},
+  {n:'Heartbeat Peak',la:39.881,lo:-105.699,el:12200,basin:'boulder'},
+  {n:'James Peak',la:39.842,lo:-105.677,el:13294,basin:'boulder'},
+  {n:'Jasper Peak',la:39.9945,lo:-105.6833,el:12923,basin:'boulder'},
+  {n:'Kiowa Peak',la:40.048,lo:-105.6242,el:13276,basin:'stvrain'},
+  {n:'Little Pawnee Peak',la:40.0831,lo:-105.622,el:12500,basin:'stvrain'},
+  {n:'Lone Eagle Peak',la:40.0714,lo:-105.6603,el:11940,basin:'boulder'},
+  {n:'Longs Peak',la:40.2553,lo:-105.6154,el:14259,basin:'bigthompson'},
+  {n:'Mount Achonee',la:40.073,lo:-105.679,el:12025,basin:'boulder'},
+  {n:'Mount Bancroft',la:39.838,lo:-105.7,el:13250,basin:'boulder'},
+  {n:'Mount Epworth',la:39.924,lo:-105.695,el:12200,basin:'boulder'},
+  {n:'Mount Eva',la:39.827,lo:-105.719,el:13130,basin:'boulder'},
+  {n:'Mount Flora',la:39.805,lo:-105.736,el:13132,basin:'boulder'},
+  {n:'Mount George',la:40.057,lo:-105.658,el:12320,basin:'boulder'},
+  {n:'Mt. Albion',la:40.0392,lo:-105.6172,el:12609,basin:'stvrain'},
+  {n:'Mt. Audubon',la:40.0994,lo:-105.6154,el:13233,basin:'boulder'},
+  {n:'Mt. Meeker',la:40.2486,lo:-105.605,el:13911,basin:'bigthompson'},
+  {n:'Mt. Neva',la:40.0186,lo:-105.6694,el:12814,basin:'boulder'},
+  {n:'Mt. Toll',la:40.0883,lo:-105.6339,el:12979,basin:'stvrain'},
+  {n:'N. Arapaho Peak',la:40.0267,lo:-105.65,el:13502,basin:'boulder'},
+  {n:'Navajo Peak',la:40.0533,lo:-105.6467,el:13409,basin:'stvrain'},
+  {n:'Ogalalla Peak',la:40.1703,lo:-105.6667,el:13333,basin:'stvrain'},
+  {n:'Pagoda Mtn',la:40.2492,lo:-105.6264,el:13497,basin:'bigthompson'},
+  {n:'Paiute Peak',la:40.098,lo:-105.6332,el:13088,basin:'boulder'},
+  {n:'Pawnee Peak',la:40.0813,lo:-105.6329,el:12943,basin:'stvrain'},
+  {n:'Radiobeacon',la:39.918,lo:-105.683,el:12400,basin:'boulder'},
+  {n:'Red Deer Mtn',la:40.1379,lo:-105.6301,el:12375,basin:'stvrain'},
+  {n:'Rollins Pass',la:39.935,lo:-105.681,el:11671,basin:'boulder'},
+  {n:'S. Arapaho Peak',la:40.02,lo:-105.6497,el:13397,basin:'boulder'},
+  {n:'Sawtooth Mtn',la:40.1269,lo:-105.6252,el:12304,basin:'stvrain'},
+  {n:'Shoshoni Peak',la:40.0672,lo:-105.6389,el:12967,basin:'stvrain'},
+  {n:'St. Vrain Glacier',la:40.163,lo:-105.657,el:13050,basin:'stvrain'},
+  {n:'St. Vrain Mtn',la:40.1625,lo:-105.5866,el:12162,basin:'stvrain'},
+  {n:'Witter Peak',la:39.814,lo:-105.713,el:13018,basin:'boulder'},
+];
+
+// ── LINES — named FRSK ski descents ──────────────────────────────────────
+// Fields: n=name, pk=peak, asp=aspect, tq=terrain quality, sh=shadow,
+//         ez=ski floor elevation ft, sl=slope degrees, hdist=horiz ft,
+//         route=[[lat,lon],...] waypoints
+// ez/sl are estimates — v39 will replace with Open-Meteo computed values
+var LINES=[
+  // ── Apache Peak
+  {n:'Apache Couloir',pk:'Apache Peak',asp:'E',tq:tq(3,3,3),sh:0.1,ez:12440,sl:35,hdist:1968,route:[[40.0576,-105.6507],[40.0576,-105.647],[40.0579,-105.6437]]},
+  {n:'Isabelle Glacier',pk:'Apache Peak',asp:'NE',tq:tq(3,3,3),sh:0.4,ez:11800,sl:28,hdist:1657,route:[[40.0613,-105.6479],[40.064,-105.6432]]},
+  {n:"Queen's Way",pk:'Apache Peak',asp:'NE',tq:tq(3,3,3),sh:0.4,ez:12400,sl:28,hdist:1498,route:[[40.0594,-105.6499],[40.0597,-105.6479],[40.062,-105.6463]]},
+  // ── Arikaree Peak (topo-estimated routes)
+  {n:'East Face',pk:'Arikaree Peak',asp:'E',tq:tq(3,3,2),sh:0,ez:12500,sl:32,hdist:2100,route:[[40.0464,-105.6383],[40.0464,-105.6355],[40.0463,-105.6328],[40.0462,-105.6302]]},
+  {n:'Southeast Face',pk:'Arikaree Peak',asp:'SE',tq:tq(3,3,2),sh:0,ez:12400,sl:37,hdist:1900,route:[[40.0464,-105.6383],[40.0452,-105.636],[40.044,-105.6338],[40.0428,-105.6318]]},
+  // ── Challenger Glacier
+  {n:'Challenger Glacier',pk:'Challenger Glacier',asp:'NE',tq:tq(3,3,3),sh:0,ez:10800,sl:28,hdist:1976,route:[[39.96,-105.6883],[39.9619,-105.6862],[39.9634,-105.6855],[39.9647,-105.6851]]},
+  {n:'King Lake Bowl',pk:'Challenger Glacier',asp:'SE',tq:tq(2,2,2),sh:0,ez:10600,sl:28,hdist:1189,route:[[39.9514,-105.6928],[39.9488,-105.6902]]},
+  {n:'King Lake Bowl',pk:'Challenger Glacier',asp:'SE',tq:tq(2,2,2),sh:0,ez:10600,sl:28,hdist:1116,route:[[39.95,-105.6938],[39.9486,-105.6902]]},
+  {n:'King Lake Bowl',pk:'Challenger Glacier',asp:'S',tq:tq(2,2,2),sh:0,ez:10600,sl:28,hdist:1821,route:[[39.9534,-105.6894],[39.9511,-105.6882],[39.9486,-105.6877]]},
+  {n:'Skyscraper Glacier',pk:'Challenger Glacier',asp:'SE',tq:tq(2,2,2),sh:0,ez:10800,sl:28,hdist:1226,route:[[39.9564,-105.688],[39.9551,-105.6871],[39.9533,-105.6863]]},
+  // ── Cherokee Peak
+  {n:'Northeast Face',pk:'Cherokee Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:10800,sl:28,hdist:2542,route:[[40.0813,-105.6723],[40.0827,-105.6704],[40.0838,-105.6695],[40.084,-105.6693],[40.0851,-105.6695],[40.0865,-105.6707],[40.087,-105.6709]]},
+  // ── Chiefs Head (topo-estimated)
+  {n:'Northeast Face',pk:'Chiefs Head',asp:'NE',tq:tq(2,2,2),sh:0.3,ez:12600,sl:35,hdist:2200,route:[[40.2308,-105.6381],[40.2330,-105.635],[40.2352,-105.632],[40.2374,-105.629]]},
+  {n:'Southeast Face',pk:'Chiefs Head',asp:'SE',tq:tq(2,2,2),sh:0,ez:12500,sl:32,hdist:2100,route:[[40.2308,-105.6381],[40.2286,-105.636],[40.2264,-105.634],[40.2242,-105.632]]},
+  // ── Crater Peak
+  {n:'Crater Couloirs',pk:'Crater Peak',asp:'E',tq:tq(2,2,2),sh:0,ez:10400,sl:35,hdist:1259,route:[[39.8983,-105.6917],[39.8983,-105.6912],[39.8983,-105.6908],[39.8985,-105.6902],[39.8987,-105.689],[39.8995,-105.6876]]},
+  {n:'Crater Couloirs',pk:'Crater Peak',asp:'E',tq:tq(2,2,2),sh:0,ez:10400,sl:35,hdist:1434,route:[[39.9016,-105.6904],[39.9014,-105.6898],[39.9014,-105.6893],[39.9012,-105.6884],[39.9007,-105.6854]]},
+  {n:'Crater Couloirs',pk:'Crater Peak',asp:'SE',tq:tq(2,2,2),sh:0,ez:10400,sl:35,hdist:1448,route:[[39.9031,-105.6887],[39.9024,-105.6883],[39.9021,-105.6881],[39.9014,-105.6874],[39.9008,-105.6852]]},
+  // ── Hallett Peak (topo-estimated)
+  {n:'Chaos Couloir',pk:'Hallett Peak',asp:'SE',tq:tq(3,3,2),sh:0,ez:11556,sl:40,hdist:3200,route:[[40.3033,-105.6861],[40.301,-105.682],[40.2988,-105.678],[40.2965,-105.6741],[40.2942,-105.6703],[40.292,-105.6665]]},
+  {n:'East Couloir',pk:'Hallett Peak',asp:'E',tq:tq(3,3,2),sh:0,ez:11437,sl:35,hdist:2800,route:[[40.3033,-105.6861],[40.304,-105.683],[40.3047,-105.68],[40.3053,-105.6769],[40.306,-105.6739]]},
+  // ── Heartbeat Peak
+  {n:'Hearbeat Bowls',pk:'Heartbeat Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:11000,sl:28,hdist:954,route:[[39.8813,-105.6978],[39.882,-105.6957],[39.8826,-105.695]]},
+  {n:'Heart Lake Face',pk:'Heartbeat Peak',asp:'E',tq:tq(2,2,2),sh:0,ez:11200,sl:28,hdist:1235,route:[[39.8763,-105.6994],[39.8758,-105.6982],[39.8755,-105.6967],[39.8754,-105.6952]]},
+  {n:'Heartbeat Bowls',pk:'Heartbeat Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:11000,sl:28,hdist:1155,route:[[39.8811,-105.6983],[39.8781,-105.6968]]},
+  {n:'Heartbeat Bowls',pk:'Heartbeat Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:11000,sl:28,hdist:2466,route:[[39.8834,-105.6981],[39.8827,-105.695],[39.8823,-105.693],[39.8798,-105.6922]]},
+  {n:'Icebox Express',pk:'Heartbeat Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:11400,sl:22,hdist:568,route:[[39.8848,-105.6985],[39.886,-105.6972]]},
+  {n:'Icebox Express',pk:'Heartbeat Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:11400,sl:22,hdist:531,route:[[39.8852,-105.6991],[39.886,-105.6975]]},
+  {n:'North Face',pk:'Heartbeat Peak',asp:'N',tq:tq(3,3,3),sh:0,ez:10800,sl:28,hdist:1476,route:[[39.8669,-105.6917],[39.8692,-105.6923],[39.87,-105.6917],[39.8706,-105.691]]},
+  // ── James Peak
+  {n:'Bailout',pk:'James Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:12200,sl:28,hdist:3033,route:[[39.849,-105.6841],[39.8499,-105.6788],[39.8503,-105.6785],[39.8519,-105.6775],[39.8537,-105.6776]]},
+  {n:'First Star',pk:'James Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:12200,sl:28,hdist:834,route:[[39.8496,-105.6862],[39.8503,-105.6862],[39.8506,-105.6857],[39.8516,-105.6852]]},
+  {n:'North Slopes',pk:'James Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:12200,sl:22,hdist:7241,route:[[39.852,-105.6903],[39.8595,-105.691],[39.8641,-105.6904],[39.8667,-105.6886],[39.8685,-105.6871],[39.8706,-105.6865],[39.8709,-105.6863]]},
+  {n:'Shooting Star',pk:'James Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:12400,sl:28,hdist:653,route:[[39.852,-105.6898],[39.8524,-105.6893],[39.853,-105.6888],[39.8535,-105.6885]]},
+  {n:'Sky Pilot',pk:'James Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:12200,sl:28,hdist:829,route:[[39.8512,-105.6884],[39.8521,-105.6884],[39.8533,-105.6882],[39.8534,-105.6881]]},
+  {n:'Southeast Slope',pk:'James Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:10800,sl:22,hdist:8389,route:[[39.8519,-105.6903],[39.8467,-105.6841],[39.8451,-105.6746],[39.8432,-105.6702],[39.8409,-105.6662]]},
+  {n:"St. Mary's Glacier",pk:'James Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:10800,sl:28,hdist:2511,route:[[39.839,-105.6534],[39.8379,-105.6503],[39.8372,-105.6493],[39.8365,-105.6477],[39.8351,-105.6462]]},
+  {n:'Starbright',pk:'James Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:12400,sl:28,hdist:540,route:[[39.8547,-105.6894],[39.8553,-105.6887],[39.8557,-105.688]]},
+  {n:'Starlight',pk:'James Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:12200,sl:28,hdist:935,route:[[39.849,-105.6853],[39.85,-105.685],[39.851,-105.6849],[39.8515,-105.685]]},
+  {n:'Superstar',pk:'James Peak',asp:'SE',tq:tq(1,2,2),sh:0,ez:12400,sl:28,hdist:341,route:[[39.8541,-105.6895],[39.8536,-105.6885]]},
+  // ── Jasper Peak
+  {n:'Desdemona',pk:'Jasper Peak',asp:'E',tq:tq(2,2,2),sh:0,ez:12300,sl:28,hdist:772,route:[[40.0085,-105.6897],[40.009,-105.6886],[40.0093,-105.6871]]},
+  {n:'Gaiteraid',pk:'Jasper Peak',asp:'E',tq:tq(3,3,3),sh:0,ez:12200,sl:28,hdist:2140,route:[[39.9926,-105.6826],[39.9916,-105.6751]]},
+  {n:'Juliet',pk:'Jasper Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:12300,sl:28,hdist:717,route:[[40.008,-105.6891],[40.0086,-105.688],[40.0092,-105.687]]},
+  {n:'Northeast Face',pk:'Jasper Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:12000,sl:28,hdist:3120,route:[[39.9957,-105.6814],[39.9972,-105.677],[40.0002,-105.672]]},
+  {n:'Northeast Slopes',pk:'Jasper Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:12300,sl:22,hdist:874,route:[[40.007,-105.6883],[40.0092,-105.687]]},
+  {n:'Phoebe',pk:'Jasper Peak',asp:'SE',tq:tq(2,2,2),sh:0,ez:12300,sl:28,hdist:814,route:[[40.0102,-105.6897],[40.0093,-105.6871]]},
+  {n:'Snow Lion',pk:'Jasper Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:12200,sl:28,hdist:2429,route:[[39.9949,-105.6825],[39.9916,-105.675]]},
+  // ── Kiowa Peak (topo-estimated)
+  {n:'East Face',pk:'Kiowa Peak',asp:'E',tq:tq(3,2,2),sh:0,ez:12600,sl:32,hdist:2000,route:[[40.048,-105.6242],[40.048,-105.6218],[40.0479,-105.6194],[40.0479,-105.6171]]},
+  {n:'Southeast Face',pk:'Kiowa Peak',asp:'SE',tq:tq(3,3,2),sh:0,ez:12500,sl:36,hdist:1900,route:[[40.048,-105.6242],[40.0466,-105.622],[40.0453,-105.6199],[40.044,-105.618]]},
+  // ── Little Pawnee Peak
+  {n:'Little Pawnee Headwall',pk:'Little Pawnee Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:11800,sl:40,hdist:1363,route:[[40.0805,-105.615],[40.0813,-105.6142],[40.0815,-105.6134],[40.0828,-105.6113]]},
+  {n:'Little Pawnee Headwall',pk:'Little Pawnee Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:11800,sl:40,hdist:1465,route:[[40.08,-105.615],[40.0806,-105.6138],[40.0827,-105.6112]]},
+  {n:'Little Pawnee Headwall',pk:'Little Pawnee Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:11800,sl:40,hdist:1560,route:[[40.0792,-105.6144],[40.0799,-105.6137],[40.0804,-105.6132],[40.081,-105.6127],[40.0827,-105.6112]]},
+  {n:'Little Pawnee Headwall',pk:'Little Pawnee Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:11800,sl:40,hdist:1570,route:[[40.0789,-105.6131],[40.0801,-105.6126],[40.0808,-105.6129],[40.0827,-105.6112]]},
+  {n:'North Couloir East',pk:'Little Pawnee Peak',asp:'NE',tq:tq(3,3,3),sh:0,ez:12000,sl:35,hdist:1630,route:[[40.0824,-105.6195],[40.0831,-105.6194],[40.0838,-105.6186],[40.0839,-105.618],[40.0847,-105.6152]]},
+  {n:'North Couloir West',pk:'Little Pawnee Peak',asp:'N',tq:tq(3,3,3),sh:0,ez:12000,sl:35,hdist:1677,route:[[40.0831,-105.622],[40.0843,-105.6215],[40.0864,-105.6214],[40.0875,-105.6207]]},
+  {n:'Obliquity Couloir',pk:'Little Pawnee Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:12000,sl:35,hdist:1398,route:[[40.0808,-105.6157],[40.0828,-105.6162],[40.0845,-105.6151]]},
+  // ── Lone Eagle Peak
+  {n:'Lone Rabbit',pk:'Lone Eagle Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:11200,sl:28,hdist:2670,route:[[40.0672,-105.6622],[40.0685,-105.6629],[40.0719,-105.6636],[40.0744,-105.6638]]},
+  {n:'Peck Glacier',pk:'Lone Eagle Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:11000,sl:28,hdist:4079,route:[[40.0636,-105.6668],[40.0643,-105.6662],[40.0716,-105.6635],[40.0726,-105.6637],[40.0744,-105.6638]]},
+  // ── Longs Peak (topo-estimated)
+  {n:'Northwest Couloir',pk:'Longs Peak',asp:'NW',tq:tq(2,2,1),sh:0.3,ez:13000,sl:38,hdist:2600,route:[[40.2553,-105.6154],[40.2575,-105.619],[40.2597,-105.6226],[40.262,-105.626]]},
+  {n:'Northeast Face',pk:'Longs Peak',asp:'NE',tq:tq(2,2,1),sh:0.2,ez:12800,sl:40,hdist:2400,route:[[40.2553,-105.6154],[40.2574,-105.612],[40.2595,-105.6087],[40.2616,-105.6054]]},
+  // ── Mount Achonee
+  {n:'Achonee Arrow',pk:'Mount Achonee',asp:'E',tq:tq(2,2,2),sh:0,ez:11200,sl:35,hdist:4471,route:[[40.0735,-105.6793],[40.0764,-105.6753],[40.0778,-105.6714],[40.0772,-105.671],[40.0769,-105.6698],[40.0755,-105.6669]]},
+  {n:'Hopi Glacier',pk:'Mount Achonee',asp:'NE',tq:tq(2,2,2),sh:0,ez:11000,sl:28,hdist:5304,route:[[40.0644,-105.6764],[40.0655,-105.6741],[40.0685,-105.67],[40.0701,-105.6681],[40.0715,-105.6652],[40.0744,-105.6638]]},
+  {n:'Northeast Gully',pk:'Mount Achonee',asp:'NE',tq:tq(2,2,2),sh:0,ez:11200,sl:35,hdist:4450,route:[[40.0669,-105.6785],[40.0708,-105.6731],[40.0731,-105.67],[40.0741,-105.6685],[40.0749,-105.667]]},
+  // ── Mount Bancroft
+  {n:'Bancroft Bowl',pk:'Mount Bancroft',asp:'E',tq:tq(3,3,3),sh:0,ez:11400,sl:28,hdist:5871,route:[[39.8374,-105.6998],[39.8344,-105.692],[39.834,-105.6886],[39.8339,-105.685],[39.8349,-105.68]]},
+  {n:'Bear Claw',pk:'Mount Bancroft',asp:'W',tq:tq(2,2,2),sh:0,ez:10400,sl:28,hdist:3858,route:[[39.8405,-105.7135],[39.8413,-105.7168],[39.8421,-105.7191],[39.8425,-105.7211],[39.8425,-105.7268]]},
+  {n:'Ohman Lake Couloirs',pk:'Mount Bancroft',asp:'NE',tq:tq(2,2,2),sh:0,ez:12000,sl:35,hdist:1149,route:[[39.8375,-105.6878],[39.8383,-105.6875],[39.8387,-105.6876],[39.8393,-105.6868],[39.8395,-105.6859]]},
+  {n:'Ohman Lake Couloirs',pk:'Mount Bancroft',asp:'E',tq:tq(2,2,2),sh:0,ez:12000,sl:35,hdist:1379,route:[[39.8386,-105.6906],[39.8387,-105.6898],[39.8387,-105.689],[39.8392,-105.6873],[39.8395,-105.6859]]},
+  {n:'Ohman Lake Couloirs',pk:'Mount Bancroft',asp:'NE',tq:tq(2,2,2),sh:0,ez:12000,sl:35,hdist:1244,route:[[39.8382,-105.6898],[39.8387,-105.6891],[39.8391,-105.6876],[39.8394,-105.6867],[39.8395,-105.6859]]},
+  {n:'Southeast Slopes',pk:'Mount Bancroft',asp:'SE',tq:tq(2,2,2),sh:0,ez:11200,sl:22,hdist:7685,route:[[39.8378,-105.7129],[39.8344,-105.7104],[39.8307,-105.7064],[39.8247,-105.699],[39.8227,-105.695]]},
+  {n:'Sweet Caroline',pk:'Mount Bancroft',asp:'SE',tq:tq(2,2,2),sh:0,ez:12400,sl:28,hdist:1761,route:[[39.8389,-105.6945],[39.8358,-105.6897]]},
+  // ── Mount Epworth
+  {n:'Mount Epworth',pk:'Mount Epworth',asp:'NE',tq:tq(2,2,2),sh:0,ez:11200,sl:28,hdist:1801,route:[[39.9228,-105.695],[39.9242,-105.6925],[39.9253,-105.6916],[39.9264,-105.691]]},
+  // ── Mount Eva
+  {n:'Bear Claw',pk:'Mount Eva',asp:'NW',tq:tq(2,2,2),sh:0,ez:10400,sl:28,hdist:3394,route:[[39.8375,-105.7165],[39.8399,-105.7215],[39.8425,-105.7267]]},
+  {n:'Bear Claw',pk:'Mount Eva',asp:'NW',tq:tq(2,2,2),sh:0,ez:10400,sl:28,hdist:3494,route:[[39.8387,-105.7158],[39.8401,-105.7179],[39.8413,-105.7194],[39.8425,-105.7268]]},
+  {n:'Bear Claw',pk:'Mount Eva',asp:'NW',tq:tq(2,2,2),sh:0,ez:10400,sl:28,hdist:3102,route:[[39.8369,-105.7187],[39.8375,-105.7194],[39.8391,-105.7221],[39.8425,-105.7268]]},
+  {n:'Eva Bowl',pk:'Mount Eva',asp:'NE',tq:tq(2,2,2),sh:0,ez:11600,sl:28,hdist:1131,route:[[39.8194,-105.7224],[39.8204,-105.7202],[39.8211,-105.7191]]},
+  {n:'Eva Bowl',pk:'Mount Eva',asp:'SE',tq:tq(2,2,2),sh:0,ez:11600,sl:28,hdist:2225,route:[[39.8245,-105.7229],[39.8203,-105.7172]]},
+  {n:'South Couloir',pk:'Mount Eva',asp:'S',tq:tq(2,2,2),sh:0,ez:12000,sl:35,hdist:1626,route:[[39.825,-105.7134],[39.8236,-105.7128],[39.8206,-105.712]]},
+  {n:'Southeast Face',pk:'Mount Eva',asp:'SE',tq:tq(3,3,3),sh:0,ez:11200,sl:28,hdist:5146,route:[[39.8271,-105.7194],[39.8246,-105.7168],[39.821,-105.7138],[39.8201,-105.7106],[39.82,-105.7053]]},
+  // ── Mount Flora
+  {n:'Northeast Bowls',pk:'Mount Flora',asp:'E',tq:tq(2,2,2),sh:0,ez:12000,sl:28,hdist:2094,route:[[39.8119,-105.7331],[39.8122,-105.7299],[39.8117,-105.7257]]},
+  {n:'Northeast Bowls',pk:'Mount Flora',asp:'E',tq:tq(2,2,2),sh:0,ez:12000,sl:28,hdist:820,route:[[39.8051,-105.7358],[39.8059,-105.733],[39.8059,-105.733]]},
+  {n:'South Chute',pk:'Mount Flora',asp:'S',tq:tq(2,2,2),sh:0,ez:11600,sl:35,hdist:3193,route:[[39.8043,-105.7358],[39.8019,-105.7367],[39.7997,-105.7372],[39.7972,-105.7366],[39.7961,-105.7357]]},
+  // ── Mount George
+  {n:'Fair Glacier',pk:'Mount George',asp:'N',tq:tq(2,2,2),sh:0,ez:11200,sl:28,hdist:3634,route:[[40.056,-105.6559],[40.0577,-105.6561],[40.0617,-105.6569],[40.0658,-105.6556]]},
+  {n:'Mount George Couloir',pk:'Mount George',asp:'NE',tq:tq(2,2,2),sh:0,ez:11400,sl:35,hdist:1061,route:[[40.0568,-105.6587],[40.0576,-105.6583],[40.0592,-105.6567]]},
+  // ── Mt. Albion (topo-estimated)
+  {n:'East Face',pk:'Mt. Albion',asp:'E',tq:tq(3,3,3),sh:0,ez:12000,sl:25,hdist:1900,route:[[40.0392,-105.6172],[40.0392,-105.615],[40.0391,-105.6128],[40.0391,-105.6107]]},
+  {n:'Southeast Face',pk:'Mt. Albion',asp:'SE',tq:tq(3,3,3),sh:0,ez:11800,sl:28,hdist:1900,route:[[40.0392,-105.6172],[40.0377,-105.615],[40.0363,-105.6129],[40.0349,-105.6109]]},
+  // ── Mt. Audubon
+  {n:'Autobon',pk:'Mt. Audubon',asp:'SE',tq:tq(1,2,2),sh:0,ez:12000,sl:28,hdist:1253,route:[[40.0932,-105.6068],[40.0901,-105.6048]]},
+  {n:'Autobot',pk:'Mt. Audubon',asp:'SE',tq:tq(1,2,2),sh:0,ez:12000,sl:28,hdist:1581,route:[[40.0932,-105.6087],[40.09,-105.605]]},
+  {n:'Coney Couloirs',pk:'Mt. Audubon',asp:'N',tq:tq(3,3,3),sh:0,ez:11600,sl:35,hdist:2607,route:[[40.1042,-105.6131],[40.1062,-105.6135],[40.1082,-105.6143],[40.1096,-105.6155],[40.1105,-105.6165]]},
+  {n:'Coney Couloirs',pk:'Mt. Audubon',asp:'NW',tq:tq(3,3,3),sh:0,ez:11600,sl:35,hdist:2564,route:[[40.1028,-105.6164],[40.1042,-105.6173],[40.1059,-105.6191],[40.1068,-105.6198],[40.1086,-105.6214]]},
+  {n:'Coney Couloirs',pk:'Mt. Audubon',asp:'N',tq:tq(3,3,3),sh:0,ez:11600,sl:35,hdist:3571,route:[[40.0989,-105.6191],[40.1017,-105.6193],[40.103,-105.6195],[40.1049,-105.6206],[40.1065,-105.6221],[40.1074,-105.6238]]},
+  {n:'Crooked Couloir',pk:'Mt. Audubon',asp:'S',tq:tq(2,2,2),sh:0,ez:12200,sl:35,hdist:2889,route:[[40.0981,-105.619],[40.096,-105.6202],[40.0936,-105.6191],[40.0905,-105.6193]]},
+  {n:'East Cirque',pk:'Mt. Audubon',asp:'SE',tq:tq(3,3,3),sh:0,ez:12200,sl:28,hdist:1510,route:[[40.0996,-105.608],[40.0957,-105.6059]]},
+  {n:'East Cirque',pk:'Mt. Audubon',asp:'SE',tq:tq(3,3,3),sh:0,ez:12200,sl:28,hdist:1538,route:[[40.0988,-105.6098],[40.0958,-105.606]]},
+  {n:'Needs Name',pk:'Mt. Audubon',asp:'SE',tq:tq(1,2,2),sh:0,ez:12000,sl:28,hdist:1508,route:[[40.0927,-105.6092],[40.0915,-105.6087],[40.0897,-105.6058]]},
+  {n:'South Face',pk:'Mt. Audubon',asp:'S',tq:tq(3,3,3),sh:0,ez:11400,sl:28,hdist:3293,route:[[40.098,-105.6165],[40.0951,-105.6151],[40.0923,-105.6155],[40.0902,-105.6184]]},
+  {n:'The Audubahn',pk:'Mt. Audubon',asp:'SW',tq:tq(2,2,2),sh:0,ez:12000,sl:28,hdist:717,route:[[40.0955,-105.6054],[40.0937,-105.6065]]},
+  // ── Mt. Meeker (topo-estimated)
+  {n:'Southeast Face',pk:'Mt. Meeker',asp:'SE',tq:tq(2,2,1),sh:0,ez:12800,sl:35,hdist:2600,route:[[40.2486,-105.605],[40.2462,-105.605],[40.2438,-105.6049],[40.2415,-105.6048]]},
+  {n:'South Face',pk:'Mt. Meeker',asp:'S',tq:tq(2,2,1),sh:0,ez:12600,sl:32,hdist:2400,route:[[40.2486,-105.605],[40.2486,-105.6025],[40.2485,-105.6001],[40.2485,-105.5977]]},
+  // ── Mt. Neva
+  {n:'Northeast Face',pk:'Mt. Neva',asp:'NE',tq:tq(2,2,3),sh:0.2,ez:12300,sl:35,hdist:874,route:[[40.007,-105.6883],[40.0092,-105.687]]},
+  {n:'Southeast Couloir',pk:'Mt. Neva',asp:'SE',tq:tq(3,3,3),sh:0,ez:12357,sl:35,hdist:1400,route:[[40.0186,-105.6694],[40.016,-105.6683],[40.0134,-105.6672],[40.0108,-105.6661]]},
+  // ── Mt. Toll
+  {n:'Mount Toll Southeast Face',pk:'Mt. Toll',asp:'E',tq:tq(2,2,2),sh:0,ez:12100,sl:28,hdist:4004,route:[[40.0884,-105.6337],[40.086,-105.6302],[40.0868,-105.6294],[40.0882,-105.6273],[40.0886,-105.6246],[40.0893,-105.6219]]},
+  // ── N. Arapaho Peak
+  {n:'Northstar',pk:'N. Arapaho Peak',asp:'W',tq:tq(3,3,3),sh:0,ez:12800,sl:28,hdist:3744,route:[[40.0278,-105.652],[40.0281,-105.6552],[40.028,-105.6566],[40.0279,-105.6596],[40.0268,-105.6649]]},
+  {n:'West Face',pk:'N. Arapaho Peak',asp:'W',tq:tq(2,2,1),sh:0,ez:12800,sl:35,hdist:2200,route:[[40.0267,-105.65],[40.0267,-105.6528],[40.0266,-105.6556],[40.0265,-105.6583]]},
+  // ── Navajo Peak
+  {n:'Navajo Snowfield',pk:'Navajo Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:12424,sl:42,hdist:1786,route:[[40.0541,-105.6479],[40.0578,-105.6437]]},
+  // ── Ogalalla Peak
+  {n:'Dalkes Couloir',pk:'Ogalalla Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:12400,sl:35,hdist:1472,route:[[40.1701,-105.6663],[40.169,-105.665],[40.1688,-105.6646],[40.168,-105.6641],[40.1668,-105.6634]]},
+  {n:'Ogallala Express',pk:'Ogalalla Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:12600,sl:22,hdist:1661,route:[[40.1688,-105.6694],[40.1683,-105.6677],[40.1659,-105.665]]},
+  {n:'Ooh La La Express',pk:'Ogalalla Peak',asp:'NE',tq:tq(1,2,2),sh:0,ez:12600,sl:22,hdist:417,route:[[40.163,-105.6709],[40.1634,-105.6705],[40.1635,-105.6697]]},
+  {n:'Saint Vrain Glacier #1',pk:'Ogalalla Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:12600,sl:28,hdist:1339,route:[[40.1632,-105.6694],[40.165,-105.6652]]},
+  // ── Pagoda Mtn (topo-estimated)
+  {n:'East Face',pk:'Pagoda Mtn',asp:'E',tq:tq(2,3,2),sh:0,ez:12900,sl:27,hdist:2200,route:[[40.2492,-105.6264],[40.2492,-105.6241],[40.2491,-105.6218],[40.2491,-105.6196]]},
+  {n:'Southeast Face',pk:'Pagoda Mtn',asp:'SE',tq:tq(3,3,2),sh:0,ez:12700,sl:30,hdist:2100,route:[[40.2492,-105.6264],[40.2472,-105.6248],[40.2452,-105.6233],[40.2432,-105.6219]]},
+  // ── Paiute Peak
+  {n:'Curvaceous Couloir',pk:'Paiute Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:12000,sl:35,hdist:1903,route:[[40.0962,-105.6323],[40.0935,-105.6307],[40.0931,-105.6278]]},
+  {n:'Little Blue Couloir',pk:'Paiute Peak',asp:'S',tq:tq(3,3,3),sh:0,ez:12100,sl:35,hdist:1283,route:[[40.0976,-105.626],[40.0941,-105.6263]]},
+  {n:'South Slope',pk:'Paiute Peak',asp:'SE',tq:tq(2,2,2),sh:0,ez:11800,sl:22,hdist:4501,route:[[40.0953,-105.634],[40.092,-105.6327],[40.09,-105.6294],[40.0895,-105.6221]]},
+  {n:'Southeast Face',pk:'Paiute Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:12100,sl:28,hdist:1517,route:[[40.097,-105.6319],[40.0956,-105.6306],[40.0939,-105.6283]]},
+  // ── Pawnee Peak
+  {n:'Keyholes',pk:'Pawnee Peak',asp:'E',tq:tq(2,2,2),sh:0,ez:11800,sl:28,hdist:1892,route:[[40.0761,-105.6309],[40.0745,-105.6261],[40.0749,-105.6246]]},
+  {n:'Keyholes',pk:'Pawnee Peak',asp:'SE',tq:tq(2,2,2),sh:0,ez:11800,sl:28,hdist:1454,route:[[40.0774,-105.6288],[40.0771,-105.6284],[40.0751,-105.6246]]},
+  {n:'Keyholes',pk:'Pawnee Peak',asp:'E',tq:tq(2,2,2),sh:0,ez:11800,sl:28,hdist:2029,route:[[40.0758,-105.631],[40.0748,-105.6302],[40.0746,-105.626],[40.0749,-105.6246]]},
+  {n:'Pawnee Couloir',pk:'Pawnee Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:12071,sl:35,hdist:1509,route:[[40.0817,-105.6307],[40.0781,-105.6279]]},
+  {n:'Southeast Slope',pk:'Pawnee Peak',asp:'SE',tq:tq(3,3,3),sh:0,ez:12100,sl:22,hdist:3974,route:[[40.0815,-105.6327],[40.0788,-105.6309],[40.0784,-105.6246],[40.0755,-105.6243]]},
+  // ── Radiobeacon
+  {n:'Double Fall Line Couloir',pk:'Radiobeacon',asp:'SE',tq:tq(2,2,2),sh:0,ez:11400,sl:35,hdist:1747,route:[[39.9235,-105.6813],[39.9221,-105.6811],[39.9205,-105.6773]]},
+  {n:'East Face',pk:'Radiobeacon',asp:'NE',tq:tq(3,3,3),sh:0,ez:11200,sl:28,hdist:3271,route:[[39.9174,-105.6822],[39.9168,-105.6794],[39.9169,-105.6761],[39.9178,-105.675],[39.9188,-105.674],[39.9205,-105.6737]]},
+  {n:'Forest Lake Bowl South',pk:'Radiobeacon',asp:'SE',tq:tq(2,2,2),sh:0,ez:11000,sl:28,hdist:1997,route:[[39.9245,-105.6805],[39.9223,-105.6783],[39.9211,-105.6787],[39.9205,-105.6773]]},
+  {n:'Forest Lake Couloir',pk:'Radiobeacon',asp:'E',tq:tq(2,2,2),sh:0,ez:11000,sl:35,hdist:1727,route:[[39.9206,-105.683],[39.9203,-105.682],[39.9201,-105.6816],[39.9201,-105.6811],[39.9204,-105.6773]]},
+  {n:'Frosty Bowl',pk:'Radiobeacon',asp:'E',tq:tq(2,2,2),sh:0,ez:10800,sl:28,hdist:2521,route:[[39.9128,-105.6865],[39.9115,-105.6832],[39.9105,-105.678]]},
+  {n:'North Chutes',pk:'Radiobeacon',asp:'N',tq:tq(2,2,2),sh:0.2,ez:11600,sl:35,hdist:936,route:[[39.9179,-105.6786],[39.9186,-105.6782],[39.9195,-105.6781],[39.9201,-105.6774]]},
+  {n:'North Chutes',pk:'Radiobeacon',asp:'N',tq:tq(2,2,2),sh:0.2,ez:11600,sl:35,hdist:1276,route:[[39.9169,-105.6786],[39.9181,-105.6786],[39.9192,-105.6785],[39.9201,-105.6774]]},
+  {n:'North Face',pk:'Radiobeacon',asp:'NE',tq:tq(3,3,3),sh:0.2,ez:11600,sl:28,hdist:1690,route:[[39.9182,-105.6828],[39.9186,-105.6817],[39.9192,-105.6808],[39.9198,-105.68],[39.9202,-105.6775]]},
+  {n:'North Face',pk:'Radiobeacon',asp:'NE',tq:tq(3,3,3),sh:0.2,ez:11600,sl:28,hdist:1841,route:[[39.9172,-105.6811],[39.9188,-105.6808],[39.9195,-105.6805],[39.9198,-105.68],[39.9202,-105.6775]]},
+  {n:'Northeast Couloir',pk:'Radiobeacon',asp:'E',tq:tq(3,3,3),sh:0.2,ez:11400,sl:35,hdist:1934,route:[[39.9187,-105.6829],[39.9194,-105.6821],[39.9201,-105.6818],[39.9201,-105.6814],[39.9204,-105.6773]]},
+  // ── Red Deer Mtn
+  {n:'East Slope',pk:'Red Deer Mtn',asp:'E',tq:tq(3,3,3),sh:0,ez:11200,sl:22,hdist:5999,route:[[40.138,-105.6297],[40.1392,-105.6194],[40.1399,-105.6147],[40.1407,-105.6116],[40.1419,-105.6092]]},
+  {n:'Saint Vrain Glacier #6',pk:'Red Deer Mtn',asp:'NE',tq:tq(2,2,2),sh:0,ez:12000,sl:28,hdist:1427,route:[[40.1481,-105.6432],[40.1485,-105.643],[40.149,-105.6421],[40.1497,-105.6407],[40.1507,-105.6401]]},
+  {n:'Southeast Face',pk:'Red Deer Mtn',asp:'SE',tq:tq(3,3,3),sh:0,ez:11800,sl:28,hdist:2440,route:[[40.1379,-105.6298],[40.1332,-105.6235]]},
+  // ── Rollins Pass
+  {n:'Corona Pass',pk:'Rollins Pass',asp:'N',tq:tq(2,2,2),sh:0,ez:10800,sl:22,hdist:2093,route:[[39.9364,-105.6832],[39.9381,-105.6834],[39.9394,-105.6828],[39.9417,-105.681]]},
+  {n:'Corona Pass',pk:'Rollins Pass',asp:'N',tq:tq(2,2,2),sh:0,ez:10800,sl:22,hdist:2279,route:[[39.9351,-105.6806],[39.9371,-105.6801],[39.9391,-105.6798],[39.9413,-105.6798]]},
+  {n:'Forest Lake Bowl North',pk:'Rollins Pass',asp:'S',tq:tq(2,2,2),sh:0,ez:10600,sl:28,hdist:2721,route:[[39.927,-105.6791],[39.9253,-105.6779],[39.9231,-105.6784],[39.9212,-105.6787],[39.9204,-105.6773]]},
+  {n:'Jenny Lake Bowl',pk:'Rollins Pass',asp:'E',tq:tq(3,3,3),sh:0,ez:10800,sl:28,hdist:2150,route:[[39.9293,-105.677],[39.9296,-105.6766],[39.9298,-105.6722],[39.9299,-105.6709],[39.9306,-105.6699]]},
+  {n:'Jenny Lake Bowl',pk:'Rollins Pass',asp:'E',tq:tq(3,3,3),sh:0,ez:10800,sl:28,hdist:2113,route:[[39.9288,-105.6769],[39.9297,-105.6746],[39.93,-105.6708],[39.9306,-105.6699]]},
+  // ── S. Arapaho Peak
+  {n:'East Face',pk:'S. Arapaho Peak',asp:'E',tq:tq(3,3,3),sh:0,ez:12700,sl:33,hdist:2000,route:[[40.02,-105.6497],[40.02,-105.6475],[40.0201,-105.6432]]},
+  {n:'Skywalker Couloir',pk:'S. Arapaho Peak',asp:'SW',tq:tq(3,3,3),sh:0,ez:12600,sl:35,hdist:3858,route:[[40.0199,-105.6513],[40.0185,-105.652],[40.0167,-105.6527],[40.0155,-105.6532],[40.0143,-105.6556],[40.0113,-105.6583]]},
+  // ── Sawtooth Mtn
+  {n:'Northeast Face',pk:'Sawtooth Mtn',asp:'NE',tq:tq(2,2,2),sh:0,ez:11652,sl:28,hdist:3155,route:[[40.1266,-105.6244],[40.128,-105.6237],[40.1297,-105.6216],[40.1325,-105.6165]]},
+  {n:'Southeast Chute',pk:'Sawtooth Mtn',asp:'E',tq:tq(3,3,3),sh:0,ez:11700,sl:35,hdist:2379,route:[[40.1266,-105.6244],[40.1272,-105.6231],[40.1269,-105.6223],[40.1244,-105.6172]]},
+  // ── Shoshoni Peak
+  {n:'North Couloir',pk:'Shoshoni Peak',asp:'N',tq:tq(2,2,2),sh:0,ez:12300,sl:35,hdist:1128,route:[[40.0739,-105.6429],[40.0745,-105.6432],[40.0768,-105.6421]]},
+  {n:'Pawshoni Bowl',pk:'Shoshoni Peak',asp:'SE',tq:tq(2,2,2),sh:0,ez:12000,sl:28,hdist:2004,route:[[40.0738,-105.638],[40.0708,-105.632]]},
+  {n:'Shoshoni Bowl',pk:'Shoshoni Peak',asp:'NE',tq:tq(3,3,3),sh:0.3,ez:12033,sl:28,hdist:2301,route:[[40.0671,-105.6388],[40.069,-105.6347],[40.0708,-105.6321]]},
+  // ── St. Vrain Glacier
+  {n:'Sain Vrain Glacier #2',pk:'St. Vrain Glacier',asp:'NE',tq:tq(2,2,2),sh:0,ez:12400,sl:28,hdist:1329,route:[[40.1588,-105.666],[40.1598,-105.6638],[40.1604,-105.6618]]},
+  {n:'Sain Vrain Glacier #4',pk:'St. Vrain Glacier',asp:'NE',tq:tq(2,2,2),sh:0,ez:12200,sl:28,hdist:1878,route:[[40.1518,-105.6557],[40.1556,-105.6533],[40.1561,-105.6522]]},
+  {n:'Saint Vrain Glacier #3',pk:'St. Vrain Glacier',asp:'E',tq:tq(2,2,2),sh:0,ez:12400,sl:28,hdist:1108,route:[[40.1563,-105.6577],[40.1568,-105.6555],[40.1557,-105.6545]]},
+  {n:'Saint Vrain Glacier #5',pk:'St. Vrain Glacier',asp:'NE',tq:tq(2,2,2),sh:0,ez:12400,sl:28,hdist:926,route:[[40.1523,-105.6524],[40.153,-105.6509],[40.1542,-105.6504]]},
+  {n:'The Snake',pk:'St. Vrain Glacier',asp:'SE',tq:tq(2,2,2),sh:0,ez:12200,sl:28,hdist:2401,route:[[40.168,-105.6464],[40.1662,-105.6465],[40.1655,-105.646],[40.1643,-105.6449],[40.1623,-105.6429]]},
+  {n:'Vrain Drain',pk:'St. Vrain Glacier',asp:'NE',tq:tq(1,2,2),sh:0,ez:12400,sl:22,hdist:444,route:[[40.1588,-105.6679],[40.1589,-105.6671],[40.1593,-105.6665]]},
+  // ── St. Vrain Mtn
+  {n:'East Ridge',pk:'St. Vrain Mtn',asp:'E',tq:tq(2,2,2),sh:0,ez:10400,sl:22,hdist:8065,route:[[40.1612,-105.5856],[40.161,-105.5746],[40.1589,-105.5653],[40.1568,-105.5578]]},
+  {n:'Sain Vrain Mountain South Slopes',pk:'St. Vrain Mtn',asp:'S',tq:tq(1,2,2),sh:0,ez:11000,sl:22,hdist:2473,route:[[40.1596,-105.5874],[40.1529,-105.5862]]},
+  {n:'Saint Vrain Mountain North Face',pk:'St. Vrain Mtn',asp:'N',tq:tq(1,2,2),sh:0,ez:11200,sl:28,hdist:4082,route:[[40.1625,-105.5866],[40.1737,-105.5861]]},
+  {n:'Saint Vrain Mountain South Slopes',pk:'St. Vrain Mtn',asp:'SE',tq:tq(1,2,2),sh:0,ez:11000,sl:22,hdist:2088,route:[[40.1577,-105.5943],[40.1537,-105.589]]},
+  // ── Witter Peak
+  {n:'Eva Bowl',pk:'Witter Peak',asp:'NE',tq:tq(2,2,2),sh:0,ez:11200,sl:28,hdist:1184,route:[[39.8174,-105.719],[39.8203,-105.7171]]},
+  {n:'Welcome Couloir',pk:'Witter Peak',asp:'E',tq:tq(2,2,2),sh:0,ez:11800,sl:35,hdist:3477,route:[[39.8137,-105.7129],[39.8156,-105.7097],[39.8163,-105.7083],[39.8167,-105.7067],[39.8164,-105.7017]]},
+];
+
+var PK=[]; // Legacy data replaced — see PEAKS[] and LINES[] above
 var AZ={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
 var BASE_RAD={N:0.18,NE:0.55,E:0.88,SE:1.25,S:1.38,SW:1.20,W:0.72,NW:0.30};
 var BASE_SUN={N:null,NE:7.8,E:6.9,SE:7.3,S:9.5,SW:12.0,W:13.5,NW:15.2};
@@ -676,7 +935,16 @@ var MONTH_ADJ={
   6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},isothermProb:0.70},
 };
 
-var selectedPeak=0,selectedAsp=null,allResults=[],leafletMap=null,pkMarkers=[],routePolylines=[];
+var selectedLineIdx=-1,allResults=[],leafletMap=null,pkMarkers=[],routePolylines=[];
+
+// ── HELPERS ──────────────────────────────────────────────────────────────
+function getPKMeta(pkName){
+  for(var i=0;i<PEAKS.length;i++){if(PEAKS[i].n===pkName)return PEAKS[i];}
+  return PEAKS[0];
+}
+function getLinesForPeak(pkName){
+  return LINES.filter(function(l){return l.pk===pkName;});
+}
 
 // ── SNOTEL ────────────────────────────────────────────────────────────────
 // Wild Basin corrected to 9,410' (verified NRCS). Copeland Lake removed (too low).
@@ -689,9 +957,13 @@ var BASIN_CFG={
     stations:[{id:'322',name:'Bear Lake',elev:9475},{id:'551',name:'Joe Wright',elev:10020}]},
 };
 function getPeakBasin(n){
+  var meta=getPKMeta(n);
+  return meta ? meta.basin : 'boulder';
+}
+function getPeakBasin_LEGACY_IGNORE(n_unused){
   var b=['N. Arapaho Peak','S. Arapaho Peak','Navajo Peak','Mt. Albion','Ogalalla Peak','Mt. Neva','Jasper Peak','Lone Eagle Peak','Arikaree Peak','Kiowa Peak','Shoshoni Peak','Challenger Glacier','Rollins Pass','Mount Epworth','Radiobeacon','Crater Peak','Heartbeat Peak','James Peak','Mount Bancroft','Mount Eva','Witter Peak','Mount Flora'];
   var s=['Apache Peak','Pawnee Peak','Mt. Toll','Mt. Audubon','Paiute Peak','Sawtooth Mtn','Red Deer Mtn','St. Vrain Mtn','St. Vrain Glacier','Little Pawnee Peak','Cherokee Peak','Mount Achonee','Mount George','Longs Peak','Mt. Meeker','Chiefs Head','Pagoda Mtn'];
-  if(b.indexOf(n)>=0)return'boulder';if(s.indexOf(n)>=0)return'stvrain';return'bigthompson';
+  if(b.indexOf(n_unused)>=0)return'boulder';if(s.indexOf(n_unused)>=0)return'stvrain';return'bigthompson';
 }
 var sweCache={};
 
@@ -860,8 +1132,10 @@ function loadSNWD(basinKey, cb) {
 }
 function sweBarColor(p){return p>=100?'#2ed573':p>=85?'#7ae87a':p>=70?'#ffd166':p>=50?'#ffa502':'#ff4757';}
 function sweLabel(p){return p>=120?'Well Above Normal':p>=100?'Above Normal':p>=90?'Near Normal':p>=75?'Below Normal':p>=50?'Well Below Normal':'Critically Low';}
+function updateSWEPanel_byName(pkName){ updateSWEPanel(pkName); }
 function updateSWEPanel(pkIdx){
-  var pk=PK[pkIdx],bk=getPeakBasin(pk.n),cfg=BASIN_CFG[bk],el=document.getElementById('swe-panel');
+  var pkName=(typeof pkIdx==='string')?pkIdx:(PK[pkIdx]?PK[pkIdx].n:'');
+  var bk=getPeakBasin(pkName),cfg=BASIN_CFG[bk],el=document.getElementById('swe-panel');
   if(!el)return;
   el.innerHTML='<span style="color:var(--muted)">⏳ Loading '+cfg.name+' — querying '+cfg.stations.length+' station'+(cfg.stations.length>1?'s':'')+'...</span>';
   loadSWE(bk,function(d){
@@ -913,50 +1187,48 @@ function buildUI(){
   var minDate=tY+'-03-01',maxDate=tY+'-06-30';
   var dateEl=document.getElementById('sel-date');
   dateEl.value=defDate;dateEl.min=minDate;dateEl.max=maxDate;
-  var sel=document.getElementById('sel-peak');
-  PK.forEach(function(pk,i){var o=document.createElement('option');o.value=i;o.textContent=pk.n+" ("+pk.el.toLocaleString()+"')";sel.appendChild(o);});
+  var pkSel=document.getElementById('sel-peak');
+  var seen={};
+  LINES.forEach(function(l){seen[l.pk]=true;});
+  var pkNames=Object.keys(seen).sort();
+  pkNames.forEach(function(nm){
+    var opt=document.createElement('option');
+    opt.value=nm; opt.textContent=nm;
+    pkSel.appendChild(opt);
+  });
   var ul=document.getElementById('peak-list-about');
-  PK.forEach(function(pk){var li=document.createElement('li');li.innerHTML=pk.n+' <span class="eb">'+pk.el.toLocaleString()+"'</span>";ul.appendChild(li);});
-  onPeakChange();
+  PEAKS.forEach(function(pk){var li=document.createElement('li');li.innerHTML=pk.n+' <span class="eb">'+pk.el.toLocaleString()+"'</span>";ul.appendChild(li);});
   ['fdi','fga'].forEach(function(id){document.getElementById(id).addEventListener('input',updatePacePreview);});
   ['fsdp','fds'].forEach(function(id){document.getElementById(id).addEventListener('input',crustPreview);});
   updatePacePreview();crustPreview();
 }
+function buildUI_LEGACY(){}
 window.onDateChange=function(){ triggerWeatherFetch(); };
 window.onPeakChange=function(){
-  selectedPeak=+document.getElementById('sel-peak').value;
-  selectedAsp=null;
-  buildAspGrid(selectedPeak);
-  updateSWEPanel(selectedPeak);
-  triggerWeatherFetch();
-  var pk=PK[selectedPeak];
-  var hint=document.getElementById('approach-hint');
-  if(pk.app&&pk.app.di){
-    document.getElementById('fdi').value=pk.app.di;
-    if(hint) hint.textContent='Approach from: '+pk.app.th;
-    updatePacePreview();
-  } else {
-    if(hint) hint.textContent='';
-  }
-};
-function buildAspGrid(i){
-  var pk=PK[i],g=document.getElementById('asp-grid');g.innerHTML='';
-  ['N','NE','E','SE','S','SW','W','NW'].forEach(function(asp){
-    var b=document.createElement('button');b.className='asp-btn';b.textContent=asp;
-    if(!pk.asp[asp])b.disabled=true;
-    else b.onclick=function(){
-  selectedAsp=asp;
-  document.querySelectorAll('.asp-btn').forEach(function(x){x.classList.remove('active');});
-  b.classList.add('active');
-  var pk2=PK[selectedPeak];
-  if(pk2.app&&pk2.app.tz&&pk2.asp[asp]&&pk2.asp[asp].ez){
-    var gain=Math.round(pk2.asp[asp].ez-pk2.app.tz);
-    if(gain>200){ document.getElementById('fga').value=gain; updatePacePreview(); }
-  }
-};
-    g.appendChild(b);
+  var pkName=document.getElementById('sel-peak').value;
+  var lineSel=document.getElementById('sel-line');
+  lineSel.innerHTML='<option value="">— select line —</option>';
+  if(!pkName){selectedLineIdx=-1;return;}
+  var pkLines=getLinesForPeak(pkName);
+  var nameCounts={};
+  pkLines.forEach(function(l){nameCounts[l.n]=(nameCounts[l.n]||0)+1;});
+  pkLines.forEach(function(l){
+    var realIdx=LINES.indexOf(l);
+    var opt=document.createElement('option');
+    opt.value=realIdx;
+    opt.textContent=l.n+(nameCounts[l.n]>1?' ('+l.asp+')':'');
+    lineSel.appendChild(opt);
   });
+  var pkMeta=getPKMeta(pkName);
+  updateSWEPanel_byName(pkName);
+  triggerWeatherFetch();
+};
+function onLineChange(){
+  var v=document.getElementById('sel-line').value;
+  selectedLineIdx=(v==='')?-1:parseInt(v);
+  updateMapMarkers();
 }
+function buildAspGrid_REMOVED(i){}
 function updatePacePreview(){
   var d=+document.getElementById('fdi').value||0,g=+document.getElementById('fga').value||0;
   if(d<0.1||g<10){document.getElementById('pace-prev').textContent='—';return;}
@@ -1688,7 +1960,10 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
 function triggerWeatherFetch() {
   var dateVal = document.getElementById('sel-date').value;
   if(!dateVal) return;
-  var pk = PK[selectedPeak];
+  var pkName = document.getElementById('sel-peak').value;
+  var pkMeta = pkName ? getPKMeta(pkName) : null;
+  var pk = pkMeta ? {n:pkMeta.n,la:pkMeta.la,lo:pkMeta.lo,el:pkMeta.el} : null;
+  if(!pk) return;
   var m = new Date(dateVal+'T12:00:00').getMonth()+1;
   if(m<3||m>6){ weatherData=null; return; }
   document.getElementById('sel-month').value = m;
@@ -1830,13 +2105,14 @@ function renderWeatherStrip(wd, targetDate) {
     snowNote = ' · no significant storm in window';
   }
 
-  var pk2 = PK[selectedPeak];
+  var _pkName2=document.getElementById('sel-peak').value;
+  var pk2=_pkName2?getPKMeta(_pkName2):{n:'',la:40.0,lo:-105.6,el:12000};
   var omUrl = 'https://open-meteo.com/en/docs'
     + '#latitude=' + pk2.la.toFixed(4)
     + '&longitude=' + pk2.lo.toFixed(4)
     + '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean'
     + '&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FDenver';
-  var peakEl = PK[selectedPeak].el.toLocaleString();
+  var peakEl = pk2.el.toLocaleString();
   var dataNote = wd.archiveFailed ? ' (archive unavail — surface model only)' : ' · full two-layer model';
   var srcHtml = '<div style="font-size:.62rem;color:#456a82;margin-top:.35rem;line-height:1.5">'
     +'<a href="'+omUrl+'" target="_blank" style="color:#456a82;text-decoration:none">📡 Open-Meteo forecast for '+pk2.n+'</a>'
@@ -3009,7 +3285,8 @@ function cornWindow(pk,asp,f,month){
 function buildDrivers(w,f,month,asp){
   var ma=MONTH_ADJ[month]||MONTH_ADJ[4],mnames={3:"March",4:"April",5:"May",6:"June"},rows=[];
   var liveFTC = (weatherData && weatherData.ftCycles != null) ? weatherData.ftCycles : 0;
-  var peakElStr=PK[selectedPeak].el.toLocaleString();
+  var _bdPk=selectedLineIdx>=0?getPKMeta(LINES[selectedLineIdx].pk):PEAKS[0];
+  var peakElStr=_bdPk.el.toLocaleString();
   function head(num,title){ rows.push({type:'head',text:'Step '+num+' · '+title}); }
   function mod(title){  rows.push({type:'head',text:'Modifier · '+title}); }
 
@@ -3058,8 +3335,7 @@ function buildDrivers(w,f,month,asp){
   }
   if (weatherData && weatherData.freezeLevelFt != null) {
     var flFt = weatherData.freezeLevelFt;
-    var skiFt = PK[selectedPeak] && PK[selectedPeak].asp[selectedAsp]
-      ? PK[selectedPeak].asp[selectedAsp].ez : null;
+    var skiFt = selectedLineIdx>=0 ? LINES[selectedLineIdx].ez : null;
     if (skiFt && flFt > skiFt + 300) {
       rows.push({icon:'⚠️',cls:'driver-neg',
         text:'<strong>Freezing level ' + flFt.toLocaleString() + '\' — above ski zone ('
@@ -3313,31 +3589,47 @@ function qc(q){return q>=75?"#2ed573":q>=50?"#ffd166":q>=25?"#ffa502":"#ff4757";
 function qbg(q){return q>=75?"rgba(46,213,115,0.15)":q>=50?"rgba(255,209,102,0.12)":q>=25?"rgba(255,165,2,0.12)":"rgba(255,71,87,0.12)";}
 
 window.CA=function(){
-  if(!selectedAsp){alert("Please select a target aspect.");return;}
-  var f=gf(),month=+document.getElementById('sel-month').value,pk=PK[selectedPeak];
-  var primary=cornWindow(pk,selectedAsp,f,month);
+  if(selectedLineIdx<0||selectedLineIdx>=LINES.length){
+    document.getElementById('result-out').innerHTML='<div class="nodata">Select a peak and descent line on the Plan tab, then compute.</div>';
+    ST('result'); return;
+  }
+  var line=LINES[selectedLineIdx];
+  var pkMeta=getPKMeta(line.pk);
+  // Adapter: build a shape cornWindow expects from the named line
+  var pk={n:pkMeta.n,la:pkMeta.la,lo:pkMeta.lo,el:pkMeta.el,asp:{}};
+  pk.asp[line.asp]={t:line.tq,wx:WIND_ASP[line.asp]||0.5,sl:line.sl,ez:line.ez,sh:line.sh||0};
+  var asp=line.asp;
+  var f=gf(),month=+document.getElementById('sel-month').value;
+  var primary=cornWindow(pk,asp,f,month);
   var aspComps=[];
-  Object.keys(pk.asp).forEach(function(asp){var w=cornWindow(pk,asp,f,month);if(w)aspComps.push({asp:asp,ws:w.ws,we:w.we,dur:w.dur,q:w.q,qlabel:w.qlabel});});
+  Object.keys(pk.asp).forEach(function(a){var w=cornWindow(pk,a,f,month);if(w)aspComps.push({asp:a,ws:w.ws,we:w.we,dur:w.dur,q:w.q,qlabel:w.qlabel});});
   aspComps.sort(function(a,b){return b.q-a.q;});
   allResults=[];
-  PK.forEach(function(p){Object.keys(p.asp).forEach(function(asp){var w=cornWindow(p,asp,f,month);if(w)allResults.push({pk:p,asp:asp,q:w.q,ws:w.ws,we:w.we,dur:w.dur,inf:w.inf,qlabel:w.qlabel});});});
-  renderResult(pk,selectedAsp,primary,aspComps,f,month);
+  LINES.forEach(function(l,idx){
+    var pm=getPKMeta(l.pk);
+    var pkObj={n:pm.n,la:pm.la,lo:pm.lo,el:pm.el,asp:{}};
+    pkObj.asp[l.asp]={t:l.tq,wx:WIND_ASP[l.asp]||0.5,sl:l.sl,ez:l.ez,sh:l.sh||0};
+    var w=cornWindow(pkObj,l.asp,f,month);
+    if(w)allResults.push({lineIdx:idx,pk:l.pk,lineName:l.n,asp:l.asp,q:w.q,ws:w.ws,we:w.we,dur:w.dur,inf:w.inf,qlabel:w.qlabel});
+  });
+  renderResult(pk,asp,primary,aspComps,f,month,line);
   updateMapMarkers();updateRouteLines();ST('result');
 };
 
-function renderResult(pk,asp,w,aspComps,f,month){
+function renderResult(pk,asp,w,aspComps,f,month,line){
   var el=document.getElementById('result-out'),h="";
   var mnames={3:"March",4:"April",5:"May",6:"June"};
   if(f.sl)h+='<div class="alert">⚠️ Wind Slab Risk — avoid lee aspects (NE/E/SE) below corniced ridgelines.</div>';
   if(f.lo>33)h+='<div class="alert">⛔ No overnight freeze. Corn very unlikely.</div>';
   else if(f.lo>30)h+='<div class="alert">⚠️ Marginal freeze — thin crust possible.</div>';
-  if(!w||w.ws===null){h+='<div class="result-card"><div class="ppeak">'+pk.n+' · '+asp+'</div><div class="info-msg">'+(w?w.inf:"Cannot compute.")+'</div></div>';el.innerHTML=h;return;}
+  var _lineName=line?line.n:(pk.n+' · '+asp);
+  if(!w||w.ws===null){h+='<div class="result-card"><div class="ppeak">'+_lineName+' <span style="font-size:.76rem;color:var(--muted)">'+pk.n+'</span></div><div class="info-msg">'+(w?w.inf:"Cannot compute.")+'</div></div>';el.innerHTML=h;return;}
 
   var app=calcApproach(f.di,f.ga,f.buf),sc=qc(w.q);
   var depE=Math.max(3.0,w.ws-app.timeHrsRaw),depL=Math.max(depE+0.25,w.we-0.5-app.timeHrsRaw);
 
   h+='<div class="depart-card">';
-  h+='<div style="font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.22rem">'+pk.n+' · '+asp+'-Facing · '+mnames[month]+'</div>';
+  h+='<div style="font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.22rem">'+_lineName+' · '+pk.n+' · '+mnames[month]+'</div>';
 
   if(w.q < 20) {
     // Score too low to be actionable — suppress departure time, explain clearly
@@ -3458,7 +3750,7 @@ function renderResult(pk,asp,w,aspComps,f,month){
     h+='<div id="corn-score-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px">';
     h+='<canvas id="corn-score-canvas" style="display:block;height:200px"></canvas>';
     h+='</div>';
-    h+='<div style="font-size:.68rem;color:#456a82;margin-top:.3rem">Faded = forecast &nbsp;·&nbsp; White range = uncertainty (days 5–15) &nbsp;·&nbsp; Aspect: <span style="color:var(--teal);font-weight:600">'+(selectedAsp||'?')+'</span></div>';
+    h+='<div style="font-size:.68rem;color:#456a82;margin-top:.3rem">Faded = forecast &nbsp;·&nbsp; White range = uncertainty (days 5–15) &nbsp;·&nbsp; Aspect: <span style="color:var(--teal);font-weight:600">'+(asp||'?')+'</span></div>';
   }
   h+='</div>';
 
@@ -3478,10 +3770,8 @@ function renderResult(pk,asp,w,aspComps,f,month){
   if(weatherData && weatherData.ripenessTrajectory && weatherData.ripenessTrajectory.length) {
     requestAnimationFrame(function(){
       drawRipenessChart('ripeness-canvas', weatherData, month, w);
-      var pk2 = PK[selectedPeak];
-      var asp2 = selectedAsp;
-      if(pk2 && asp2) {
-        drawCornScoreChart('corn-score-canvas', weatherData, pk2, asp2);
+      if(pk && asp) {
+        drawCornScoreChart('corn-score-canvas', weatherData, pk, asp);
       }
     });
   }
@@ -3504,10 +3794,22 @@ function initMap(){
   addPeakMarkers();updateRouteLines();
 }
 function makePieSVG(pk,size){
-  var asps=Object.keys(pk.asp),r=size/2-2,cx=size/2,cy=size/2,paths='',hasData=allResults.length>0;
+  // Build pie from LINES data for this peak
+  var pkLines=getLinesForPeak(pk.n);
+  var aspBest={};
+  var hasData=allResults.length>0;
+  if(hasData){
+    allResults.forEach(function(r){
+      if(r.pk===pk.n) aspBest[r.asp]=Math.max(aspBest[r.asp]||0,r.q);
+    });
+  }
+  var seenAsps={};
+  pkLines.forEach(function(l){seenAsps[l.asp]=true;});
+  var asps=Object.keys(seenAsps);
+  if(!asps.length) asps=['E']; // fallback
+  var r=size/2-2,cx=size/2,cy=size/2,paths='';
   asps.forEach(function(asp){
-    var az=AZ[asp],q=0;
-    if(hasData)for(var i=0;i<allResults.length;i++){if(allResults[i].pk.n===pk.n&&allResults[i].asp===asp){q=allResults[i].q;break;}}
+    var az=AZ[asp]||0,q=aspBest[asp]||0;
     var col=hasData?qc(q):'#4a8ab0';
     var sr=((az-22.5-90)*Math.PI/180),er=((az+22.5-90)*Math.PI/180);
     var x1=cx+r*Math.cos(sr),y1=cy+r*Math.sin(sr),x2=cx+r*Math.cos(er),y2=cy+r*Math.sin(er);
@@ -3515,12 +3817,13 @@ function makePieSVG(pk,size){
     if(hasData&&q>0&&size>=28){var mr=((az-90)*Math.PI/180),lx=cx+r*0.62*Math.cos(mr),ly=cy+r*0.62*Math.sin(mr);paths+='<text x="'+lx+'" y="'+(ly+3.5)+'" font-size="7" fill="white" text-anchor="middle" font-weight="bold">'+q+'</text>';}
   });
   paths+='<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="white" stroke="#000" stroke-width="0.5"/>';
-  if(PK[selectedPeak]&&PK[selectedPeak].n===pk.n)paths+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+1)+'" fill="none" stroke="#00d4aa" stroke-width="2.5"/>';
+  var selLine=LINES[selectedLineIdx];
+  if(selLine&&selLine.pk===pk.n) paths+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r+1)+'" fill="none" stroke="#00d4aa" stroke-width="2.5"/>';
   return'<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'+paths+'</svg>';
 }
 function addPeakMarkers(){
   pkMarkers.forEach(function(m){leafletMap.removeLayer(m);});pkMarkers=[];
-  PK.forEach(function(pk){
+  PEAKS.forEach(function(pk){
     var size=36;
     var icon=L.divIcon({className:'corn-marker',html:makePieSVG(pk,size),iconSize:[size,size],iconAnchor:[size/2,size/2],popupAnchor:[0,-(size/2)]});
     var m=L.marker([pk.la,pk.lo],{icon:icon});
@@ -3532,55 +3835,52 @@ function addPeakMarkers(){
 function updateMapMarkers(){if(!leafletMap)return;addPeakMarkers();}
 function updateRouteLines(){
   if(!leafletMap) return;
-  routePolylines.forEach(function(p){ leafletMap.removeLayer(p); });
+  routePolylines.forEach(function(p){leafletMap.removeLayer(p);});
   routePolylines=[];
   var hasData=allResults.length>0;
-
-  // ── Descent polylines — colored by corn score ──
-  PK.forEach(function(pk){
-    Object.keys(pk.asp).forEach(function(asp){
-      var ad=pk.asp[asp];
-      if(!ad.route||!ad.route.length) return;
-      var score=0,found=false;
-      if(hasData){
-        for(var i=0;i<allResults.length;i++){
-          if(allResults[i].pk.n===pk.n&&allResults[i].asp===asp){
-            score=allResults[i].q; found=true; break;
-          }
-        }
+  LINES.forEach(function(line,idx){
+    if(!line.route||!line.route.length) return;
+    var score=0,found=false;
+    if(hasData){
+      for(var i=0;i<allResults.length;i++){
+        if(allResults[i].lineIdx===idx){score=allResults[i].q;found=true;break;}
       }
-      var color=(hasData&&found)?qc(score):'#4a8ab0';
-      var weight=(hasData&&found&&score>=50)?4:3;
-      var opacity=(hasData&&found)?0.85:0.45;
-      var poly=L.polyline(ad.route,{
-        color:color,weight:weight,opacity:opacity,
-        lineJoin:'round',lineCap:'round'
-      });
-      poly.on('click',function(){showPeakPopup(pk);});
-      var ttLabel=pk.n+' · '+asp;
-      if(hasData&&found) ttLabel+=' · '+score;
-      poly.bindTooltip(ttLabel,{permanent:false,direction:'top',opacity:0.9});
-      poly.addTo(leafletMap);
-      routePolylines.push(poly);
-    });
+    }
+    var color=(hasData&&found)?qc(score):'#4a8ab0';
+    var weight=(found&&score>=50)?4:3;
+    var opacity=(hasData&&found)?0.85:0.45;
+    var isSelected=(idx===selectedLineIdx);
+    if(isSelected){color='#00d4aa';weight=4;opacity=1;}
+    var poly=L.polyline(line.route,{color:color,weight:weight,opacity:opacity,lineJoin:'round',lineCap:'round'});
+    var ttLabel=line.n+' — '+line.pk;
+    if(hasData&&found) ttLabel+=' · '+score;
+    poly.bindTooltip(ttLabel,{permanent:false,direction:'top',opacity:0.9});
+    var pkMeta=getPKMeta(line.pk);
+    poly.on('click',function(){showPeakPopup(pkMeta);});
+    poly.addTo(leafletMap);
+    routePolylines.push(poly);
   });
-
-  // Approach polylines deferred — routes need verification
+  // Approach polylines deferred
 }
 
 function showPeakPopup(pk){
   var h='<div class="ppeak">'+pk.n+' <span style="font-size:.76rem;color:var(--muted)">'+pk.el.toLocaleString()+"'</span></div>";
   if(!allResults.length){h+='<p style="color:var(--muted);font-size:.83rem">Go to Plan → compute to see scores.</p>';}
   else{
-    var pkR=allResults.filter(function(r){return r.pk.n===pk.n;}).sort(function(a,b){return b.q-a.q;});
-    h+='<table class="asp-table"><tr><th>Aspect</th><th>Opens</th><th>Window</th><th>Quality</th><th>Score</th></tr>';
-    pkR.forEach(function(r){h+='<tr><td style="color:var(--teal)">'+r.asp+'</td><td>'+ht(r.ws)+'</td><td>'+r.dur+'h</td><td style="color:'+qc(r.q)+'">'+r.qlabel+'</td><td><span style="color:'+qc(r.q)+';font-weight:700">'+r.q+'</span></td></tr>';});
+    var pkR=allResults.filter(function(r){return r.pk===pk.n;}).sort(function(a,b){return b.q-a.q;});
+    h+='<table class="asp-table"><tr><th>Line</th><th>Asp</th><th>Opens</th><th>Window</th><th>Score</th></tr>';
+    pkR.forEach(function(r){h+='<tr><td style="color:var(--teal)">'+r.lineName+'</td><td>'+r.asp+'</td><td>'+ht(r.ws)+'</td><td>'+r.dur+'h</td><td><span style="color:'+qc(r.q)+';font-weight:700">'+r.q+'</span></td></tr>';});
     h+='</table>';
   }
   h+='<button class="btn-sm" style="display:block;margin-top:.6rem" onclick="setObjPeak(\''+pk.n.replace(/'/g,"\\'")+'\')">Plan this Peak →</button>';
   document.getElementById('pc').innerHTML=h;document.getElementById('popup').style.display='block';
 }
-window.setObjPeak=function(n){for(var i=0;i<PK.length;i++){if(PK[i].n===n){document.getElementById('sel-peak').value=i;selectedPeak=i;buildAspGrid(i);selectedAsp=null;CP();ST('plan');return;}}};
+window.setObjPeak=function(n){
+  document.getElementById('sel-peak').value=n;
+  onPeakChange();
+  selectedLineIdx=-1;
+  CP(); ST('plan');
+};
 window.CP=function(){document.getElementById('popup').style.display='none';};
 document.getElementById('popup').addEventListener('click',function(e){if(e.target===this)window.CP();});
 window.ST=function(name){
