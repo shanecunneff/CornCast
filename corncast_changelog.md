@@ -1,5 +1,24 @@
 # CornCast — Physics Changelog
 
+### v37b — Add missing descent routes (2026-03-19)
+
+Added FRSK-verified descent polylines to 7 asp entries that were
+previously rendering without route lines on the map:
+
+Mt. Audubon:
+- N face: Coney Couloirs (drops toward Coney Lakes)
+- E face: East Cirque (replaces 2-pt Autobon with cleaner line)
+- S face: South Face
+- W face: Crooked Couloir
+
+Paiute Peak:
+- E face: Little Blue Couloir
+- S face: Curvaceous Couloir
+- W face: South Slope
+
+All coordinates sourced from FRSK CalTopo GeoJSON (caltopo.com/m/12M99),
+confirmed as FRSK descent-pattern lines (dashed-circle style).
+
 ### v37a — Peak coordinate fixes, approach lines removed (2026-03-19)
 
 Fixed incorrect summit coordinates for 6 peaks identified via
