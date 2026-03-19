@@ -1223,7 +1223,7 @@ window.onPeakChange=function(){
   updateSWEPanel_byName(pkName);
   triggerWeatherFetch();
 };
-function onLineChange(){
+window.onLineChange=function(){
   var v=document.getElementById('sel-line').value;
   selectedLineIdx=(v==='')?-1:parseInt(v);
   updateMapMarkers();
