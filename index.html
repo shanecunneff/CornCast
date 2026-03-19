@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v36 2026-03-18 MST</title>
+<title>CornCast 🌽 v36a 2026-03-18 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -1955,12 +1955,12 @@ function drawRipenessChart(canvasId, wd, month, cornWin) {
   ctx.font = '9px -apple-system,sans-serif';
   [0, 0.25, 0.50, 0.75, 1.0].forEach(function(r){
     var y = yH(r);
-    ctx.strokeStyle = 'rgba(46,74,96,0.40)';
-    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = 'rgba(46,74,96,0.20)';
+    ctx.lineWidth = 0.4;
     ctx.setLineDash([3,4]);
     ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(93,184,240,0.55)';
+    ctx.fillStyle = 'rgba(93,184,240,0.45)';
     ctx.textAlign = 'left';
     ctx.fillText(Math.round(r*100)+'%', PAD.left + cW + 4, y + 3);
   });
@@ -2040,26 +2040,8 @@ function drawRipenessChart(canvasId, wd, month, cornWin) {
     ctx.globalAlpha = 1.0;
   }
 
-  // ── Forecast uncertainty shading ──
-  if(todayIdx >= 0) {
-    ctx.save();
-    ctx.beginPath();
-    for(var fi=todayIdx; fi<N; fi++){
-      var unc = Math.min(0.30, (fi - todayIdx) * 0.015);
-      var cv = comb(traj[fi]);
-      var xx = xPos(fi), yy = yH(Math.min(1, cv + unc));
-      if(fi===todayIdx) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
-    }
-    for(var fi2=N-1; fi2>=todayIdx; fi2--){
-      var unc2 = Math.min(0.30, (fi2 - todayIdx) * 0.015);
-      var cv2 = comb(traj[fi2]);
-      ctx.lineTo(xPos(fi2), yH(Math.max(0, cv2 - unc2)));
-    }
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(255,144,64,0.07)';
-    ctx.fill();
-    ctx.restore();
-  }
+  // Forecast uncertainty shading removed — dashed lines on CCR/SFQ
+  // already distinguish forecast from archive clearly
 
   // ── Helper: draw a bezier polyline ──
   function drawLine(pts, color, width, dashed) {
@@ -2089,19 +2071,7 @@ function drawRipenessChart(canvasId, wd, month, cornWin) {
   return {solid:solid, dashed:dashed};
   }
 
-  // ── Uncertainty band edges — upper and lower dashed borders ──
-  if(todayIdx >= 0) {
-    var uncUpperPts = [];
-    var uncLowerPts = [];
-    for(var fi3=todayIdx; fi3<N; fi3++){
-      var unc3 = Math.min(0.30, (fi3 - todayIdx) * 0.015);
-      var cv3 = comb(traj[fi3]);
-      uncUpperPts.push({x: xPos(fi3), y: yH(Math.min(1, cv3 + unc3))});
-      uncLowerPts.push({x: xPos(fi3), y: yH(Math.max(0, cv3 - unc3))});
-    }
-    drawLine(uncUpperPts, 'rgba(255,144,64,0.25)', 1, true);
-    drawLine(uncLowerPts, 'rgba(255,144,64,0.25)', 1, true);
-  }
+  // Uncertainty band edges removed with shading above
   // ── Temperature band (Hi to Lo) — rose/peach fill, Hi edge only ──
   // Drawn BEFORE CCR so blue cold reserve overlays it.
   ctx.save();
@@ -2385,7 +2355,7 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
   var PX_PER_DAY = Math.min(16, Math.max(7, Math.floor(minChartPx / Math.max(N, 1))));
   var cW = N * PX_PER_DAY;
 
-  var H = 160;  // shorter than the coldness chart — bars don't need as much height
+  var H = 200;  // increased for readability on mobile
   var W = PAD.left + PAD.right + cW;
   var cH = H - PAD.top - PAD.bottom;
 
@@ -2416,8 +2386,9 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
   ctx.font = '8px -apple-system,sans-serif';
   [25, 50, 75, 100].forEach(function(v) {
     var y = yScore(v);
-    ctx.strokeStyle = v === 50 ? 'rgba(255,71,87,0.25)' : 'rgba(46,74,96,0.30)';
-    ctx.lineWidth   = v === 50 ? 1 : 0.5;
+    // All gridlines neutral — 50 is NOT a threshold, avoid red which implies danger
+    ctx.strokeStyle = v === 50 ? 'rgba(255,255,255,0.12)' : 'rgba(46,74,96,0.18)';
+    ctx.lineWidth   = v === 50 ? 0.8 : 0.5;
     ctx.setLineDash(v === 50 ? [3,3] : [2,4]);
     ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
     ctx.setLineDash([]);
@@ -2462,12 +2433,19 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
     ctx.fillStyle = barColor;
     ctx.fillRect(bx, by, bw, bh);
 
-    // Subtle score number inside tall bars (≥40px)
-    if(bh >= 40 && bw >= 6) {
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.font = '7px -apple-system,sans-serif';
+    // Score label: inside tall bars, above short bars
+    if(bw >= 5 && s.score >= 20) {
+      ctx.font = 'bold 7px -apple-system,sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(s.score, bx + bw/2, by + 10);
+      if(bh >= 22) {
+        // Tall enough — label inside bar
+        ctx.fillStyle = 'rgba(255,255,255,0.65)';
+        ctx.fillText(s.score, bx + bw/2, by + 10);
+      } else {
+        // Short bar — label above, score color
+        ctx.fillStyle = barColor.replace(/[\d.]+\)$/, '0.90)');
+        ctx.fillText(s.score, bx + bw/2, by - 2);
+      }
     }
   }
 
@@ -3246,7 +3224,6 @@ function renderResult(pk,asp,w,aspComps,f,month){
     h+='<div class="dw-item"><div class="dw-val">'+ht(w.ws)+'</div><div class="dw-key">Corn Opens</div></div>';
     h+='<div class="dw-item"><div class="dw-val">'+ht(w.we)+'</div><div class="dw-key">Corn Closes</div></div>';
     h+='<div class="dw-item"><div class="dw-val">'+w.dur+'h</div><div class="dw-key">Duration</div></div>';
-    h+='<div class="dw-item"><div class="dw-val" style="color:'+sc+'">'+w.q+'</div><div class="dw-key">Score</div></div>';
     h+='</div></div>';
   } else if(depE>=depL-0.1){
     h+='<div class="big-time">'+ht(depE)+'</div><div class="big-label">Leave Trailhead — narrow window</div>';
@@ -3254,7 +3231,6 @@ function renderResult(pk,asp,w,aspComps,f,month){
     h+='<div class="dw-item"><div class="dw-val">'+ht(w.ws)+'</div><div class="dw-key">Corn Opens</div></div>';
     h+='<div class="dw-item"><div class="dw-val">'+ht(w.we)+'</div><div class="dw-key">Corn Closes</div></div>';
     h+='<div class="dw-item"><div class="dw-val">'+w.dur+'h</div><div class="dw-key">Duration</div></div>';
-    h+='<div class="dw-item"><div class="dw-val" style="color:'+sc+'">'+w.q+'</div><div class="dw-key">Score</div></div>';
     h+='</div>';
     h+='<div class="approach-detail">'+f.di+'mi · '+f.ga.toLocaleString()+"' gain · "+app.gradePct+'% grade → '+app.speedMph+' mph → '+app.skinHrs+' hrs + '+f.buf+' min buffer = '+app.timeHrs+' hrs total</div>';
   } else {
@@ -3267,18 +3243,33 @@ function renderResult(pk,asp,w,aspComps,f,month){
     h+='<div class="dw-item"><div class="dw-val">'+ht(w.ws)+'</div><div class="dw-key">Corn Opens</div></div>';
     h+='<div class="dw-item"><div class="dw-val">'+ht(w.we)+'</div><div class="dw-key">Corn Closes</div></div>';
     h+='<div class="dw-item"><div class="dw-val">'+w.dur+'h</div><div class="dw-key">Duration</div></div>';
-    h+='<div class="dw-item"><div class="dw-val" style="color:'+sc+'">'+w.q+'</div><div class="dw-key">Score</div></div>';
     h+='</div>';
     h+='<div class="approach-detail">'+f.di+'mi · '+f.ga.toLocaleString()+"' gain · "+app.gradePct+'% grade → '+app.speedMph+' mph → '+app.skinHrs+' hrs + '+f.buf+' min buffer = '+app.timeHrs+' hrs total</div>';
   }
   h+='</div>';
 
+  // Hourly Conditions — moved above score card for immediate actionability
+  h+='<div class="result-card"><h2 style="margin-bottom:.45rem">Hourly Conditions</h2><div class="tl">';
+  for(var hr=5;hr<=15;hr++){
+    var st2="Frozen",pc=5,bc="#2a4a6a";
+    if(hr>=w.ws&&hr<=w.we){st2="🌽 Prime Corn";pc=96;bc="#2ed573";}
+    else if(hr>w.we&&hr<=w.we+1){st2="Softening";pc=55;bc="#ffd166";}
+    else if(hr>w.we+1&&hr<=w.we+2.5){st2="Slush";pc=28;bc="#ffa502";}
+    else if(hr>w.we+2.5){st2="Heavy/Wet";pc=10;bc="#ff4757";}
+    else if(hr>=w.ws-1.5&&hr<w.ws){st2="Thawing";pc=48;bc="#ffd166";}
+    var isDep=(hr>=depE&&hr<=depL);
+    h+='<div class="tlr" style="'+(isDep?'background:rgba(255,209,102,0.07);border-radius:4px;':'')+'">';
+    h+='<div class="tlt">'+(isDep?'<span style="color:var(--gold)">▶</span> ':'')+ht(hr)+'</div>';
+    h+='<div class="tlbw"><div class="tlb" style="width:'+pc+'%;background:'+bc+'"></div></div>';
+    h+='<div class="tll" style="color:'+bc+'">'+st2+'</div></div>';
+  }
+  h+='<div style="font-size:.68rem;color:var(--gold);margin-top:.3rem">▶ = departure window</div></div></div>';
   // Conditions card
   h+='<div class="result-card" style="border-color:'+sc+'40">';
   h+='<h2 style="margin-bottom:.4rem">Conditions</h2>';
   h+='<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem">';
   h+='<div style="background:'+qbg(w.q)+';border:2px solid '+sc+';border-radius:8px;padding:.35rem .7rem;font-size:1rem;font-weight:700;color:'+sc+'">'+w.qlabel+'</div>';
-  h+='<div style="font-size:1.8rem;font-weight:700;color:'+sc+'">'+w.q+'<span style="font-size:.85rem;color:var(--muted);font-weight:400">/100</span></div>';
+  h+='<div style="font-size:2.2rem;font-weight:700;color:'+sc+'">'+w.q+'<span style="font-size:.85rem;color:var(--muted);font-weight:400">/100</span></div>';
   h+='</div>';
   h+='<div class="wbar"><div class="wfill" style="width:'+w.q+'%;background:'+sc+'"></div></div>';
   h+='<div class="info-msg">'+w.inf+'</div>';
@@ -3327,39 +3318,22 @@ function renderResult(pk,asp,w,aspComps,f,month){
     h+='<canvas id="ripeness-canvas" style="display:block;height:240px"></canvas>';
     h+='</div>';
     h+='<div id="ripeness-info-panel" style="margin-top:.5rem;padding:.4rem .65rem;border-radius:7px;background:rgba(13,27,42,0.55);border:1px solid rgba(56,189,248,0.12);font-size:.72rem;color:var(--muted);min-height:1.9rem;line-height:1.5">← tap any day to inspect</div>';
-    h+='<div style="font-size:.63rem;color:#456a82;margin-top:.35rem">';
-    h+='<span style="color:#fbbf24">●</span> Sfc freeze &nbsp;';
-    h+='<span style="color:rgba(56,189,248,0.85)">■</span> Cold reserve &nbsp;';
-    h+='<span style="color:rgba(255,155,120,0.7)">▬</span> Hi/Lo temp &nbsp;';
-    h+='<span style="opacity:.75">❄</span> Snow &nbsp;·&nbsp; Dashed = forecast &nbsp;·&nbsp; Pan ← history';
+    h+='<div style="font-size:.67rem;color:#456a82;margin-top:.35rem;line-height:1.8">';
+    h+='<span style="color:#fbbf24">●</span> Surface freeze quality &nbsp;&nbsp;';
+    h+='<span style="color:rgba(56,189,248,0.85)">■</span> Column cold reserve &nbsp;&nbsp;';
+    h+='<span style="color:rgba(255,155,120,0.7)">▬</span> Hi/Lo temp<br>';
+    h+='<span style="opacity:.75">❄</span> Snowfall &nbsp;·&nbsp; Dashed lines = forecast &nbsp;·&nbsp; Tap any day to inspect &nbsp;·&nbsp; Pan ←';
     h+='</div>';
 
     // ── Chart 2: Daily corn score ──
     h+='<h3 style="margin-top:1.1rem;margin-bottom:.25rem">🌽 Daily Corn Quality Score</h3>';
     h+='<div style="font-size:.68rem;color:var(--muted);margin-bottom:.4rem">Estimated corn window quality for each day · bar height = score 0–100</div>';
     h+='<div id="corn-score-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px">';
-    h+='<canvas id="corn-score-canvas" style="display:block;height:160px"></canvas>';
+    h+='<canvas id="corn-score-canvas" style="display:block;height:200px"></canvas>';
     h+='</div>';
-    h+='<div style="font-size:.64rem;color:#456a82;margin-top:.3rem">Faded bars = forecast · White range = ensemble uncertainty (days 5–15) · aspect: '+(selectedAsp||'?')+'</div>';
+    h+='<div style="font-size:.68rem;color:#456a82;margin-top:.3rem">Faded = forecast &nbsp;·&nbsp; White range = uncertainty (days 5–15) &nbsp;·&nbsp; Aspect: <span style="color:var(--teal);font-weight:600">'+(selectedAsp||'?')+'</span></div>';
   }
   h+='</div>';
-
-  // Timeline
-  h+='<div class="result-card"><h2 style="margin-bottom:.45rem">Hourly Conditions</h2><div class="tl">';
-  for(var hr=5;hr<=15;hr++){
-    var st2="Frozen",pc=5,bc="#2a4a6a";
-    if(hr>=w.ws&&hr<=w.we){st2="🌽 Prime Corn";pc=96;bc="#2ed573";}
-    else if(hr>w.we&&hr<=w.we+1){st2="Softening";pc=55;bc="#ffd166";}
-    else if(hr>w.we+1&&hr<=w.we+2.5){st2="Slush";pc=28;bc="#ffa502";}
-    else if(hr>w.we+2.5){st2="Heavy/Wet";pc=10;bc="#ff4757";}
-    else if(hr>=w.ws-1.5&&hr<w.ws){st2="Thawing";pc=48;bc="#ffd166";}
-    var isDep=(hr>=depE&&hr<=depL);
-    h+='<div class="tlr" style="'+(isDep?'background:rgba(255,209,102,0.07);border-radius:4px;':'')+'">';
-    h+='<div class="tlt">'+(isDep?'<span style="color:var(--gold)">▶</span> ':'')+ht(hr)+'</div>';
-    h+='<div class="tlbw"><div class="tlb" style="width:'+pc+'%;background:'+bc+'"></div></div>';
-    h+='<div class="tll" style="color:'+bc+'">'+st2+'</div></div>';
-  }
-  h+='<div style="font-size:.68rem;color:var(--gold);margin-top:.3rem">▶ = departure window</div></div></div>';
 
   // Aspect comparison
   h+='<div class="result-card"><h2 style="margin-bottom:.42rem">All Aspects — '+pk.n+'</h2>';
@@ -3449,6 +3423,12 @@ window.ST=function(name){
     document.querySelectorAll('.tab')[i].classList.toggle('active',n===name);
     document.getElementById('tab-'+n).classList.toggle('active',n===name);
   });
+  if(name==='result'){
+    var ro=document.getElementById('result-out');
+    if(ro) ro.scrollTop=0;
+    var tp=document.getElementById('tab-result');
+    if(tp) tp.scrollTop=0;
+  }
   if(name==='map'){setTimeout(function(){if(!leafletMap)initMap();else leafletMap.invalidateSize();},80);}
 };
 window.addEventListener('resize',function(){if(leafletMap)leafletMap.invalidateSize();});
