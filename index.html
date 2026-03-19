@@ -1187,8 +1187,7 @@ function buildUI(){
   var minDate=tY+'-03-01',maxDate=tY+'-06-30';
   var dateEl=document.getElementById('sel-date');
   dateEl.value=defDate;dateEl.min=minDate;dateEl.max=maxDate;
-  var pkSel=document.getElementById('sel-peak');
-  var seen={};
+  var pkSel=document.getElementById('sel-peak');   var blankOpt=document.createElement('option');   blankOpt.value=''; blankOpt.textContent='— select peak —';   pkSel.appendChild(blankOpt);   var seen={};
   LINES.forEach(function(l){seen[l.pk]=true;});
   var pkNames=Object.keys(seen).sort();
   pkNames.forEach(function(nm){
@@ -1226,7 +1225,6 @@ window.onPeakChange=function(){
 window.onLineChange=function(){
   var v=document.getElementById('sel-line').value;
   selectedLineIdx=(v==='')?-1:parseInt(v);
-  updateMapMarkers();
 }
 function buildAspGrid_REMOVED(i){}
 function updatePacePreview(){
