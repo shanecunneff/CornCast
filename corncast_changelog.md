@@ -1,5 +1,25 @@
 # CornCast — Physics Changelog
 
+### v36a — Result tab UX improvements (2026-03-18 MST)
+Result tab now scrolls to top on every load.
+Section reorder: Hourly Conditions timeline moved immediately
+below departure times — the most actionable information now
+appears before the score detail and driver narrative.
+Score duplicate removed from departure row — Opens, Closes,
+Duration remain. Score displayed once in Conditions card at
+larger size (2.2rem).
+Corn score chart: height 160px → 200px. Bar labels now appear
+above short bars instead of being hidden. Score labels shown for
+all bars ≥20 score and ≥5px wide. Red 50-line replaced with
+neutral white (red implied a threshold warning, which is wrong).
+All gridline opacity reduced. Chart legend font size increased
+with teal aspect label.
+Ripeness chart: orange forecast uncertainty shading and dashed
+border lines removed — dashed CCR/SFQ lines already distinguish
+forecast from archive clearly. Right Y-axis gridline opacity
+reduced from 0.40 to 0.20. Legend expanded to two lines with
+clearer metric labels.
+
 ### v36 — Ensemble forecast confidence bands (2026-03-18 MST)
 **New: GFS ensemble fetch** added as a 4th parallel request in
 fetchWeatherData, using Open-Meteo ensemble API with gfs_seamless
