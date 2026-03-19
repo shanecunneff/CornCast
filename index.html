@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v36a 2026-03-18 MST</title>
+<title>CornCast 🌽 v37 2026-03-19 MST</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -229,6 +229,7 @@ input[type=date]:focus{border-color:var(--teal)}
       <div id="pace-prev" style="font-size:.73rem;color:var(--muted);padding:.48rem .62rem;background:var(--navy3);border-radius:8px">Enter distance &amp; gain</div>
     </div>
   </div>
+  <div id="approach-hint" style="font-size:.67rem;color:var(--muted);margin-bottom:.3rem;min-height:1rem"></div>
   <button class="btn" onclick="CA()">🌽 Compute Corn Window</button>
 </div>
 
@@ -249,6 +250,7 @@ input[type=date]:focus{border-color:var(--teal)}
       <div class="li"><div class="ldot" style="background:#ffa502"></div>Marginal 25+</div>
       <div class="li"><div class="ldot" style="background:#ff4757"></div>Poor</div>
       <div class="li"><div class="ldot" style="background:#4a8ab0"></div>No data</div>
+      <div class="li"><div class="ldot" style="background:#f4a261;opacity:.7"></div>Approach</div>
     </div>
     <p style="font-size:.62rem;color:var(--muted);margin-top:.3rem;flex-shrink:0">Map © <a href="https://openstreetmap.org" style="color:var(--muted)">OpenStreetMap</a> · USGS The National Map</p>
   </div>
@@ -502,64 +504,76 @@ function tq(sr,ap,we){return{sr:sr,ap:ap,we:we,q:(sr+ap+we)/9};}
 var PK=[
   // Brainard Lake cluster — coords from USGS National Map summit layer
   {n:"Mt. Toll",          la:40.0883,lo:-105.6339,el:12979,
-   asp:{N:{t:tq(1,2,2),wx:.65,sh:0,ez:12489,note:"N face icy"},NE:{t:tq(2,2,2),wx:.58,sh:.2,ez:12400,note:"NE aspect moderate"},E:{t:tq(3,3,3),wx:.52,sh:0,ez:12300,note:"E face, good morning corn"},SE:{t:tq(3,3,3),wx:.48,sh:0,ez:12100,note:"SE couloir, quality line"}}},
+   app:{th:"Mitchell Lake TH",tz:10480,di:2.5,route:[[40.0833,-105.5817],[40.0855,-105.5868],[40.0845,-105.5897],[40.0866,-105.5963],[40.0865,-105.6003],[40.0856,-105.605],[40.0842,-105.611],[40.087,-105.6138],[40.0887,-105.6171],[40.0908,-105.6211]]},
+   asp:{N:{t:tq(1,2,2),wx:.65,sh:0,ez:12489,note:"N face icy"},NE:{t:tq(2,2,2),wx:.58,sl:25,sh:.2,ez:12400,note:"NE aspect moderate"},E:{t:tq(3,3,3),wx:.52,sl:28,sh:0,ez:12300,note:"E face, good morning corn"},SE:{t:tq(3,3,3),wx:.48,sl:30,sh:0,ez:12100,note:"SE couloir, quality line",route:[[40.0884,-105.6337],[40.086,-105.6302],[40.0868,-105.6294],[40.0872,-105.6288],[40.0882,-105.6273],[40.0886,-105.6246],[40.0893,-105.6219]]}}},
   // Pawnee: summit is east of Pawnee Lake, on the ridge at ~-105.6394
   {n:"Pawnee Peak",       la:40.0813,lo:-105.6329,el:12943,
-   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12700,note:"N face limited"},NE:{t:tq(2,2,2),wx:.58,sh:.2,ez:12071,note:"NE bowl"},E:{t:tq(3,3,3),wx:.55,sh:0,ez:12200,note:"E face, accessible corn"},SE:{t:tq(3,3,3),wx:.50,sh:0,ez:12100,note:"SE — popular spring objective"}}},
+   app:{th:"Brainard Lake Gateway TH",tz:10000,di:4.5,route:[[40.0802,-105.5342],[40.081,-105.5376],[40.0826,-105.5469],[40.0807,-105.5563],[40.0779,-105.5845],[40.0759,-105.587],[40.0704,-105.6146],[40.0691,-105.6097],[40.0704,-105.6124],[40.0761,-105.6353]]},
+   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12700,note:"N face limited"},NE:{t:tq(2,2,2),wx:.58,sl:35,sh:.2,ez:12071,note:"NE bowl",route:[[40.0817,-105.6307],[40.0781,-105.6279]]},E:{t:tq(3,3,3),wx:.55,sh:0,ez:12200,note:"E face, accessible corn"},SE:{t:tq(3,3,3),wx:.50,sl:30,sh:0,ez:12100,note:"SE — popular spring objective",route:[[40.0815,-105.6327],[40.0788,-105.6309],[40.0781,-105.6279],[40.0784,-105.6246],[40.0755,-105.6243]]}}},
   // Audubon: summit on east side of ridge, confirmed USGS
   {n:"Mt. Audubon",       la:40.0994,lo:-105.6256,el:13233,
-   asp:{N:{t:tq(1,2,2),wx:.70,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12216,note:"Broad E face, consistent"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12016,note:"SE face, classic Audubon corn"},S:{t:tq(2,3,2),wx:.52,sh:0,ez:12016,note:"S face, early window"},W:{t:tq(2,2,1),wx:.62,sh:0,ez:12500,note:"W face, afternoon"}}},
+   app:{th:"Mitchell Lake TH",tz:10480,di:2.0,route:[[40.0833,-105.5817],[40.0855,-105.5868],[40.0865,-105.5941],[40.0879,-105.5945],[40.0893,-105.5972],[40.0907,-105.5972],[40.093,-105.5963],[40.0955,-105.5998],[40.0957,-105.6014],[40.0955,-105.6044]]},
+   asp:{N:{t:tq(1,2,2),wx:.70,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,3),wx:.50,sl:28,sh:0,ez:12216,note:"Broad E face, consistent",route:[[40.0932,-105.6068],[40.0901,-105.6048]]},SE:{t:tq(3,3,3),wx:.46,sl:32,sh:0,ez:12016,note:"SE face, classic Audubon corn",route:[[40.0955,-105.6054],[40.0937,-105.6065]]},S:{t:tq(2,3,2),wx:.52,sh:0,ez:12016,note:"S face, early window"},W:{t:tq(2,2,1),wx:.62,sh:0,ez:12500,note:"W face, afternoon"}}},
   // Paiute: summit on divide west of Paiute Lake
   {n:"Paiute Peak",       la:40.0980,lo:-105.6332,el:13088,
-   asp:{E:{t:tq(3,2,3),wx:.55,sh:0,ez:12100,note:"E face, lower elev melts earlier"},SE:{t:tq(3,3,3),wx:.50,sh:0,ez:12100,note:"SE, good but shorter window"},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12000,note:"S face, very early window"},SW:{t:tq(2,2,1),wx:.65,sh:0,ez:12000,note:"SW, afternoon"},W:{t:tq(1,2,1),wx:.70,sh:0,ez:12100,note:"W, late afternoon"}}},
+   app:{th:"Mitchell Lake TH",tz:10480,di:2.8,route:[[40.0833,-105.5817],[40.0855,-105.5868],[40.0866,-105.5963],[40.0856,-105.605],[40.0842,-105.611],[40.087,-105.6138],[40.0887,-105.6171],[40.0908,-105.6211],[40.0956,-105.6306],[40.0939,-105.6283]]},
+   asp:{E:{t:tq(3,2,3),wx:.55,sh:0,ez:12100,note:"E face, lower elev melts earlier"},SE:{t:tq(3,3,3),wx:.50,sl:35,sh:0,ez:12100,note:"SE, good but shorter window",route:[[40.097,-105.6319],[40.0956,-105.6306],[40.0939,-105.6283]]},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12000,note:"S face, very early window"},SW:{t:tq(2,2,1),wx:.65,sh:0,ez:12000,note:"SW, afternoon"},W:{t:tq(1,2,1),wx:.70,sh:0,ez:12100,note:"W, late afternoon"}}},
   // Isabelle Glacier cluster
   {n:"Arikaree Peak",     la:40.0464,lo:-105.6383,el:13146,
-   asp:{N:{t:tq(1,1,2),wx:.75,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,2),wx:.58,sh:0,ez:12500,note:"E face, good corn potential"},SE:{t:tq(3,3,2),wx:.52,sh:0,ez:12400,note:"SE aspect, solid when frozen"},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12300,note:"S face moderate"}}},
+   asp:{N:{t:tq(1,1,2),wx:.75,sh:0,ez:12900,note:"N face very limited"},E:{t:tq(3,3,2),wx:.58,sl:32,sh:0,ez:12500,note:"E face, good corn potential",route:[[40.0464,-105.6383],[40.0464,-105.6355],[40.0463,-105.6328],[40.0462,-105.6302]]},SE:{t:tq(3,3,2),wx:.52,sl:37,sh:0,ez:12400,note:"SE aspect, solid when frozen",route:[[40.0464,-105.6383],[40.0452,-105.6360],[40.0440,-105.6338],[40.0428,-105.6318]]},S:{t:tq(2,2,2),wx:.60,sh:0,ez:12300,note:"S face moderate"}}},
   {n:"Kiowa Peak",        la:40.0480,lo:-105.6242,el:13276,
-   asp:{NE:{t:tq(2,2,2),wx:.65,sh:.2,ez:12700,note:"NE bowl, moderate quality"},E:{t:tq(3,2,2),wx:.60,sh:0,ez:12600,note:"E face, decent corn"},SE:{t:tq(3,3,2),wx:.55,sh:0,ez:12500,note:"SE, reliable window"},S:{t:tq(2,2,2),wx:.62,sh:0,ez:12300,note:"S face"}}},
+   asp:{NE:{t:tq(2,2,2),wx:.65,sh:.2,ez:12700,note:"NE bowl, moderate quality"},E:{t:tq(3,2,2),wx:.60,sl:32,sh:0,ez:12600,note:"E face, decent corn",route:[[40.0480,-105.6242],[40.0480,-105.6218],[40.0479,-105.6194],[40.0479,-105.6171]]},SE:{t:tq(3,3,2),wx:.55,sl:36,sh:0,ez:12500,note:"SE, reliable window",route:[[40.0480,-105.6242],[40.0466,-105.6220],[40.0453,-105.6199],[40.0440,-105.6180]]},S:{t:tq(2,2,2),wx:.62,sh:0,ez:12300,note:"S face"}}},
   {n:"Mt. Albion",        la:40.0392,lo:-105.6172,el:12609,
-   asp:{E:{t:tq(3,3,3),wx:.52,sh:0,ez:12000,note:"E face decent, accessible"},SE:{t:tq(3,3,3),wx:.48,sh:0,ez:11800,note:"SE aspect, good beginner corn"},N:{t:tq(1,1,2),wx:.65,sh:0,ez:12300,note:"N face very limited"}}},
+   asp:{E:{t:tq(3,3,3),wx:.52,sl:25,sh:0,ez:12000,note:"E face decent, accessible",route:[[40.0392,-105.6172],[40.0392,-105.615],[40.0391,-105.6128],[40.0391,-105.6107]]},SE:{t:tq(3,3,3),wx:.48,sl:28,sh:0,ez:11800,note:"SE aspect, good beginner corn",route:[[40.0392,-105.6172],[40.0377,-105.615],[40.0363,-105.6129],[40.0349,-105.6109]]},N:{t:tq(1,1,2),wx:.65,sh:0,ez:12300,note:"N face very limited"}}},
   {n:"N. Arapaho Peak",   la:40.0267,lo:-105.6500,el:13502,
-   asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N glacier, rarely skiable"},NW:{t:tq(2,2,1),wx:.85,sh:0,ez:12900,note:"NW bowl, wind-loaded"},W:{t:tq(2,2,1),wx:.80,sh:0,ez:12800,note:"W face, afternoon corn"},SW:{t:tq(2,2,2),wx:.72,sh:0,ez:12700,note:"SW, afternoon option"}}},
+   asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N glacier, rarely skiable"},NW:{t:tq(2,2,1),wx:.85,sh:0,ez:12900,note:"NW bowl, wind-loaded"},W:{t:tq(2,2,1),wx:.80,sl:35,sh:0,ez:12800,note:"W face, afternoon corn",route:[[40.0267,-105.65],[40.0267,-105.6528],[40.0266,-105.6556],[40.0265,-105.6583]]},SW:{t:tq(2,2,2),wx:.72,sl:33,sh:0,ez:12700,note:"SW, afternoon option",route:[[40.0267,-105.65],[40.0252,-105.652],[40.0237,-105.654],[40.0222,-105.6558]]}}},
   {n:"S. Arapaho Peak",   la:40.0200,lo:-105.6497,el:13397,
-   asp:{E:{t:tq(3,3,3),wx:.50,sh:0,ez:12700,note:"E face, reliable morning corn"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12600,note:"Classic SE couloir — premier corn face"},S:{t:tq(3,3,2),wx:.52,sh:0,ez:12500,note:"S face, watch window timing"},SW:{t:tq(2,2,2),wx:.57,sh:0,ez:12500,note:"SW, afternoon window"}}},
+   app:{th:"Fourth of July TH",tz:10121,di:3.2,route:[[39.9952,-105.6343],[39.9972,-105.6357],[40.001,-105.6389],[40.0039,-105.6457],[40.008,-105.6548],[40.0112,-105.6599],[40.013,-105.6639],[40.014,-105.6678],[40.0148,-105.6726],[40.0144,-105.6781]]},
+   asp:{E:{t:tq(3,3,3),wx:.50,sl:33,sh:0,ez:12700,note:"E face, reliable morning corn",route:[[40.0200,-105.6497],[40.0200,-105.6475],[40.0200,-105.6453],[40.0201,-105.6432]]},SE:{t:tq(3,3,3),wx:.44,sl:38,sh:0,ez:12600,note:"Classic SE couloir — premier corn face",route:[[40.0199,-105.6513],[40.0192,-105.6516],[40.0185,-105.652],[40.0181,-105.6521],[40.0178,-105.6522],[40.0167,-105.6527],[40.0162,-105.6527],[40.0155,-105.6532],[40.0128,-105.6571],[40.0113,-105.6583]]},S:{t:tq(3,3,2),wx:.52,sh:0,ez:12500,note:"S face, watch window timing"},SW:{t:tq(2,2,2),wx:.57,sh:0,ez:12500,note:"SW, afternoon window"}}},
   {n:"Navajo Peak",       la:40.0533,lo:-105.6467,el:13409,
-   asp:{N:{t:tq(1,1,1),wx:.90,sh:0,ez:12424,note:"Very exposed, icy N face"},NE:{t:tq(2,1,1),wx:.85,sh:0,ez:12424,note:"Airplane Gully — high wind, variable crust"},E:{t:tq(2,2,2),wx:.75,sh:0,ez:12700,note:"Rocky E face, patchy snow"},S:{t:tq(2,2,2),wx:.70,sh:0,ez:12500,note:"S face, melts fast"},SW:{t:tq(1,2,1),wx:.82,sh:0,ez:12500,note:"Exposed SW, slab prone"}}},
+   app:{th:"Long Lake TH",tz:10520,di:4.5,route:[[40.0771,-105.5707],[40.0779,-105.5845],[40.0704,-105.6146],[40.0687,-105.6226],[40.0667,-105.6299],[40.0637,-105.6311],[40.0617,-105.6372],[40.0608,-105.6424],[40.0541,-105.6479],[40.0578,-105.6437]]},
+   asp:{N:{t:tq(1,1,1),wx:.90,sh:0,ez:12424,note:"Very exposed, icy N face"},NE:{t:tq(2,1,1),wx:.85,sl:42,sh:0,ez:12424,note:"Airplane Gully — high wind, variable crust",route:[[40.0541,-105.6479],[40.0578,-105.6437]]},E:{t:tq(2,2,2),wx:.75,sh:0,ez:12700,note:"Rocky E face, patchy snow"},S:{t:tq(2,2,2),wx:.70,sh:0,ez:12500,note:"S face, melts fast"},SW:{t:tq(1,2,1),wx:.82,sh:0,ez:12500,note:"Exposed SW, slab prone"}}},
   {n:"Apache Peak",       la:40.0583,lo:-105.6513,el:13441,
-   asp:{N:{t:tq(1,2,2),wx:.50,sh:.5,ez:13000,note:"N face, very late window"},NE:{t:tq(3,3,3),wx:.38,sh:.4,ez:12800,note:"Sheltered NE bowl — excellent corn above Isabelle Glacier"},E:{t:tq(3,3,3),wx:.36,sh:0,ez:12440,note:"Prime E face, best in the range"},SE:{t:tq(3,3,3),wx:.40,sh:0,ez:12600,note:"SE couloir, top-tier when frozen"}}},
+   app:{th:"Long Lake TH",tz:10520,di:4.5,route:[[40.0771,-105.5707],[40.0779,-105.5845],[40.0704,-105.6146],[40.0687,-105.6226],[40.0667,-105.6299],[40.0637,-105.6311],[40.0617,-105.6372],[40.0608,-105.6424],[40.0598,-105.6433],[40.0579,-105.6437]]},
+   asp:{N:{t:tq(1,2,2),wx:.50,sh:.5,ez:13000,note:"N face, very late window"},NE:{t:tq(3,3,3),wx:.38,sl:34,sh:.4,ez:12800,note:"Sheltered NE bowl — excellent corn above Isabelle Glacier",route:[[40.0594,-105.6499],[40.0597,-105.6479],[40.062,-105.6463]]},E:{t:tq(3,3,3),wx:.36,sl:36,sh:0,ez:12440,note:"Prime E face, best in the range",route:[[40.0576,-105.6507],[40.0576,-105.647],[40.0579,-105.6437]]},SE:{t:tq(3,3,3),wx:.40,sh:0,ez:12600,note:"SE couloir, top-tier when frozen"}}},
   // Shoshoni: summit east of Lake Isabelle on the divide
   {n:"Shoshoni Peak",     la:40.0672,lo:-105.6389,el:12967,
-   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12383,note:"N face marginal"},NE:{t:tq(3,3,3),wx:.55,sh:.3,ez:12033,note:"NE couloir / Shoshoni Bowl — classic lower-angle spring line"},SE:{t:tq(3,3,2),wx:.50,sh:0,ez:12100,note:"SE, short but quality window"},S:{t:tq(1,2,2),wx:.55,sh:0,ez:12000,note:"Sheer S face, near-vertical"}}},
+   app:{th:"Long Lake TH",tz:10520,di:4.0,route:[[40.0771,-105.5707],[40.0779,-105.5845],[40.0704,-105.6146],[40.0705,-105.6167],[40.0698,-105.6207],[40.0687,-105.6226],[40.0667,-105.6299],[40.0637,-105.6311],[40.0671,-105.6388],[40.0708,-105.6321]]},
+   asp:{N:{t:tq(1,1,2),wx:.60,sh:0,ez:12383,note:"N face marginal"},NE:{t:tq(3,3,3),wx:.55,sl:33,sh:.3,ez:12033,note:"NE couloir / Shoshoni Bowl — classic lower-angle spring line",route:[[40.0671,-105.6388],[40.069,-105.6347],[40.0708,-105.6321]]},SE:{t:tq(3,3,2),wx:.50,sh:0,ez:12100,note:"SE, short but quality window"},S:{t:tq(1,2,2),wx:.55,sh:0,ez:12000,note:"Sheer S face, near-vertical"}}},
   {n:"Ogalalla Peak",     la:40.1703,lo:-105.6667,el:13333,
-   asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N very exposed"},NE:{t:tq(2,2,1),wx:.72,sh:.3,ez:12800,note:"NE, high wind exposure"},E:{t:tq(3,2,2),wx:.62,sh:0,ez:12700,note:"E face, moderate quality"},SE:{t:tq(3,3,2),wx:.58,sh:0,ez:12500,note:"SE aspect"}}},
+   asp:{N:{t:tq(1,1,1),wx:.80,sh:0,ez:13000,note:"N very exposed"},NE:{t:tq(2,2,1),wx:.72,sh:.3,ez:12800,note:"NE, high wind exposure"},E:{t:tq(3,2,2),wx:.62,sl:28,sh:0,ez:12700,note:"E face, moderate quality",route:[[40.1703,-105.6667],[40.1703,-105.6643],[40.1702,-105.6619],[40.1702,-105.6596]]},SE:{t:tq(3,3,2),wx:.58,sl:32,sh:0,ez:12500,note:"SE aspect",route:[[40.1703,-105.6667],[40.1686,-105.6644],[40.167,-105.6622],[40.1655,-105.6601]]}}},
   // Western cluster
   {n:"Mt. Neva",          la:40.0186,lo:-105.6694,el:12814,
-   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12300,note:"NE aspect, moderate"},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12200,note:"E face, decent lower-angle corn"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12357,note:"SE couloir, popular objective"},N:{t:tq(1,1,2),wx:.58,sh:0,ez:12600,note:"N face minimal"}}},
+   app:{th:"Fourth of July TH",tz:10121,di:3.0,route:[[39.9952,-105.6343],[40.001,-105.6389],[40.008,-105.6548],[40.013,-105.6639],[40.0144,-105.6781],[40.0139,-105.6811],[40.0116,-105.6853],[40.0093,-105.687],[40.007,-105.6883],[40.0092,-105.687]]},
+   asp:{NE:{t:tq(2,2,3),wx:.52,sl:35,sh:.2,ez:12300,note:"NE aspect, moderate",route:[[40.007,-105.6883],[40.0092,-105.687]]},E:{t:tq(3,3,3),wx:.50,sh:0,ez:12200,note:"E face, decent lower-angle corn"},SE:{t:tq(3,3,3),wx:.46,sh:0,ez:12357,note:"SE couloir, popular objective"},N:{t:tq(1,1,2),wx:.58,sh:0,ez:12600,note:"N face minimal"}}},
   {n:"Jasper Peak",       la:39.9945,lo:-105.6833,el:12923,
-   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12300,note:"NE bowl, moderate"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12200,note:"E face, decent corn"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12249,note:"SE couloir, known ski line"},N:{t:tq(1,1,2),wx:.60,sh:0,ez:12600,note:"N face very limited"}}},
+   app:{th:"Fourth of July TH",tz:10121,di:2.6,route:[[39.9952,-105.6343],[40.0041,-105.6465],[40.0048,-105.6503],[40.0046,-105.6532],[39.9994,-105.6505],[39.9939,-105.6501],[39.9931,-105.6592],[39.9932,-105.6608],[39.9909,-105.6676],[39.9917,-105.6713]]},
+   asp:{NE:{t:tq(2,2,3),wx:.52,sl:38,sh:.2,ez:12300,note:"NE bowl, moderate",route:[[39.9949,-105.6825],[39.9916,-105.675]]},E:{t:tq(3,3,3),wx:.48,sl:32,sh:0,ez:12200,note:"E face, decent corn",route:[[39.9926,-105.6826],[39.9916,-105.6751]]},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:12249,note:"SE couloir, known ski line"},N:{t:tq(1,1,2),wx:.60,sh:0,ez:12600,note:"N face very limited"}}},
   {n:"Lone Eagle Peak",   la:40.0714,lo:-105.6603,el:11940,
-   asp:{E:{t:tq(2,3,3),wx:.42,sh:0,ez:11400,note:"E face, low elevation — early season only"},SE:{t:tq(3,3,3),wx:.38,sh:0,ez:11200,note:"SE, popular early spring objective"},S:{t:tq(2,3,2),wx:.45,sh:0,ez:11370,note:"S face, very early melt"}}},
+   asp:{E:{t:tq(2,3,3),wx:.42,sl:30,sh:0,ez:11400,note:"E face, low elevation — early season only",route:[[40.0714,-105.6603],[40.0714,-105.6578],[40.0713,-105.6554],[40.0713,-105.653]]},SE:{t:tq(3,3,3),wx:.38,sl:35,sh:0,ez:11200,note:"SE, popular early spring objective",route:[[40.0714,-105.6603],[40.07,-105.658],[40.0686,-105.6557],[40.0673,-105.6535]]},S:{t:tq(2,3,2),wx:.45,sh:0,ez:11370,note:"S face, very early melt"}}},
   // RMNP / North cluster
   {n:"Sawtooth Mtn",      la:40.1269,lo:-105.6252,el:12304,
-   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11652,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.42,sh:0,ez:11700,note:"SE aspect, wide open"},S:{t:tq(2,3,2),wx:.48,sh:0,ez:11600,note:"S face, early melt"},SW:{t:tq(2,2,1),wx:.52,sh:0,ez:11600,note:"SW afternoon"}}},
+   app:{th:"Buchanan Pass TH",tz:9720,di:3.2,route:[[40.133,-105.6046],[40.1327,-105.608],[40.1328,-105.6118],[40.1329,-105.6216],[40.1331,-105.6249],[40.1324,-105.6284],[40.131,-105.63],[40.1297,-105.6291],[40.1271,-105.6253],[40.1265,-105.6247]]},
+   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11652,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.42,sl:28,sh:0,ez:11700,note:"SE aspect, wide open",route:[[40.1266,-105.6244],[40.1272,-105.6231],[40.1269,-105.6223],[40.1244,-105.6172]]},S:{t:tq(2,3,2),wx:.48,sh:0,ez:11600,note:"S face, early melt"},SW:{t:tq(2,2,1),wx:.52,sh:0,ez:11600,note:"SW afternoon"}}},
   {n:"Red Deer Mtn",      la:40.1120,lo:-105.6320,el:12375,
-   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12100,note:"NE aspect"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face moderate"},SE:{t:tq(3,3,3),wx:.45,sh:0,ez:11900,note:"SE couloir — ski line from Buchanan Pass"},S:{t:tq(2,2,2),wx:.50,sh:0,ez:11700,note:"S face"}}},
+   app:{th:"Buchanan Pass TH",tz:9720,di:3.5,route:[[40.133,-105.6046],[40.1327,-105.608],[40.1328,-105.6118],[40.1334,-105.6142],[40.1329,-105.6216],[40.1331,-105.6249],[40.1324,-105.6284],[40.131,-105.63],[40.131,-105.6301],[40.131,-105.632]]},
+   asp:{NE:{t:tq(2,2,3),wx:.52,sh:.2,ez:12100,note:"NE aspect"},E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face moderate"},SE:{t:tq(3,3,3),wx:.45,sl:35,sh:0,ez:11900,note:"SE couloir — ski line from Buchanan Pass",route:[[40.1379,-105.6298],[40.1332,-105.6235]]},S:{t:tq(2,2,2),wx:.50,sh:0,ez:11700,note:"S face"}}},
   {n:"St. Vrain Mtn",     la:40.1613,lo:-105.5851,el:12162,
-   asp:{E:{t:tq(3,3,3),wx:.45,sh:0,ez:11700,note:"E face, accessible lower terrain"},SE:{t:tq(3,3,3),wx:.42,sh:0,ez:11500,note:"SE, widest window at this elevation"},S:{t:tq(2,2,2),wx:.48,sh:0,ez:11400,note:"S face very early melt"},W:{t:tq(1,2,1),wx:.55,sh:0,ez:11600,note:"W face"}}},
+   asp:{E:{t:tq(3,3,3),wx:.45,sl:25,sh:0,ez:11700,note:"E face, accessible lower terrain",route:[[40.1613,-105.5851],[40.1613,-105.5828],[40.1612,-105.5806],[40.1612,-105.5784]]},SE:{t:tq(3,3,3),wx:.42,sl:28,sh:0,ez:11500,note:"SE, widest window at this elevation",route:[[40.1613,-105.5851],[40.1597,-105.5829],[40.1581,-105.5808],[40.1566,-105.5788]]},S:{t:tq(2,2,2),wx:.48,sh:0,ez:11400,note:"S face very early melt"},W:{t:tq(1,2,1),wx:.55,sh:0,ez:11600,note:"W face"}}},
   {n:"Terra Tomah",       la:40.3097,lo:-105.6619,el:12718,
-   asp:{E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.44,sh:0,ez:11800,note:"SE, wide open approach"},S:{t:tq(2,3,2),wx:.50,sh:0,ez:11909,note:"S face early melt"},SW:{t:tq(2,2,1),wx:.54,sh:0,ez:11909,note:"SW afternoon"},W:{t:tq(1,2,1),wx:.60,sh:0,ez:11900,note:"W late afternoon"}}},
+   asp:{E:{t:tq(3,3,3),wx:.48,sh:0,ez:12000,note:"E face, gentle terrain"},SE:{t:tq(3,3,3),wx:.44,sl:28,sh:0,ez:11800,note:"SE, wide open approach",route:[[40.3097,-105.6619],[40.308,-105.6597],[40.3063,-105.6576],[40.3047,-105.6556]]},S:{t:tq(2,3,2),wx:.50,sl:25,sh:0,ez:11909,note:"S face early melt",route:[[40.3097,-105.6619],[40.3073,-105.6619],[40.3049,-105.6618],[40.3026,-105.6617]]},SW:{t:tq(2,2,1),wx:.54,sh:0,ez:11909,note:"SW afternoon"},W:{t:tq(1,2,1),wx:.60,sh:0,ez:11900,note:"W late afternoon"}}},
   // Longs Peak area
   {n:"Longs Peak",        la:40.2550,lo:-105.6153,el:14259,
-   asp:{N:{t:tq(1,1,1),wx:.95,sh:0,ez:13800,note:"Diamond face — technical, rarely skied"},NE:{t:tq(3,3,2),wx:.58,sh:.7,ez:13400,note:"NE Trough — stays frozen late, classic line"},E:{t:tq(3,3,2),wx:.62,sh:0,ez:13300,note:"E lobe, high quality"},SE:{t:tq(3,3,2),wx:.60,sh:0,ez:13200,note:"SE bowl"},W:{t:tq(1,1,1),wx:.90,sh:0,ez:13500,note:"W face very exposed"},NW:{t:tq(1,1,1),wx:.92,sh:0,ez:13600,note:"NW wind-scoured"}}},
+   asp:{N:{t:tq(1,1,1),wx:.95,sh:0,ez:13800,note:"Diamond face — technical, rarely skied"},NE:{t:tq(3,3,2),wx:.58,sl:43,sh:.7,ez:13400,note:"NE Trough — stays frozen late, classic line",route:[[40.2550,-105.6153],[40.2569,-105.6129],[40.2589,-105.6106],[40.2608,-105.6084],[40.2626,-105.6064]]},E:{t:tq(3,3,2),wx:.62,sh:0,ez:13300,note:"E lobe, high quality"},SE:{t:tq(3,3,2),wx:.60,sh:0,ez:13200,note:"SE bowl"},W:{t:tq(1,1,1),wx:.90,sh:0,ez:13500,note:"W face very exposed"},NW:{t:tq(1,1,1),wx:.92,sh:0,ez:13600,note:"NW wind-scoured"}}},
   {n:"Mt. Meeker",        la:40.2456,lo:-105.6061,el:13911,
-   asp:{N:{t:tq(1,1,1),wx:.85,sh:0,ez:13500,note:"N face icy and technical"},NE:{t:tq(3,3,2),wx:.62,sh:.5,ez:13100,note:"NE face, high quality when frozen"},E:{t:tq(3,3,2),wx:.56,sh:0,ez:13000,note:"E face excellent corn"},S:{t:tq(3,3,3),wx:.54,sh:0,ez:12700,note:"The Loft — top-tier when it works"},SW:{t:tq(2,2,2),wx:.65,sh:0,ez:12800,note:"Loft SW approach"}}},
+   asp:{N:{t:tq(1,1,1),wx:.85,sh:0,ez:13500,note:"N face icy and technical"},NE:{t:tq(3,3,2),wx:.62,sh:.5,ez:13100,note:"NE face, high quality when frozen"},E:{t:tq(3,3,2),wx:.56,sl:32,sh:0,ez:13000,note:"E face excellent corn",route:[[40.2456,-105.6061],[40.2456,-105.6036],[40.2455,-105.6012],[40.2455,-105.5988]]},S:{t:tq(3,3,3),wx:.54,sl:28,sh:0,ez:12700,note:"The Loft — top-tier when it works",route:[[40.2456,-105.6061],[40.2432,-105.6061],[40.2408,-105.606],[40.2385,-105.6059]]},SW:{t:tq(2,2,2),wx:.65,sh:0,ez:12800,note:"Loft SW approach"}}},
   {n:"Chiefs Head",       la:40.2308,lo:-105.6381,el:13579,
-   asp:{NE:{t:tq(3,3,3),wx:.44,sh:.5,ez:12689,note:"Premier NE face — remote but excellent"},E:{t:tq(3,3,3),wx:.46,sh:0,ez:12689,note:"E bowl, consistently best corn"},S:{t:tq(2,3,2),wx:.55,sh:0,ez:12700,note:"S face moderate quality"},SW:{t:tq(2,2,2),wx:.60,sh:0,ez:12600,note:"SW afternoon window"},NW:{t:tq(1,1,1),wx:.72,sh:0,ez:12989,note:"NW exposed ridge"}}},
+   asp:{NE:{t:tq(3,3,3),wx:.44,sl:36,sh:.5,ez:12689,note:"Premier NE face — remote but excellent",route:[[40.2308,-105.6381],[40.2322,-105.6355],[40.2336,-105.6330],[40.2349,-105.6307],[40.2362,-105.6285]]},E:{t:tq(3,3,3),wx:.46,sl:30,sh:0,ez:12689,note:"E bowl, consistently best corn",route:[[40.2308,-105.6381],[40.2308,-105.6355],[40.2307,-105.6330],[40.2306,-105.6306]]},S:{t:tq(2,3,2),wx:.55,sh:0,ez:12700,note:"S face moderate quality"},SW:{t:tq(2,2,2),wx:.60,sh:0,ez:12600,note:"SW afternoon window"},NW:{t:tq(1,1,1),wx:.72,sh:0,ez:12989,note:"NW exposed ridge"}}},
   {n:"Pagoda Mtn",        la:40.2431,lo:-105.6281,el:13497,
-   asp:{N:{t:tq(1,1,2),wx:.75,sh:0,ez:13100,note:"N face minimal sun"},E:{t:tq(2,3,2),wx:.60,sh:0,ez:12900,note:"E face moderate quality"},SE:{t:tq(3,3,2),wx:.56,sh:0,ez:12700,note:"SE, reliable but not standout"},W:{t:tq(1,2,1),wx:.72,sh:0,ez:12900,note:"W face afternoon"}}},
+   asp:{N:{t:tq(1,1,2),wx:.75,sh:0,ez:13100,note:"N face minimal sun"},E:{t:tq(2,3,2),wx:.60,sl:27,sh:0,ez:12900,note:"E face moderate quality",route:[[40.2431,-105.6281],[40.2431,-105.6258],[40.243,-105.6235],[40.243,-105.6213]]},SE:{t:tq(3,3,2),wx:.56,sl:30,sh:0,ez:12700,note:"SE, reliable but not standout",route:[[40.2431,-105.6281],[40.2415,-105.6259],[40.2399,-105.6237],[40.2384,-105.6217]]},W:{t:tq(1,2,1),wx:.72,sh:0,ez:12900,note:"W face afternoon"}}},
   {n:"Hallett Peak",     la:40.2981,lo:-105.6447,el:12713,
-   asp:{SE:{t:tq(3,3,2),wx:.44,sh:0,ez:11556,note:"Chaos Couloir — classic RMNP spring corn from Lake Haiyaha"},
-        E: {t:tq(3,3,2),wx:.50,sh:0,ez:11437,note:"East Couloir above Emerald Lake"}}},
+   asp:{SE:{t:tq(3,3,2),wx:.44,sl:40,sh:0,ez:11556,note:"Chaos Couloir — classic RMNP spring corn from Lake Haiyaha",route:[[40.2981,-105.6447],[40.296,-105.6424],[40.294,-105.6402],[40.292,-105.6381],[40.2901,-105.6361],[40.2884,-105.6342]]},
+        E: {t:tq(3,3,2),wx:.50,sl:35,sh:0,ez:11437,note:"East Couloir above Emerald Lake",route:[[40.2981,-105.6447],[40.2989,-105.642],[40.2996,-105.6393],[40.3003,-105.6368],[40.301,-105.6344]]}}},
 ];
 
 var AZ={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
@@ -573,7 +587,7 @@ var MONTH_ADJ={
   6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},isothermProb:0.70},
 };
 
-var selectedPeak=0,selectedAsp=null,allResults=[],leafletMap=null,pkMarkers=[];
+var selectedPeak=0,selectedAsp=null,allResults=[],leafletMap=null,pkMarkers=[],routePolylines=[];
 
 // ── SNOTEL ────────────────────────────────────────────────────────────────
 // Wild Basin corrected to 9,410' (verified NRCS). Copeland Lake removed (too low).
@@ -820,13 +834,37 @@ function buildUI(){
   updatePacePreview();crustPreview();
 }
 window.onDateChange=function(){ triggerWeatherFetch(); };
-window.onPeakChange=function(){selectedPeak=+document.getElementById('sel-peak').value;selectedAsp=null;buildAspGrid(selectedPeak);updateSWEPanel(selectedPeak);triggerWeatherFetch();};
+window.onPeakChange=function(){
+  selectedPeak=+document.getElementById('sel-peak').value;
+  selectedAsp=null;
+  buildAspGrid(selectedPeak);
+  updateSWEPanel(selectedPeak);
+  triggerWeatherFetch();
+  var pk=PK[selectedPeak];
+  var hint=document.getElementById('approach-hint');
+  if(pk.app&&pk.app.di){
+    document.getElementById('fdi').value=pk.app.di;
+    if(hint) hint.textContent='Approach from: '+pk.app.th;
+    updatePacePreview();
+  } else {
+    if(hint) hint.textContent='';
+  }
+};
 function buildAspGrid(i){
   var pk=PK[i],g=document.getElementById('asp-grid');g.innerHTML='';
   ['N','NE','E','SE','S','SW','W','NW'].forEach(function(asp){
     var b=document.createElement('button');b.className='asp-btn';b.textContent=asp;
     if(!pk.asp[asp])b.disabled=true;
-    else b.onclick=function(){selectedAsp=asp;document.querySelectorAll('.asp-btn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');};
+    else b.onclick=function(){
+  selectedAsp=asp;
+  document.querySelectorAll('.asp-btn').forEach(function(x){x.classList.remove('active');});
+  b.classList.add('active');
+  var pk2=PK[selectedPeak];
+  if(pk2.app&&pk2.app.tz&&pk2.asp[asp]&&pk2.asp[asp].ez){
+    var gain=Math.round(pk2.asp[asp].ez-pk2.app.tz);
+    if(gain>200){ document.getElementById('fga').value=gain; updatePacePreview(); }
+  }
+};
     g.appendChild(b);
   });
 }
@@ -3195,7 +3233,7 @@ window.CA=function(){
   allResults=[];
   PK.forEach(function(p){Object.keys(p.asp).forEach(function(asp){var w=cornWindow(p,asp,f,month);if(w)allResults.push({pk:p,asp:asp,q:w.q,ws:w.ws,we:w.we,dur:w.dur,inf:w.inf,qlabel:w.qlabel});});});
   renderResult(pk,selectedAsp,primary,aspComps,f,month);
-  updateMapMarkers();ST('result');
+  updateMapMarkers();updateRouteLines();ST('result');
 };
 
 function renderResult(pk,asp,w,aspComps,f,month){
@@ -3374,7 +3412,7 @@ function initMap(){
   var hillshade=L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,opacity:0.35,attribution:'USGS'});
   usgsTopo.addTo(leafletMap);hillshade.addTo(leafletMap);
   L.control.layers({'USGS Topo':usgsTopo,'OpenStreetMap':osm},{'Hillshade':hillshade},{position:'bottomright'}).addTo(leafletMap);
-  addPeakMarkers();
+  addPeakMarkers();updateRouteLines();
 }
 function makePieSVG(pk,size){
   var asps=Object.keys(pk.asp),r=size/2-2,cx=size/2,cy=size/2,paths='',hasData=allResults.length>0;
@@ -3403,6 +3441,56 @@ function addPeakMarkers(){
   });
 }
 function updateMapMarkers(){if(!leafletMap)return;addPeakMarkers();}
+function updateRouteLines(){
+  if(!leafletMap) return;
+  routePolylines.forEach(function(p){ leafletMap.removeLayer(p); });
+  routePolylines=[];
+  var hasData=allResults.length>0;
+
+  // ── Descent polylines — colored by corn score ──
+  PK.forEach(function(pk){
+    Object.keys(pk.asp).forEach(function(asp){
+      var ad=pk.asp[asp];
+      if(!ad.route||!ad.route.length) return;
+      var score=0,found=false;
+      if(hasData){
+        for(var i=0;i<allResults.length;i++){
+          if(allResults[i].pk.n===pk.n&&allResults[i].asp===asp){
+            score=allResults[i].q; found=true; break;
+          }
+        }
+      }
+      var color=(hasData&&found)?qc(score):'#4a8ab0';
+      var weight=(hasData&&found&&score>=50)?4:3;
+      var opacity=(hasData&&found)?0.85:0.45;
+      var poly=L.polyline(ad.route,{
+        color:color,weight:weight,opacity:opacity,
+        lineJoin:'round',lineCap:'round'
+      });
+      poly.on('click',function(){showPeakPopup(pk);});
+      var ttLabel=pk.n+' · '+asp;
+      if(hasData&&found) ttLabel+=' · '+score;
+      poly.bindTooltip(ttLabel,{permanent:false,direction:'top',opacity:0.9});
+      poly.addTo(leafletMap);
+      routePolylines.push(poly);
+    });
+  });
+
+  // ── Approach polylines — fixed amber dashed, neutral ──
+  PK.forEach(function(pk){
+    if(!pk.app||!pk.app.route||!pk.app.route.length) return;
+    var approachPoly=L.polyline(pk.app.route,{
+      color:'#f4a261',weight:1.5,opacity:0.50,
+      dashArray:'6,4',lineJoin:'round',lineCap:'round'
+    });
+    approachPoly.bindTooltip(pk.n+' approach · '+pk.app.th,{
+      permanent:false,direction:'top',opacity:0.85
+    });
+    approachPoly.addTo(leafletMap);
+    routePolylines.push(approachPoly);
+  });
+}
+
 function showPeakPopup(pk){
   var h='<div class="ppeak">'+pk.n+' <span style="font-size:.76rem;color:var(--muted)">'+pk.el.toLocaleString()+"'</span></div>";
   if(!allResults.length){h+='<p style="color:var(--muted);font-size:.83rem">Go to Plan → compute to see scores.</p>';}

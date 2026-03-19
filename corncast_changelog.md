@@ -1,5 +1,28 @@
 # CornCast — Physics Changelog
 
+### v37 — Ski descent polylines + approach routes (2026-03-19)
+
+Added ski line polylines to the Map tab. After calculating conditions,
+each aspect's descent route is drawn as a colored polyline matching the
+corn score color (green/amber/red). Before any calculation, lines show
+in neutral blue. Tapping a line opens the peak popup.
+
+Added approach route polylines as thin amber dashed lines showing the
+skin track from trailhead to ski terrain for 12 peaks. Approach lines
+are always neutral — they do not change color based on conditions.
+
+Added `sl` (slope angle in degrees) to all ski faces in the PK array.
+Used by the physics model in v38 (slope geometry correction session).
+
+Added Plan tab auto-population: selecting a peak pre-fills the approach
+distance from trailhead data. Selecting an aspect pre-fills elevation
+gain as ski zone elevation minus trailhead elevation. A hint line shows
+the trailhead name. Both values remain editable.
+
+Route coordinates sourced from FRSK CalTopo master map (caltopo.com/m/12M99),
+converted from GeoJSON [lon,lat] to PK array [lat,lon] format. RMNP
+routes (Hallett, Longs) are topo estimates pending TNT4 verification.
+
 ### v36a — Result tab UX improvements (2026-03-18 MST)
 Result tab now scrolls to top on every load.
 Section reorder: Hourly Conditions timeline moved immediately
