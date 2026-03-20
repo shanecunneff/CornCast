@@ -209,7 +209,7 @@ input[type=date]:focus{border-color:var(--teal)}
     <div class="field"><label>Overnight Low °F</label><input type="number" id="flo" value="22" min="-10" max="45"></div>
     <div class="field"><label>Dawn Temp °F <span id="fda-auto-tag" style="color:var(--teal);font-weight:400;text-transform:none;font-size:.62rem;display:none">auto</span></label><input type="number" id="fda" value="28" min="-10" max="50"></div>
     <div class="field"><label>Daytime High °F</label><input type="number" id="fhi" value="46" min="25" max="75"></div>
-    <div class="field"><label>Wind at Elevation mph</label><input type="number" id="fwi" value="15" min="0" max="80"></div>
+    <div class="field"><label>Overnight Wind mph <span style="font-size:.6rem;color:var(--muted);font-weight:400;text-transform:none">(midnight–6 AM)</span></label><input type="number" id="fwi" value="15" min="0" max="80"></div>
     <div class="field"><label>Overnight Clouds %</label><input type="number" id="fcn" value="10" min="0" max="100"></div>
     <div class="field"><label>Morning Clouds %</label><input type="number" id="fcm" value="20" min="0" max="100"></div>
     <div class="sdiv"></div>
@@ -226,6 +226,7 @@ input[type=date]:focus{border-color:var(--teal)}
     </div>
     <div class="sdiv"></div>
     <div class="field full"><div class="toggle-row"><span style="font-size:.84rem">Wind Slab Risk</span><label class="toggle"><input type="checkbox" id="fsl"><span class="slider-t"></span></label></div></div>
+    <div class="field full"><div class="toggle-row"><div><span style="font-size:.84rem">Dust on Snow</span><div style="font-size:.67rem;color:var(--muted);margin-top:.1rem">Lowers albedo — corn opens ~25 min earlier, window compresses. <a href="https://avalanche.state.co.us/forecasts/special-reports/dust-on-snow" target="_blank" style="color:var(--teal)">Check CAIC ↗</a></div></div><label class="toggle"><input type="checkbox" id="fdust"><span class="slider-t"></span></label></div></div>
     <div class="sdiv"></div>
     <div class="field"><label>Approach Distance mi</label><input type="number" id="fdi" value="5" min="0.5" max="20" step="0.5"></div>
     <div class="field"><label>Elevation Gain ft</label><input type="number" id="fga" value="2800" min="200" max="6000" step="100"></div>
@@ -480,12 +481,12 @@ input[type=date]:focus{border-color:var(--teal)}
     <ul style="margin-top:.4rem;line-height:1.9">
       <li><strong>Terrain factor is hand-coded</strong>, not derived from GIS or DEM analysis. The snow retention, aspect purity, and wind shelter ratings are informed judgments — treat them as a strong starting point, especially for faces you haven't skied before.</li>
       <li><strong>Single-line computation.</strong> CornCast scores one named descent line at a time. A long descent often spans multiple aspects — N to E to SE — each with different opening and closing times. The selected line's aspect is used for the entire window calculation.</li>
-      <li><strong>No dust-on-snow modeling.</strong> Dust layers on the surface lower albedo and can accelerate corn onset by 20–45 minutes while compressing the window. Check the Desert Dust page at CAIC or OpenSnow for dust events.</li>
+      <li><strong>Dust-on-snow flag is manual.</strong> When active, CornCast applies a ~25 min earlier onset and ~15 min window compression. The magnitude is fixed — actual impact varies by dust layer depth and age. Always verify against the <a href="https://avalanche.state.co.us/forecasts/special-reports/dust-on-snow" target="_blank" style="color:var(--teal)">CAIC dust-on-snow report</a>.</li>
       <li><strong>Column cold content is calibrated, not validated.</strong> The coefficients governing how quickly the deep snowpack gains and loses cold content are physically motivated estimates — they have not been validated against observational data from Niwot Ridge or other Front Range alpine sites at ski-zone elevations.</li>
       <li><strong>Isothermal probability is a seasonal estimate.</strong> A drought year can isothermalize the pack 2–4 weeks earlier than the monthly baseline. A high-SWE cold spring may stay cold-core well into June. The model adjusts for SWE but cannot detect true isothermal state without real-time temperature sensors in the snowpack.</li>
       <li><strong>SNOTEL via proxy.</strong> The NRCS data server does not allow direct browser requests. CornCast routes through public CORS proxies, which occasionally fail. The model runs without SWE adjustment if all proxies fail — results are labeled accordingly.</li>
       <li><strong>Forecast uncertainty grows fast.</strong> Beyond 5–7 days, GFS and ECMWF model skill drops sharply in mountain terrain. Use CornCast for planning direction at long range, not precision timing.</li>
-      <li><strong>No convective risk modeling.</strong> Spring and early summer afternoons in the Colorado Front Range bring rapidly developing thunderstorms, often building over the peaks by noon with lightning by early afternoon. CornCast does not model convective risk. A result showing a 12:30 PM corn window on a June day may be physically correct while being inadvisable. Always set a turnaround time based on weather observation, not just the corn window.</li>
+      <li><strong>Convective risk flag uses CAPE only.</strong> CornCast surfaces a convective warning when CAPE exceeds 200 J/kg and the window opens after noon. CAPE is a coarse proxy — actual convective development depends on capping, moisture, and local terrain. Always make your own assessment of afternoon storm potential before committing to a late corn window.</li>
       <li><strong>SNOTEL elevation gap.</strong> The highest SNOTEL station for the Indian Peaks (Niwot Ridge) sits at 11,480'. Most corn skiing occurs between 12,000' and 13,500'. Extrapolating snow depth and SWE to ski zone elevation uses a two-point regression with significant uncertainty. Wind-loading creates face-to-face depth variation no remote sensor captures — the accuracy ceiling for face-specific depth estimation is approximately 70% of real variance.</li>
     </ul>
   </div>
@@ -493,6 +494,15 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v42 — Physics & Safety Inputs (2026-03-19)</h3>
+    <p>Five improvements implemented together — all fail silently if data is unavailable:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>Overnight wind average:</strong> Wind scour now uses mean wind speed midnight–6 AM instead of daily maximum. Freeze quality penalty is now physically correct — afternoon gusts no longer degrade overnight crust calculations. Auto-fills the Plan tab wind field with overnight mean when live data is available.</li>
+      <li><strong>Elevation season offset:</strong> Isothermal probability now decreases by ~0.04 per 1,000' above 11,500' ski zone elevation. High-elevation terrain (13,000'+) stays cold-core longer than the calendar date alone implies. Consistent with Clow et al. (2012) Front Range snowpack trends.</li>
+      <li><strong>3-point depth gradient:</strong> Snow depth regression now uses all available SNOTEL stations per basin (both high and low elevation) rather than just the highest. More anchor points = more accurate ski zone depth extrapolation for the pack floor and isothermal calculations.</li>
+      <li><strong>Dust-on-snow toggle:</strong> Manual flag in Plan tab applies ~25 min earlier corn onset and ~15 min window compression when active. Links directly to CAIC dust-on-snow report. About tab limitation updated.</li>
+      <li><strong>Convective risk flag:</strong> When CAPE forecast exceeds 200 J/kg and the window opens after noon, a warning alert appears in the Result tab. High-CAPE (500+ J/kg) late windows show a red alert; moderate CAPE shows orange.</li>
+    </ul>
     <h3>v41 — Physics accuracy audit + full UX/narrative update (2026-03-19)</h3>
     <p>Comprehensive audit of every physics step shown to the user. All driver rows and About tab formula boxes now accurately reflect the actual model implementation:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -1122,34 +1132,67 @@ function loadSNWD(basinKey, cb) {
   if(snwdCache[basinKey] && snwdCache[basinKey].loaded) { cb(snwdCache[basinKey]); return; }
   var cfg = BASIN_CFG[basinKey];
   if(!cfg) { cb(null); return; }
-  // Highest-elevation station = best alpine snowfall proxy
+  // Fetch primary (highest) station first for TMIN/rawCsv compatibility,
+  // then fetch all other stations in parallel for depth gradient.
   var sorted = cfg.stations.slice().sort(function(a,b){ return b.elev - a.elev; });
-  var idx = 0;
-  function tryStation() {
-    if(idx >= sorted.length) {
-      snwdCache[basinKey] = { loaded: true, error: true };
-      cb(snwdCache[basinKey]); return;
-    }
-    var st = sorted[idx++];
-    var url = nrcsSnwdUrl(st.id, false);
-    var alt = nrcsSnwdUrl(st.id, true);
+  var primary = sorted[0];
+  var others = sorted.slice(1);
+
+  function fetchPrimary(onDone) {
+    var url = nrcsSnwdUrl(primary.id, false);
+    var alt = nrcsSnwdUrl(primary.id, true);
     var tried = false;
     function attempt(u) {
       doFetch(u, 8000, function(text, err) {
-        if(err || !text) { if(!tried){tried=true;attempt(alt);}else{tryStation();} return; }
+        if(err||!text){if(!tried){tried=true;attempt(alt);}else{onDone(null,null,null);}return;}
         try {
           var days = parseSnwdCSV(text);
           if(days.length < 2) throw new Error('insufficient data');
-          snwdCache[basinKey] = { loaded: true, days: days,
-            stationName: st.name, stationElev: st.elev, stationId: st.id,
-            rawCsv: text }; // rawCsv saved for parseSnotelTmin (5C TMIN blend)
-          cb(snwdCache[basinKey]);
-        } catch(e) { if(!tried){tried=true;attempt(alt);}else{tryStation();} }
+          onDone(days, text, primary);
+        } catch(e){if(!tried){tried=true;attempt(alt);}else{onDone(null,null,null);}}
       });
     }
     attempt(url);
   }
-  tryStation();
+
+  function fetchSecondary(st, onDone) {
+    var url = nrcsSnwdUrl(st.id, false);
+    var alt = nrcsSnwdUrl(st.id, true);
+    var tried = false;
+    function attempt(u) {
+      doFetch(u, 7000, function(text, err) {
+        if(err||!text){if(!tried){tried=true;attempt(alt);}else{onDone(null,st);}return;}
+        try {
+          var days = parseSnwdCSV(text);
+          onDone(days, st);
+        } catch(e){if(!tried){tried=true;attempt(alt);}else{onDone(null,st);}}
+      });
+    }
+    attempt(url);
+  }
+
+  fetchPrimary(function(days, rawCsv, primarySt) {
+    if(!days) {
+      snwdCache[basinKey] = { loaded: true, error: true };
+      cb(snwdCache[basinKey]); return;
+    }
+    var result = {
+      loaded: true, days: days,
+      stationName: primarySt.name, stationElev: primarySt.elev, stationId: primarySt.id,
+      rawCsv: rawCsv,
+      stationDepths: [{ elevFt: primarySt.elev, days: days, name: primarySt.name }]
+    };
+    if(!others.length) { snwdCache[basinKey]=result; cb(result); return; }
+    var pending = others.length;
+    others.forEach(function(st) {
+      fetchSecondary(st, function(secDays, secSt) {
+        if(secDays && secDays.length >= 2) {
+          result.stationDepths.push({ elevFt: secSt.elev, days: secDays, name: secSt.name });
+        }
+        if(--pending === 0) { snwdCache[basinKey]=result; cb(result); }
+      });
+    });
+  });
 }
 function sweBarColor(p){return p>=100?'#2ed573':p>=85?'#7ae87a':p>=70?'#ffd166':p>=50?'#ffa502':'#ff4757';}
 function sweLabel(p){return p>=120?'Well Above Normal':p>=100?'Above Normal':p>=90?'Near Normal':p>=75?'Below Normal':p>=50?'Well Below Normal':'Critically Low';}
@@ -1471,25 +1514,43 @@ function parseDailyJson(json, pk) {
   if(json.hourly && json.hourly.time && json.hourly.wind_speed_10m) {
     var hTimes = json.hourly.time;
     var hWinds = json.hourly.wind_speed_10m;
-    // Build date → [windValues] map
+    // Build date → {all: [], overnight: []} wind maps
+    // overnight = hours 22–23 of previous day + hours 0–6 of current day
     var windByDate = {};
+    var windOvernightByDate = {};
     for(var hi=0; hi<hTimes.length; hi++) {
-      var hDate = hTimes[hi].slice(0,10); // 'YYYY-MM-DD'
+      var hDate = hTimes[hi].slice(0,10);
+      var hHour = parseInt(hTimes[hi].slice(11,13),10);
       var hWind = hWinds[hi];
       if(hWind === null) continue;
       if(!windByDate[hDate]) windByDate[hDate] = [];
       windByDate[hDate].push(hWind);
+      // Overnight: hours 0–6 belong to this date's overnight window
+      // Hours 22–23 belong to the NEXT day's overnight window
+      if(hHour <= 6) {
+        if(!windOvernightByDate[hDate]) windOvernightByDate[hDate] = [];
+        windOvernightByDate[hDate].push(hWind);
+      }
+      if(hHour >= 22) {
+        // Compute next day date string
+        var nextDay = new Date(hDate + 'T12:00:00');
+        nextDay.setDate(nextDay.getDate() + 1);
+        var nd = nextDay.getFullYear()+'-'+String(nextDay.getMonth()+1).padStart(2,'0')+'-'+String(nextDay.getDate()).padStart(2,'0');
+        if(!windOvernightByDate[nd]) windOvernightByDate[nd] = [];
+        windOvernightByDate[nd].push(hWind);
+      }
     }
-    // Attach windMean to each day; fall back to max*0.60 if no hourly data
     days.forEach(function(d) {
       var vals = windByDate[d.date];
       if(vals && vals.length > 0) {
-        var sum = 0;
-        for(var vi=0; vi<vals.length; vi++) sum += vals[vi];
+        var sum = 0; for(var vi=0; vi<vals.length; vi++) sum += vals[vi];
         d.windMean = sum / vals.length;
-      } else {
-        d.windMean = d.wind * 0.60; // fallback: max → mean proxy
-      }
+      } else { d.windMean = d.wind * 0.60; }
+      var oVals = windOvernightByDate[d.date];
+      if(oVals && oVals.length > 0) {
+        var oSum = 0; for(var oi=0; oi<oVals.length; oi++) oSum += oVals[oi];
+        d.overnightWind = oSum / oVals.length;
+      } else { d.overnightWind = d.windMean; }
     });
   } else {
     // No hourly wind available at all — use fallback for every day
@@ -1567,7 +1628,7 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
 
   var forecastUrl = 'https://api.open-meteo.com/v1/forecast'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant,cape'
     +'&hourly=temperature_2m,cloudcover,wind_speed_10m,shortwave_radiation,direct_radiation'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
@@ -1653,6 +1714,10 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
   // Find target day
   var tgtIdx = -1;
   for(var i=0;i<allDays.length;i++){ if(allDays[i].date===targetDate){tgtIdx=i;break;} }
+  var tgtForecastIdx = -1;
+  if(forecastJson && forecastJson.daily && forecastJson.daily.time) {
+    tgtForecastIdx = forecastJson.daily.time.indexOf(targetDate);
+  }
   // If target date not in allDays, use last available
   if(tgtIdx < 0){ tgtIdx = allDays.length - 1; }
   var targetDay = allDays[tgtIdx];
@@ -1919,7 +1984,20 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
   // Primary point: SNOTEL highest-elevation station (already fetched)
   // Second point: Open-Meteo grid cell depth at its grid elevation
   var snwdStationsForGrad = [];
-  if (snwdData && snwdData.stationElev && currentSNWDInches != null) {
+  // Multi-station depth gradient: use all SNOTEL stations that returned depth data
+  if (snwdData && snwdData.stationDepths) {
+    snwdData.stationDepths.forEach(function(s) {
+      if(!s.days || !s.days.length) return;
+      // Find most recent depth on or before targetDate
+      var depthIn = null;
+      for(var si2=s.days.length-1; si2>=0; si2--) {
+        if(s.days[si2].date <= targetDate && s.days[si2].depthIn != null) {
+          depthIn = s.days[si2].depthIn; break;
+        }
+      }
+      if(depthIn != null) snwdStationsForGrad.push({ elevFt: s.elevFt, snwdIn: depthIn });
+    });
+  } else if (snwdData && snwdData.stationElev && currentSNWDInches != null) {
     snwdStationsForGrad.push({ elevFt: snwdData.stationElev, snwdIn: currentSNWDInches });
   }
   var omGridElev = (forecastJson && forecastJson.elevation != null)
@@ -2012,6 +2090,8 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     forecastFailed: forecastFailed,
     todayStr: todayStr,
     windDir: targetDay ? (targetDay.windDir || null) : null,
+    overnightWind: targetDay ? (targetDay.overnightWind || null) : null,
+    cape: (forecastJson && forecastJson.daily && forecastJson.daily.cape && tgtForecastIdx >= 0 && forecastJson.daily.cape[tgtForecastIdx] != null) ? Math.round(forecastJson.daily.cape[tgtForecastIdx]) : null,
     solarMorning:  targetDay ? (targetDay.solarMorning  || null) : null,
     directMorning: targetDay ? (targetDay.directMorning || null) : null,
     freezeLevelFt: targetDay ? (targetDay.freezeLevelFt || null) : null,
@@ -2208,7 +2288,7 @@ function prefillForecast(wd) {
   var fields = [
     {id:'flo', val:Math.round(td.tmin)},
     {id:'fhi', val:Math.round(td.tmax)},
-    {id:'fwi', val:Math.round(td.wind)},
+    {id:'fwi', val:Math.round(wd.overnightWind != null ? wd.overnightWind : td.wind)},
     {id:'fcn', val:Math.round(td.cloud)},
     {id:'fcm', val:Math.round(td.cloud * 0.75)} // morning clouds ~75% of daily mean
   ];
@@ -3197,6 +3277,11 @@ function cornWindow(pk,asp,f,month){
   var snwdIn = faceSnwdInches;
   var depthIsoPrbAdj = (36 - snwdIn) / 36 * 0.15;
   var isoPrb = Math.max(0, Math.min(0.95, baseIsoPrb + depthIsoPrbAdj));
+  // Elevation season offset: high terrain stays cold-core longer than calendar implies
+  // Each 1,000' above 11,500' retards isothermal progression by ~0.04 isoPrb units
+  // Clamped: max -0.12 benefit (terrain above 14,500'), no penalty below 11,500'
+  var elevSeasonAdj = Math.max(-0.12, Math.min(0, (ad.ez - 11500) / 1000 * -0.04));
+  isoPrb = Math.max(0, Math.min(0.95, isoPrb + elevSeasonAdj));
   effFQ=Math.max(0.03,effFQ*(1-matPen));
   // Freezing level gate: if the overnight freezing level did not descend
   // to ski zone elevation, no structural crust formed regardless of what
@@ -3234,6 +3319,8 @@ function cornWindow(pk,asp,f,month){
   // isoPrb=0.30 was treating April prime conditions as degraded
   var isoMeltFactor = Math.max(0, isoPrb - 0.50) * 0.80;
   meltDelay = meltDelay * (1 - isoMeltFactor);
+  // Dust-on-snow: lower albedo accelerates melt onset and compresses window
+  if(f.dust) meltDelay = Math.max(0, meltDelay - 0.42);
   var ws=Math.max(sunHit,sunHit+Math.min(4.2,meltDelay*1.05));
 
   // ── CRUST QUALITY: two-mode model ───────────────────────────────────────
@@ -3302,6 +3389,7 @@ function cornWindow(pk,asp,f,month){
   var prDur = computePackReadiness(liveCCC, liveFTCTotal, isoPrb);
   rawDur *= (0.72 + prDur * 0.48);
   rawDur*=(1-isoPrb*0.25); // isothermal pack collapses window faster
+  if(f.dust) rawDur = Math.max(0.20, rawDur - 0.25); // dust accelerates slush transition
   var dur=Math.max(0.20,Math.min(4.0,rawDur));
   var we=ws+dur;
   // Late-opening penalty: windows opening after 11:30am carry higher risk
@@ -3574,6 +3662,10 @@ function buildDrivers(w,f,month,asp){
     text:'<strong>Dawn temp '+f.da+'°F'+_daNote+' → High '+f.hi+'°F ('+dth+'°F morning rise at ski zone).</strong> '+debtNote
     +'. The '+dth+'°F rise rate is '+(dth>=20?'steep — thermal debt clears quickly, corn opens promptly':dth>=12?'moderate — typical spring payoff timing':'shallow — slow debt repayoff; onset may be late or incomplete on low-radiation aspects')+'.'});
   if(w.isoPrb>0.50) rows.push({icon:'🌡️',cls:'driver-neu',text:'Near-isothermal pack (isoPrb '+Math.round(w.isoPrb*100)+'%) shortens melt delay — thin overnight crust thaws quickly. Corn opens earlier but the window closes sooner for the same reason.'});
+  if(_bdLine&&(_bdLine.ez||0)>12500) rows.push({icon:'🏔️',cls:'driver-pos',text:'High ski zone elevation ('+(_bdLine.ez||0).toLocaleString()+'\'): column retains cold reserve longer than the calendar date alone suggests. Effective isothermal probability reduced.'});
+  if(f.dust){
+    rows.push({icon:'🟤',cls:'driver-neg',text:'<strong>Dust on snow active.</strong> Lower surface albedo accelerates melt onset by ~25 min and compresses window duration by ~15 min. Check <a href="https://avalanche.state.co.us/forecasts/special-reports/dust-on-snow" target="_blank" style="color:var(--teal)">CAIC dust report</a> for layer depth and intensity.'});
+  }
   if(w.ws > 13.0) rows.push({icon:'⚠️',cls:'driver-neg',text:'Window opens at '+ht(w.ws)+' — afternoon opening increases exposure to heat buildup and convective risk.'});
   else if(w.ws > 11.5) rows.push({icon:'🕐',cls:'driver-neu',text:'Window opens late morning — plan approach accordingly.'});
 
@@ -3712,6 +3804,7 @@ function gf(){
     ds:+document.getElementById('fds').value,sdp:+document.getElementById('fsdp').value,
     swePct:swePct,sweInches:sweInches,snwdInches:currentSNWDInches,
     sl:document.getElementById('fsl').checked,
+    dust:document.getElementById('fdust').checked,
     di:+document.getElementById('fdi').value,ga:+document.getElementById('fga').value,buf:+document.getElementById('fbuf').value};
 }
 function ht(hr){
@@ -3755,6 +3848,13 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
   var el=document.getElementById('result-out'),h="";
   var mnames={3:"March",4:"April",5:"May",6:"June"};
   if(f.sl)h+='<div class="alert">⚠️ Wind Slab Risk — avoid lee aspects (NE/E/SE) below corniced ridgelines.</div>';
+  if(weatherData && weatherData.cape != null) {
+    if(weatherData.cape > 500 && w && w.ws > 11.0) {
+      h+='<div class="alert">⛈️ High convective risk — CAPE '+weatherData.cape+' J/kg. Windows opening after 11 AM carry significant afternoon thunderstorm risk on unstable days. Set a hard turnaround time.</div>';
+    } else if(weatherData.cape > 200 && w && w.ws > 12.0) {
+      h+='<div class="alert" style="border-color:var(--orange);background:rgba(255,165,2,0.10);color:#ffb84d">⛈️ Moderate convective potential — CAPE '+weatherData.cape+' J/kg with a late-opening window. Monitor afternoon development.</div>';
+    }
+  }
   if(f.lo>33)h+='<div class="alert">⛔ No overnight freeze. Corn very unlikely.</div>';
   else if(f.lo>30)h+='<div class="alert">⚠️ Marginal freeze — thin crust possible.</div>';
   var _lineName=line?line.n:(pk.n+' · '+asp);
