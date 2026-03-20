@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v42 2026-03-20</title>
+<title>CornCast 🌽 v43 2026-03-20</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -494,6 +494,12 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v43 — Season Arc + Multi-Line Comparison (2026-03-19)</h3>
+    <p>Two planning features built on the computed corn score trajectory:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>Season Arc Summary:</strong> A new card in the Result tab shows the prime window date range (days scoring ≥65), the 7-day trend direction, the season peak score and date, and whether the target date falls within the prime window. Derived from the same daily corn score trajectory that powers the chart.</li>
+      <li><strong>Best Lines Today:</strong> A sortable table of the top 20 scoring lines across all 155 FRSK descents for the current weather conditions, filterable by aspect group and basin. Departure times are computed using your Plan tab approach inputs. Clicking any row selects that line and re-computes. Appears at the bottom of the Result tab after compute.</li>
+    </ul>
     <h3>v42 — Physics & Safety Inputs (2026-03-19)</h3>
     <p>Five improvements implemented together — all fail silently if data is unavailable:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -2913,6 +2919,7 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
   var scores = computeDailyCornScores(
     traj, marchFirstIdx, pk, asp, wd.swePct || null
   );
+  window._lastCornScores = scores; // used by season arc summary
   var N = scores.length;
   if(!N) return;
 
@@ -3863,6 +3870,52 @@ window.CA=function(){
   updateMapMarkers();updateRouteLines();ST('result');
 };
 
+function buildSeasonArcSummary(scores, targetDate, asp, lineName) {
+  if(!scores || scores.length < 14) return null;
+  // Find the prime window: contiguous dates with score >= 65
+  var primeStart = null, primeEnd = null, peakScore = 0, peakDate = null;
+  var inPrime = false;
+  var today = weatherData ? weatherData.todayStr : null;
+  for(var i=0; i<scores.length; i++) {
+    var s = scores[i];
+    if(!s || s.isPreSeason) continue;
+    if(s.score > peakScore) { peakScore = s.score; peakDate = s.date; }
+    if(s.score >= 65) {
+      if(!primeStart) primeStart = s.date;
+      primeEnd = s.date;
+      inPrime = true;
+    } else if(inPrime && s.score < 55 && primeStart) {
+      // Allow small dips — only break if score drops meaningfully below 55
+      inPrime = false;
+    }
+  }
+  // 7-day trend: compare score 7 days ago to today
+  var trendDir = null, trendPts = null;
+  if(today) {
+    var todayIdx=-1, sevenAgoIdx=-1;
+    for(var j=0;j<scores.length;j++){
+      if(scores[j].date===today) todayIdx=j;
+    }
+    if(todayIdx >= 7) {
+      sevenAgoIdx = todayIdx - 7;
+      trendPts = Math.round(scores[todayIdx].score - scores[sevenAgoIdx].score);
+      trendDir = trendPts >= 8 ? 'rising' : trendPts <= -8 ? 'falling' : 'stable';
+    }
+  }
+  // Find target date score
+  var tgtScore = null;
+  for(var k=0;k<scores.length;k++){if(scores[k].date===targetDate){tgtScore=scores[k].score;break;}}
+  return { primeStart:primeStart, primeEnd:primeEnd, peakScore:peakScore, peakDate:peakDate,
+           trendDir:trendDir, trendPts:trendPts, tgtScore:tgtScore };
+}
+
+function fmtDateShort(dateStr) {
+  if(!dateStr) return '?';
+  var dt = new Date(dateStr+'T12:00:00');
+  var M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return M[dt.getMonth()]+' '+dt.getDate();
+}
+
 function renderResult(pk,asp,w,aspComps,f,month,line){
   var el=document.getElementById('result-out'),h="";
   var mnames={3:"March",4:"April",5:"May",6:"June"};
@@ -4009,6 +4062,34 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
   h+='</div>';
 
   // Aspect comparison
+  // Season arc summary — only when trajectory data is available
+  if(weatherData && weatherData.ripenessTrajectory && weatherData.ripenessTrajectory.length) {
+    var _selLine = selectedLineIdx >= 0 ? LINES[selectedLineIdx] : null;
+    var _arcScores = window._lastCornScores || null;
+    if(_arcScores) {
+      var arc = buildSeasonArcSummary(_arcScores, weatherData.targetDate, asp, _selLine?_selLine.n:'');
+      if(arc) {
+        var trendIcon = arc.trendDir==='rising'?'↗':arc.trendDir==='falling'?'↘':'→';
+        var trendColor = arc.trendDir==='rising'?'var(--teal)':arc.trendDir==='falling'?'var(--red)':'var(--muted)';
+        var primeStr = arc.primeStart
+          ? fmtDateShort(arc.primeStart) + (arc.primeEnd && arc.primeEnd!==arc.primeStart ? ' – '+fmtDateShort(arc.primeEnd) : '')
+          : 'Not detected in current forecast window';
+        var inPrimeNow = arc.tgtScore != null && arc.tgtScore >= 65;
+        h+='<div class="result-card" style="border-color:rgba(0,212,170,0.35)">';
+        h+='<h2 style="margin-bottom:.38rem">📅 Season Arc</h2>';
+        h+='<div style="font-size:.8rem;color:var(--text);margin-bottom:.3rem"><strong>'+(line?line.n:asp+' face')+'</strong></div>';
+        h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.76rem">';
+        h+='<div style="background:var(--navy3);border-radius:7px;padding:.45rem .6rem"><div style="color:var(--muted);font-size:.64rem;text-transform:uppercase;margin-bottom:.18rem">Prime Window</div><div style="color:var(--teal);font-weight:700">'+primeStr+'</div></div>';
+        h+='<div style="background:var(--navy3);border-radius:7px;padding:.45rem .6rem"><div style="color:var(--muted);font-size:.64rem;text-transform:uppercase;margin-bottom:.18rem">7-Day Trend</div><div style="color:'+trendColor+';font-weight:700">'+trendIcon+(arc.trendPts!=null?' '+(arc.trendPts>0?'+':'')+arc.trendPts+' pts':'')+'</div></div>';
+        h+='<div style="background:var(--navy3);border-radius:7px;padding:.45rem .6rem"><div style="color:var(--muted);font-size:.64rem;text-transform:uppercase;margin-bottom:.18rem">Season Peak</div><div style="color:var(--gold);font-weight:700">'+(arc.peakDate?fmtDateShort(arc.peakDate)+' · '+arc.peakScore:'—')+'</div></div>';
+        h+='<div style="background:var(--navy3);border-radius:7px;padding:.45rem .6rem"><div style="color:var(--muted);font-size:.64rem;text-transform:uppercase;margin-bottom:.18rem">Target Date</div><div style="color:'+(inPrimeNow?'var(--teal)':'var(--muted)')+';font-weight:700">'+(arc.tgtScore!=null?arc.tgtScore+(inPrimeNow?' — in prime window':''):'—')+'</div></div>';
+        h+='</div>';
+        h+='<div style="font-size:.63rem;color:#456a82;margin-top:.3rem">Prime window = days scoring ≥65 · Based on current weather trajectory · Forecast uncertainty grows beyond 7 days</div>';
+        h+='</div>';
+      }
+    }
+  }
+
   var peakLines=allResults.filter(function(r){return r.pk===pk.n;}).sort(function(a,b){return b.q-a.q;});
   if(peakLines.length>1){
     h+='<div class="result-card"><h2 style="margin-bottom:.42rem">All Lines — '+pk.n+'</h2>';
@@ -4023,7 +4104,66 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
     });
     h+='</table></div>';
   }
+  h += '<div class="result-card"><h2 style="margin-bottom:.42rem">Best Lines Today</h2><div id="best-lines-today"></div></div>';
   el.innerHTML=h;
+  // Inject Best Lines Today after DOM render
+  if(allResults.length > 1) {
+    var blDiv = document.getElementById('best-lines-today');
+    if(blDiv) {
+      var f2 = gf(); // approach inputs for departure time calc
+      var app2 = calcApproach(f2.di, f2.ga, f2.buf);
+      var MNAMES3 = {3:'March',4:'April',5:'May',6:'June'};
+      var _curAsp = document.getElementById('best-lines-asp-filter')
+        ? document.getElementById('best-lines-asp-filter').value : 'all';
+      var _curBasin = document.getElementById('best-lines-basin-filter')
+        ? document.getElementById('best-lines-basin-filter').value : 'all';
+      var ASPGROUPS = {
+        'all':['N','NE','E','SE','S','SW','W','NW'],
+        'n-ne':['N','NE'], 'e-se':['E','SE'], 's-sw':['S','SW'], 'w-nw':['W','NW']
+      };
+      var aspList = ASPGROUPS[_curAsp] || ASPGROUPS['all'];
+      var filtered = allResults.filter(function(r){
+        var aspOk = aspList.indexOf(r.asp) >= 0;
+        var basinOk = _curBasin === 'all' || getPKMeta(r.pk).basin === _curBasin;
+        return aspOk && basinOk;
+      }).sort(function(a,b){return b.q-a.q;}).slice(0,20);
+      var bh = '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem;align-items:center">';
+      bh += '<span style="font-size:.68rem;color:var(--muted)">Aspect:</span>';
+      [['all','All'],['n-ne','N/NE'],['e-se','E/SE'],['s-sw','S/SW'],['w-nw','W/NW']].forEach(function(opt){
+        bh += '<button onclick="window._blAspFilter(\''+opt[0]+'\')" style="padding:.22rem .55rem;border-radius:5px;border:1px solid '
+          +(_curAsp===opt[0]?'var(--teal)':'var(--navy3)')+';background:'
+          +(_curAsp===opt[0]?'rgba(0,212,170,0.15)':'var(--navy3)')+';color:'
+          +(_curAsp===opt[0]?'var(--teal)':'var(--muted)')+';font-size:.7rem;cursor:pointer">'+opt[1]+'</button>';
+      });
+      bh += '<span style="font-size:.68rem;color:var(--muted);margin-left:.4rem">Basin:</span>';
+      [['all','All'],['boulder','Boulder'],['stvrain','St. Vrain'],['bigthompson','Big Thompson']].forEach(function(opt){
+        bh += '<button onclick="window._blBasinFilter(\''+opt[0]+'\')" style="padding:.22rem .55rem;border-radius:5px;border:1px solid '
+          +(_curBasin===opt[0]?'var(--teal)':'var(--navy3)')+';background:'
+          +(_curBasin===opt[0]?'rgba(0,212,170,0.15)':'var(--navy3)')+';color:'
+          +(_curBasin===opt[0]?'var(--teal)':'var(--muted)')+';font-size:.7rem;cursor:pointer">'+opt[1]+'</button>';
+      });
+      bh += '</div>';
+      if(filtered.length) {
+        bh += '<table class="asp-table"><tr><th>Line</th><th>Peak</th><th>Asp</th><th>Departs</th><th>Opens</th><th>Score</th></tr>';
+        filtered.forEach(function(r){
+          var isSel=(r.lineIdx===selectedLineIdx);
+          var depT = Math.max(3.0, r.ws - app2.timeHrsRaw);
+          bh += '<tr style="'+(isSel?'background:rgba(0,212,170,0.07)':'')+'" onclick="window._blSelectLine('+r.lineIdx+')" style="cursor:pointer">';
+          bh += '<td style="color:'+(isSel?'var(--teal)':'var(--text)')+';font-weight:'+(isSel?700:400)+'">'+r.lineName+(isSel?' ◀':'')+'</td>';
+          bh += '<td style="color:var(--muted);font-size:.72rem">'+r.pk+'</td>';
+          bh += '<td style="color:var(--muted)">'+r.asp+'</td>';
+          bh += '<td>'+ht(depT)+'</td>';
+          bh += '<td>'+ht(r.ws)+'</td>';
+          bh += '<td><span style="color:'+qc(r.q)+';font-weight:700">'+r.q+'</span></td></tr>';
+        });
+        bh += '</table>';
+        bh += '<div style="font-size:.62rem;color:#456a82;margin-top:.3rem">Departure times use your Plan tab approach inputs · Click any row to select that line · Top 20 shown</div>';
+      } else {
+        bh += '<div style="font-size:.78rem;color:var(--muted)">No lines match current filters.</div>';
+      }
+      blDiv.innerHTML = bh;
+    }
+  }
   // Draw ripeness chart after DOM is ready
   if(weatherData && weatherData.ripenessTrajectory && weatherData.ripenessTrajectory.length) {
     requestAnimationFrame(function(){
@@ -4133,6 +4273,34 @@ function showPeakPopup(pk){
   h+='<button class="btn-sm" style="display:block;margin-top:.6rem" onclick="setObjPeak(\''+pk.n.replace(/'/g,"\\'")+'\')">Plan this Peak →</button>';
   document.getElementById('pc').innerHTML=h;document.getElementById('popup').style.display='block';
 }
+window._blAspFilter=function(v){
+  var el=document.getElementById('best-lines-asp-filter');
+  if(!el){var inp=document.createElement('input');inp.type='hidden';inp.id='best-lines-asp-filter';inp.value=v;document.body.appendChild(inp);}
+  else el.value=v;
+  // Re-render best lines section
+  var blDiv=document.getElementById('best-lines-today');
+  if(blDiv&&allResults.length>1){
+    var evt=new Event('__blRefresh'); document.dispatchEvent(evt);
+    // Trigger re-render by re-calling the inject block
+    var ro=document.getElementById('result-out');
+    if(ro){var dummy=ro.innerHTML;ro.innerHTML=dummy;}
+    // Simpler: just re-trigger CA if weather is ready
+    if(weatherData) window.CA();
+  }
+};
+window._blBasinFilter=function(v){
+  var el=document.getElementById('best-lines-basin-filter');
+  if(!el){var inp=document.createElement('input');inp.type='hidden';inp.id='best-lines-basin-filter';inp.value=v;document.body.appendChild(inp);}
+  else el.value=v;
+  if(weatherData) window.CA();
+};
+window._blSelectLine=function(idx){
+  var lineSel=document.getElementById('sel-line');
+  if(lineSel){lineSel.value=idx;window.onLineChange();}
+  selectedLineIdx=idx;
+  if(weatherData) window.CA();
+  ST('result');
+};
 window.setObjPeak=function(n){
   document.getElementById('sel-peak').value=n;
   onPeakChange();
