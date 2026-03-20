@@ -446,7 +446,7 @@ input[type=date]:focus{border-color:var(--teal)}
     <div class="pipe-step final-step">
       <div class="pipe-header"><span class="pipe-num">✓</span><span class="pipe-title">Final Score (0–100)</span></div>
       <div class="pipe-explain">All pipeline outputs combine into a single score. The raw number is normalized so that a benchmark SE-facing corn objective at 12,500' in March under near-perfect conditions scores 100. The calibration target represents a clean, well-sheltered southeast couloir with reliable coverage and consistent solar exposure from first light through mid-morning — representative of the premier spring corn conditions in the Indian Peaks. A score of 80 means conditions are strongly in your favor. A score of 30 means you might find corn in sheltered pockets but shouldn't plan your day around it.</div>
-      <div class="formula-box">Score bands:<br>  75–100  Excellent — deep uniform freeze, 2+ hr window, classic spring skiing<br>  50–74   Good — reliable corn, 1–2 hr window, may vary slightly across face<br>  25–49   Marginal — short window, thin crust, or patchy; worth checking<br>  0–24    Poor — theoretical window only; too short to plan around<br><br>Scoring components:<br>  fqScore (0–28)   — freeze quality × grain gate: (0.35 + grainQuality × 0.65)<br>  radScore (0–18)  — effective radiation × 14<br>  cqScore (1–9)    — crust quality bell curve, peak at 0.42<br>  durBonus (0–4)   — +4 if ≥2h, +2 if ≥1.2h<br>  grainTerm (0–5)  — grainQuality × 5 (polycrystal structure → ski quality)<br><br>Grain gate: freeze on immature grains = ice, not corn. Developed polycrystals<br>unlock full freeze score; undeveloped facets get ≤48% credit.<br>Seasonal arc emerges from pack physics — no calendar multiplier.</div>
+      <div class="formula-box">Score bands:<br>  75–100  Excellent — deep uniform freeze, 2+ hr window, classic spring skiing<br>  50–74   Good — reliable corn, 1–2 hr window, may vary slightly across face<br>  25–49   Marginal — short window, thin crust, or patchy; worth checking<br>  0–24    Poor — theoretical window only; too short to plan around<br><br>Scoring components:<br>  fqScore (0–28)   — freeze quality bell, shaped by matPen(grainQuality) on effFQ<br>  radScore (0–18)  — effective radiation × 14<br>  cqScore (1–9)    — crust quality bell curve, peak at 0.42<br>  durBonus (0–4)   — +4 if ≥2h, +2 if ≥1.2h<br><br>April emerges as best from physics compounding:<br>  grainQuality near peak → matPen ≈ 0 → full fqScore<br>  crustQ near 0.42 bell peak → best cqScore<br>  thermalMass peaks at CCC 0.30–0.70 → longer window → more durBonus Developed polycrystals<br>unlock full freeze score; undeveloped facets get ≤48% credit.<br>Seasonal arc emerges from pack physics — no calendar multiplier.</div>
     </div>
   </div>
 
@@ -3507,10 +3507,8 @@ function cornWindow(pk,asp,f,month){
   // Warm nights barely refreeze (too warm). Bell rewards the physically correct range.
   var fqPeak = 0.55;
   var fqScore = effFQ <= fqPeak ? (effFQ / fqPeak) * 28 : 28 - (effFQ - fqPeak) * 14;
-  // Grain gate: freeze on immature grains produces ice, not corn. Developed
-  // polycrystals form melt-freeze bonds; undeveloped facets just make crust.
-  // Floor 0.35 = even bad grains create *some* hardened surface.
-  fqScore *= (0.35 + liveGrainQuality * 0.65);
+  // grainQuality already shapes fqScore through matPen on effFQ — no separate
+  // grain gate needed. April emerges as best from physics compounding, not forcing.
   phys += Math.max(3, Math.min(28, fqScore));
   phys += Math.min(18, effRad * 14);
   // crustQ bell curve: peaks at 0.42 (consolidated melt-freeze polycrystals)
@@ -3521,21 +3519,15 @@ function cornWindow(pk,asp,f,month){
   var cqScore = crustQ <= cqPeak ? (crustQ / cqPeak) * 9 : 9 - (crustQ - cqPeak) * 9;
   phys += Math.max(1, Math.min(9, cqScore));
   if(dur>=2.0)phys+=4;else if(dur>=1.2)phys+=2;
-  // Direct grain quality term: polycrystalline structure directly affects
-  // ski quality — consistent speed, predictable surface, clean turns.
-  phys += liveGrainQuality * 5;
+  // No direct grain term — grainQuality and thermalMass shape the score through
+  // their physics steps. April produces highest scores because matPen is near-zero
+  // (full fqScore), crustQ peaks near 0.42 (best cqScore), and thermalMass peaks
+  // in the CCC 0.30–0.70 range. The season arc emerges from physics, not bonuses.
   phys-=Math.min(15,windScour*25);if(f_lo>30)phys-=8;
-  var rawScore = phys; // terrain effects already embedded in steps
+  var rawScore = phys; // terrain effects embedded in steps
   rawScore+=(ad.ez-12000)/1600*3;
-  // Monthly radBoost multiplier removed — seasonal arc now emerges from
-  // packRipeness, grainQuality, and thermalMass physics functions.
-  // Graduated short-window penalty: literature says 1–2h is normal good corn
-  // Binary 0.75h cliff was punishing typical May windows of 0.80–0.95h
   if(dur<0.35)rawScore*=0.20;else if(dur<0.60)rawScore*=0.55;else if(dur<0.90)rawScore*=0.80;
   rawScore *= lateOpenPenalty;
-  // Pack Readiness multiplier removed — effects now embedded in grainQuality + thermalMass
-  // v44 calibration: console.log for benchmark verification
-  if (typeof console !== 'undefined' && rawScore > 35) console.log('v44 rawScore:', rawScore.toFixed(2), 'grainQ:', liveGrainQuality.toFixed(3), 'thermalM:', liveThermalMass.toFixed(3), 'packRip:', packRipeness.toFixed(3));
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
   var inf,qlabel;
   if(f_lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
