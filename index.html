@@ -435,7 +435,7 @@ input[type=date]:focus{border-color:var(--teal)}
         Three components rate each face on a 1–3 scale. <strong>Snow Retention:</strong> does this face reliably hold a deep continuous snowpack through spring, or is it wind-stripped and rocky? <strong>Aspect Purity:</strong> does the entire face receive uniform solar input at the same time, so the corn window opens consistently across the slope rather than in patchy zones? <strong>Wind Shelter:</strong> is the refreeze surface protected from overnight scour?<br><br>
         These ratings are based on published route descriptions and first-hand field knowledge — a deliberate human judgment layer on top of the physics, and a known source of subjectivity in the model.
       </div>
-      <div class="formula-box">q = (SnowRetention + AspectPurity + WindShelter) / 9    [range: 0.33 – 1.00]<br>score = physicsScore × (0.50 + q × 0.50)<br><br>Worst terrain (q=0.33): preserves 67% of physics score<br>Best terrain  (q=1.00): passes 100% of physics score through<br>Terrain scales the signal — it never eliminates it entirely</div>
+      <div class="formula-box">q = (SnowRetention + AspectPurity + WindShelter) / 9    [range: 0.33 – 1.00]<br><br>Terrain effects are now embedded directly in physics steps:<br>  sr → srDepthMult (face snow depth) + srPatchFactor (surface quality)<br>  ap → apDurFactor (window duration consistency)<br>  we → ad.wx inside windScour (freeze quality + duration)<br><br>No separate terrain multiplier — double-counting eliminated in v44.</div>
       <div class="pipe-ref">Roach (2001), Colorado's Indian Peaks Wilderness, Fulcrum Publishing; frontrangeskimo.com trip reports; first-hand field observation. Not GIS-derived — a known model limitation.</div>
       <div class="pipe-feeds">↓ Final multiplier on the physics score → produces the 0–100 output</div>
     </div>
@@ -446,7 +446,7 @@ input[type=date]:focus{border-color:var(--teal)}
     <div class="pipe-step final-step">
       <div class="pipe-header"><span class="pipe-num">✓</span><span class="pipe-title">Final Score (0–100)</span></div>
       <div class="pipe-explain">All pipeline outputs combine into a single score. The raw number is normalized so that a benchmark SE-facing corn objective at 12,500' in March under near-perfect conditions scores 100. The calibration target represents a clean, well-sheltered southeast couloir with reliable coverage and consistent solar exposure from first light through mid-morning — representative of the premier spring corn conditions in the Indian Peaks. A score of 80 means conditions are strongly in your favor. A score of 30 means you might find corn in sheltered pockets but shouldn't plan your day around it.</div>
-      <div class="formula-box">Score bands:<br>  75–100  Excellent — deep uniform freeze, 2+ hr window, classic spring skiing<br>  50–74   Good — reliable corn, 1–2 hr window, may vary slightly across face<br>  25–49   Marginal — short window, thin crust, or patchy; worth checking<br>  0–24    Poor — theoretical window only; too short to plan around<br><br>Three metrics shown in results:<br>  Terrain %    — mountain quality (snow retention × aspect purity × wind shelter)<br>  Freeze %     — overnight cold strength (how hard the crust bonded)<br>  Snow Surface % — depth &amp; freshness of snow available to refreeze<br>  These are the three physical inputs; the score combines all of them.<br><br>Benchmark: S. Arapaho SE · March · 2°F overnight · clear sky · 3 mph wind · 10" snow / 1 day old</div>
+      <div class="formula-box">Score bands:<br>  75–100  Excellent — deep uniform freeze, 2+ hr window, classic spring skiing<br>  50–74   Good — reliable corn, 1–2 hr window, may vary slightly across face<br>  25–49   Marginal — short window, thin crust, or patchy; worth checking<br>  0–24    Poor — theoretical window only; too short to plan around<br><br>Scoring components:<br>  fqScore (0–28)   — freeze quality × grain gate: (0.35 + grainQuality × 0.65)<br>  radScore (0–18)  — effective radiation × 14<br>  cqScore (1–9)    — crust quality bell curve, peak at 0.42<br>  durBonus (0–4)   — +4 if ≥2h, +2 if ≥1.2h<br>  grainTerm (0–5)  — grainQuality × 5 (polycrystal structure → ski quality)<br><br>Grain gate: freeze on immature grains = ice, not corn. Developed polycrystals<br>unlock full freeze score; undeveloped facets get ≤48% credit.<br>Seasonal arc emerges from pack physics — no calendar multiplier.</div>
     </div>
   </div>
 
@@ -589,7 +589,7 @@ input[type=date]:focus{border-color:var(--teal)}
 <script>
 (function(){
 "use strict";
-var RAW_MAX=54.0; // v44: recalibrated after removing terrain mult + pack readiness mult
+var RAW_MAX=61.0; // v44: recalibrated after fqScore grain gate + grain term + monthly mult removal
 function tq(sr,ap,we){return{sr:sr,ap:ap,we:we,q:(sr+ap+we)/9};}
 
 // ── PEAKS — coordinates verified against USGS summit data ────────────────
@@ -3507,6 +3507,10 @@ function cornWindow(pk,asp,f,month){
   // Warm nights barely refreeze (too warm). Bell rewards the physically correct range.
   var fqPeak = 0.55;
   var fqScore = effFQ <= fqPeak ? (effFQ / fqPeak) * 28 : 28 - (effFQ - fqPeak) * 14;
+  // Grain gate: freeze on immature grains produces ice, not corn. Developed
+  // polycrystals form melt-freeze bonds; undeveloped facets just make crust.
+  // Floor 0.35 = even bad grains create *some* hardened surface.
+  fqScore *= (0.35 + liveGrainQuality * 0.65);
   phys += Math.max(3, Math.min(28, fqScore));
   phys += Math.min(18, effRad * 14);
   // crustQ bell curve: peaks at 0.42 (consolidated melt-freeze polycrystals)
@@ -3517,18 +3521,21 @@ function cornWindow(pk,asp,f,month){
   var cqScore = crustQ <= cqPeak ? (crustQ / cqPeak) * 9 : 9 - (crustQ - cqPeak) * 9;
   phys += Math.max(1, Math.min(9, cqScore));
   if(dur>=2.0)phys+=4;else if(dur>=1.2)phys+=2;
+  // Direct grain quality term: polycrystalline structure directly affects
+  // ski quality — consistent speed, predictable surface, clean turns.
+  phys += liveGrainQuality * 5;
   phys-=Math.min(15,windScour*25);if(f_lo>30)phys-=8;
   var rawScore = phys; // terrain effects already embedded in steps
   rawScore+=(ad.ez-12000)/1600*3;
-  rawScore*=((ma.radBoost||{})[asp]||1)*0.85+0.15;
+  // Monthly radBoost multiplier removed — seasonal arc now emerges from
+  // packRipeness, grainQuality, and thermalMass physics functions.
   // Graduated short-window penalty: literature says 1–2h is normal good corn
   // Binary 0.75h cliff was punishing typical May windows of 0.80–0.95h
   if(dur<0.35)rawScore*=0.20;else if(dur<0.60)rawScore*=0.55;else if(dur<0.90)rawScore*=0.80;
   rawScore *= lateOpenPenalty;
   // Pack Readiness multiplier removed — effects now embedded in grainQuality + thermalMass
   // v44 calibration: console.log for benchmark verification
-  // Benchmark: SE couloir, March, 22°F low, clear, SWE=28", depth 42", sr=3/ap=3/we=3, no wind
-  if (typeof console !== 'undefined' && rawScore > 45) console.log('v44 rawScore:', rawScore.toFixed(2), 'grainQ:', liveGrainQuality.toFixed(3), 'thermalM:', liveThermalMass.toFixed(3), 'packRip:', packRipeness.toFixed(3));
+  if (typeof console !== 'undefined' && rawScore > 35) console.log('v44 rawScore:', rawScore.toFixed(2), 'grainQ:', liveGrainQuality.toFixed(3), 'thermalM:', liveThermalMass.toFixed(3), 'packRip:', packRipeness.toFixed(3));
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
   var inf,qlabel;
   if(f_lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
