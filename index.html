@@ -1628,7 +1628,7 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
 
   var forecastUrl = 'https://api.open-meteo.com/v1/forecast'
     +'?latitude='+pk.la+'&longitude='+pk.lo
-    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant,cape'
+    +'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,windspeed_10m_max,cloudcover_mean,winddirection_10m_dominant'
     +'&hourly=temperature_2m,cloudcover,wind_speed_10m,shortwave_radiation,direct_radiation'
     +'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'
     +'&timezone=America%2FDenver'
@@ -1653,11 +1653,30 @@ function fetchWeatherData(pk, targetDate, swePct, cb) {
     +'&start_date='+todayStr+'&end_date='+fmtDate(fcastEnd)
     +'&models=gfs_seamless';
   var ensembleP = fetchJsonWithTimeout(ensembleUrl, 10000).catch(function(){return null;});
-  Promise.all([archiveP, forecastP, snwdP, ensembleP]).then(function(results) {
+  // CAPE fetched separately — not available in daily free tier, use hourly max
+  var capeUrl = 'https://api.open-meteo.com/v1/forecast'
+    +'?latitude='+pk.la+'&longitude='+pk.lo
+    +'&hourly=cape'
+    +'&timezone=America%2FDenver'
+    +'&start_date='+todayStr+'&end_date='+fmtDate(fcastEnd)
+    +'&models=best_match';
+  var capeP = fetchJsonWithTimeout(capeUrl, 8000).catch(function(){return null;});
+  Promise.all([archiveP, forecastP, snwdP, ensembleP, capeP]).then(function(results) {
     var archiveJson = results[0];
     var forecastJson = results[1];
     var snwdData = results[2];
     var ensembleJson = results[3];
+    var capeJson = results[4];
+    // Inject daily max CAPE into forecastJson for processWeatherData
+    if(capeJson && capeJson.hourly && capeJson.hourly.time && capeJson.hourly.cape && forecastJson && forecastJson.daily) {
+      var capeByDate = {};
+      capeJson.hourly.time.forEach(function(t, i) {
+        var d = t.slice(0,10);
+        var v = capeJson.hourly.cape[i];
+        if(v !== null && (capeByDate[d] === undefined || v > capeByDate[d])) capeByDate[d] = v;
+      });
+      forecastJson.daily.cape = (forecastJson.daily.time || []).map(function(d){ return capeByDate[d] != null ? Math.round(capeByDate[d]) : null; });
+    }
     processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, todayStr, snwdData, cb, ensembleJson);
   });
 }
