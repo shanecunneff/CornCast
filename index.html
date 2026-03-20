@@ -306,7 +306,7 @@ input[type=date]:focus{border-color:var(--teal)}
         There is a second effect: the <em>thermal state</em> of the full snowpack column also degrades through the season. A March snowpack at 12,000' is cold all the way to the bottom — the overnight freeze can penetrate 30–50cm, creating a deep structural crust. By late May or June, the entire column is often <em>isothermal</em> — uniformly at 32°F with no cold reserve. The overnight freeze can now only penetrate 5–10cm into the surface, creating a thin veneer regardless of how cold it got. The corn window still opens, but it opens faster and closes sooner.<br><br>
         CornCast applies both effects as graduated monthly penalties.
       </div>
-      <div class="formula-box">When live Open-Meteo archive is available (primary model):<br>matPen = max(0, min(0.20, (1 − CCC) × 0.22 − ftCycles × 0.015))<br>isoPrb = surfaceRipeness × 0.60 + columnRipeness × 0.40 + depthAdj<br><br>Fallback when archive fails (calendar defaults only):<br>         March  April  May    June<br>matPen:    0%     6%    14%    22%<br>isoPrb:    5%    15%    40%    70%</div>
+      <div class="formula-box">When live Open-Meteo archive is available (primary model):<br>packRipeness = surfaceRipeness × 0.60 + columnRipeness × 0.40 + depthAdj<br>grainQuality = 0.50 × packRipenessGrainCurve(pr) + 0.30 × recentCycles + 0.20 × min(1, ftCyclesTotal/8)<br>thermalMass  = 0.65 × cccComponent + 0.35 × sweComponent + collapseAdj<br>matPen = max(0, min(0.20, (1 − grainQuality) × 0.20))  [derived]<br><br>Fallback when archive fails (calendar defaults only):<br>         March  April  May    June<br>packRipeness:  5%    15%    40%    70%</div>
       <div class="pipe-ref">Colbeck (1987), IAHS 162 — crystal metamorphism in seasonal snow; Armstrong &amp; Brun (2008), Snow and Climate, Cambridge; Clow et al. (2012), JGR Atmospheres — Front Range snowpack trends at elevation</div>
     </div>
 
@@ -374,7 +374,7 @@ input[type=date]:focus{border-color:var(--teal)}
         The rate at which that debt is repaid depends on two things: how much solar energy is arriving at the surface (driven by aspect, cloud cover, and the radiation calculations in Steps 2–3) and how quickly the morning air is warming (dawn temperature to afternoon high). A bright, sunny aspect on a clear morning with rapidly rising temperatures pays off the debt quickly. A heavily clouded northeast face in March may never pay it off during reasonable skiing hours — the model caps melt delay at 4.5 hours for exactly this reason.<br><br>
         One notable interaction: a snowpack that is already isothermal actually speeds up corn onset. Because the pack had no cold reserve, the overnight crust was thinner to begin with, so the thermal debt is smaller. The corn opens sooner — but the same thin crust means the window will close sooner too.
       </div>
-      <div class="formula-box">f_da = dawnTemp + lapseAdj   [ski zone dawn temp]<br>meltDelay = (effFQ × max(0, 33 − f_da))<br>           ÷ (effRad × max(1.0, morningRise/6) + 0.01)<br>meltDelay × (1 − isoMeltFactor)   [isoPrb>0.50 shrinks delay: thin crust thaws fast]<br>→ Capped at 2.0 hours<br>→ cornOpens = max(sunHitTime, sunHitTime + meltDelay × 1.05)</div>
+      <div class="formula-box">f_da = dawnTemp + lapseAdj   [ski zone dawn temp]<br>meltDelay = (effFQ × max(0, 33 − f_da))<br>           ÷ (effRad × max(1.0, morningRise/6) + 0.01)<br>meltDelay × (1 − ripenMeltFactor)   [packRipeness>0.50 shrinks delay: thin crust thaws fast]<br>→ Capped at 2.0 hours<br>→ cornOpens = max(sunHitTime, sunHitTime + meltDelay × 1.05)</div>
       <div class="pipe-output">📍 OUTPUT A: Corn Opens = sun hits face + melt delay</div>
       <div class="pipe-ref">Kustas &amp; Rango (1994), Water Resources Research 30(5) — simplified energy budget for snowmelt onset</div>
       <div class="pipe-feeds">↓ Subtract your approach time from Corn Opens to get your trailhead departure time</div>
@@ -391,7 +391,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>Consolidated spring pack (more than ~10 days since the last storm)</strong> behaves differently. Once grains have rounded and stabilized into large melt-freeze polycrystals, the aging process essentially stops — grain size no longer changes. What matters then is whether there is enough surface material to refreeze at all, and whether the seasonal maturity penalties have weakened the bonds. A deep consolidated April pack still produces real corn. A thin consolidated June pack produces marginal corn regardless of how cold the night was.<br><br>
         The model takes whichever score is higher — the fresh storm calculation or the consolidated pack floor.
       </div>
-      <div class="formula-box">Storm layer:  crustQ = (stormDepth÷8) × exp(−days×0.10) × (1 − matPen×0.80)<br>              [8" is full potential; halves every 7 days]<br><br>Pack floor:   crustQ = 0.35 × (faceSnwdIn÷36) × (1−matPen×0.90) × (1−isoPrb×0.40)<br>              [uses full-pack depth at ski zone from elevation gradient — NOT storm depth]<br>              [faceSnwdIn from SNOTEL+OM regression adjusted for SR wind-loading]<br><br>crustQ = max(stormLayer, packFloor, 0.05)<br>crustQ += sweAdj          [−0.12 to +0.07 from absolute SWE inches]<br>crustQ += ftBonus         [up to +0.12 for 4+ freeze-thaw cycles in 14 days]<br>crustQ × densityMult      [0.85–1.08 from SWE÷depth ratio]<br><br>Snow Surface % = final crustQ — "how much material is available to refreeze?"</div>
+      <div class="formula-box">Storm layer:  crustQ = (stormDepth÷8) × exp(−days×0.10) × (0.70 + grainQuality×0.30)<br>              [8" is full potential; halves every 7 days]<br><br>Pack floor:   crustQ = 0.35 × (faceSnwdIn÷36) × (0.60 + grainQuality×0.40)<br>              [uses full-pack depth at ski zone from elevation gradient — NOT storm depth]<br>              [faceSnwdIn from SNOTEL+OM regression adjusted for SR wind-loading]<br><br>crustQ = max(stormLayer, packFloor, 0.05)<br>crustQ × srPatchFactor    [sr=3: 1.00, sr=2: 0.92, sr=1: 0.82 — surface patchiness]<br>crustQ += sweAdj          [−0.12 to +0.07 from absolute SWE inches]<br>crustQ × densityMult      [0.85–1.08 from SWE÷depth ratio]<br><br>Snow Surface % = final crustQ — "how much material is available to refreeze?"</div>
       <div class="pipe-ref">Fierz et al. (2009), UNESCO-IHP — International Classification for Seasonal Snow, melt-freeze grain classification; Colbeck (1986), Acta Metallurgica 34 — grain coarsening in wet snow; Colbeck (1979), J. Colloid Interface Science — ice-to-ice bond strength; Colbeck (1997), CRREL Report 97-10 — sintering and grain equilibrium</div>
       <div class="pipe-feeds">↓ Primary driver of window duration (Step 6) and contributes directly to final score</div>
     </div>
@@ -420,7 +420,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>A counterintuitive result:</strong> higher-radiation aspects (SE, S) tend to produce slightly longer windows than lower-radiation aspects for the same crust quality. Intense, uniform solar loading melts the surface consistently across the whole face — every square meter enters the corn state at the same time. Low-radiation faces melt patchily, creating inconsistent micro-conditions across the slope even though the aggregate window technically hasn't closed.<br><br>
         A warm afternoon high accelerates the transition to slush: a 55°F day burns through a corn window faster than a 42°F day. Wind above about 18 mph mechanically disrupts the softened surface and shortens the window.
       </div>
-      <div class="formula-box">rawDur = crustQ × 1.6 + effRad × 1.4<br>       − max(0, (f_hi_skizone − 46) × 0.085)   [penalty starts at 46°F, not 32°F]<br>       − windDurPenalty                          [above 18 mph; scaled by aspect + per-line exposure]<br>       + sweDurBonus                             [−0.30 to +0.18 h from SWE inches]<br>rawDur × (0.72 + packReadiness × 0.48)          [pack cycling quality multiplier]<br>rawDur × (1 − isoPrb × 0.25)                    [isothermal pack collapses window faster]<br>→ Clamped 0.2 – 4.0 hours<br>→ cornCloses = cornOpens + duration</div>
+      <div class="formula-box">rawDur = crustQ × 1.6 + effRad × 1.4<br>       − max(0, (f_hi_skizone − 46) × 0.085)   [penalty starts at 46°F, not 32°F]<br>       − windDurPenalty                          [above 18 mph; scaled by aspect + per-line exposure]<br>       + sweDurBonus                             [−0.30 to +0.18 h from SWE inches]<br>rawDur × (0.72 + thermalMass × 0.48)             [CCC + SWE cold reserve; collapse above packRipeness 0.75]<br>rawDur × apDurFactor                             [ap=3: 1.00, ap=2: 0.95, ap=1: 0.88]<br>→ Clamped 0.2 – 4.0 hours<br>→ cornCloses = cornOpens + duration</div>
       <div class="pipe-output">📍 OUTPUT B: Corn Closes = corn opens + duration</div>
       <div class="pipe-feeds">↓ Corn Opens and Corn Closes together define the window; your arrival must fall between them</div>
     </div>
@@ -589,7 +589,7 @@ input[type=date]:focus{border-color:var(--teal)}
 <script>
 (function(){
 "use strict";
-var RAW_MAX=71.8;
+var RAW_MAX=54.0; // v44: recalibrated after removing terrain mult + pack readiness mult
 function tq(sr,ap,we){return{sr:sr,ap:ap,we:we,q:(sr+ap+we)/9};}
 
 // ── PEAKS — coordinates verified against USGS summit data ────────────────
@@ -966,10 +966,10 @@ var BASE_RAD={N:0.18,NE:0.55,E:0.88,SE:1.25,S:1.38,SW:1.20,W:0.72,NW:0.30};
 var BASE_SUN={N:null,NE:7.8,E:6.9,SE:7.3,S:9.5,SW:12.0,W:13.5,NW:15.2};
 var WIND_ASP={N:0.55,NE:0.45,E:0.35,SE:0.28,S:0.50,SW:0.72,W:1.00,NW:0.90};
 var MONTH_ADJ={
-  3:{radBoost:{N:.60,NE:.75,E:.90,SE:1.10,S:1.18,SW:1.08,W:.85,NW:.55},sunShift:{N:0,NE:.8,E:.5,SE:.3,S:-.2,SW:-.3,W:-.3,NW:.5},isothermProb:0.05},
-  4:{radBoost:{N:1,NE:1,E:1,SE:1,S:1,SW:1,W:1,NW:1},sunShift:{N:0,NE:0,E:0,SE:0,S:0,SW:0,W:0,NW:0},isothermProb:0.15},
-  5:{radBoost:{N:1.30,NE:1.25,E:1.10,SE:.95,S:.90,SW:.92,W:1.05,NW:1.15},sunShift:{N:0,NE:-.5,E:-.4,SE:-.2,S:.3,SW:.5,W:.4,NW:-.3},isothermProb:0.40},
-  6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},isothermProb:0.70},
+  3:{radBoost:{N:.60,NE:.75,E:.90,SE:1.10,S:1.18,SW:1.08,W:.85,NW:.55},sunShift:{N:0,NE:.8,E:.5,SE:.3,S:-.2,SW:-.3,W:-.3,NW:.5},packRipenessBaseline:0.05},
+  4:{radBoost:{N:1,NE:1,E:1,SE:1,S:1,SW:1,W:1,NW:1},sunShift:{N:0,NE:0,E:0,SE:0,S:0,SW:0,W:0,NW:0},packRipenessBaseline:0.15},
+  5:{radBoost:{N:1.30,NE:1.25,E:1.10,SE:.95,S:.90,SW:.92,W:1.05,NW:1.15},sunShift:{N:0,NE:-.5,E:-.4,SE:-.2,S:.3,SW:.5,W:.4,NW:-.3},packRipenessBaseline:0.40},
+  6:{radBoost:{N:1.60,NE:1.50,E:1.20,SE:.88,S:.82,SW:.85,W:1.10,NW:1.35},sunShift:{N:0,NE:-.9,E:-.7,SE:-.3,S:.5,SW:.8,W:.6,NW:-.5},packRipenessBaseline:0.70},
 };
 
 var selectedLineIdx=-1,allResults=[],leafletMap=null,pkMarkers=[],routePolylines=[];
@@ -1446,11 +1446,77 @@ function computeColumnColdContent(seasonDays, swePct, month, snwdInches) {
   return Math.max(0.05, Math.min(0.95, ccc));
 }
 
-// ── Combined effective isothermal probability ──
+// ── Combined pack ripeness index ──
 // Surface governs overnight refreeze (60%); Column governs window collapse speed (40%)
-function effectiveIsoPrbFn(surfaceRipeness, columnColdContent) {
+function computePackRipeness(surfaceRipeness, columnColdContent) {
   var columnRipeness = 1.0 - columnColdContent; // invert: low CCC = high column ripeness
   return surfaceRipeness * 0.60 + columnRipeness * 0.40;
+}
+
+// ── Pack ripeness grain curve — right-skewed bell ──
+// Maps pack ripeness to grain quality. Asymmetric: underdeveloped (too cold)
+// is recoverable, overdeveloped (too warm) degrades faster and irreversibly.
+function packRipenessGrainCurve(pr) {
+  if      (pr < 0.10) return 0.40 + (pr / 0.10) * 0.32;           // pre-corn: rising fast
+  else if (pr < 0.28) return 0.72 + ((pr - 0.10) / 0.18) * 0.28;  // developing: approaching peak
+  else if (pr < 0.45) return 1.00 - ((pr - 0.28) / 0.17) * 0.12;  // prime zone: slow decline
+  else if (pr < 0.65) return 0.88 - ((pr - 0.45) / 0.20) * 0.33;  // coarsening: steeper
+  else if (pr < 0.85) return 0.55 - ((pr - 0.65) / 0.20) * 0.35;  // over-coarsened: steep
+  else                return 0.20 - ((pr - 0.85) / 0.15) * 0.12;  // near-collapse
+}
+
+// ── Recency-weighted freeze-thaw cycle count ──
+// Half-life 14 days: a cycle from 14 days ago counts at 0.5×,
+// 28 days ago at 0.25×. A warm May after a great March correctly
+// shows degraded grain signal.
+function computeRecentCycles(allDays, targetDate) {
+  var HALF_LIFE = 14;
+  var score = 0;
+  var targetDt = new Date(targetDate + 'T12:00:00');
+  for (var i = allDays.length - 1; i >= 1; i--) {
+    var d = allDays[i];
+    if (d.date > targetDate) continue;
+    var daysAgo = Math.round((targetDt - new Date(d.date + 'T12:00:00')) / 86400000);
+    if (daysAgo > 60) break;
+    if (allDays[i-1].tmax > 36 && d.tmin < 28) {
+      score += Math.pow(0.5, daysAgo / HALF_LIFE);
+    }
+  }
+  return Math.min(1.0, score / 4.0);
+}
+
+// ── Grain quality — replaces matPen everywhere ──
+// How well the snowpack crystal structure will produce and sustain corn bonds.
+function grainQuality(packRipeness, recentCycles, ftCyclesTotal) {
+  var ripenessComponent = packRipenessGrainCurve(packRipeness);
+  var cycleComponent = recentCycles;
+  var maturityComponent = Math.min(1.0, ftCyclesTotal / 8);
+  return 0.50 * ripenessComponent + 0.30 * cycleComponent + 0.20 * maturityComponent;
+}
+
+// ── Thermal mass — how much cold energy sustains the corn state ──
+// Replaces CCC range component of computePackReadiness and the monotonic
+// (1 − packRipeness × 0.25) duration penalty in Step 6.
+function thermalMass(liveCCC, sweInches, packRipeness) {
+  var cccComponent;
+  if      (liveCCC < 0.30) cccComponent = (liveCCC / 0.30) * 0.65;
+  else if (liveCCC < 0.70) cccComponent = 0.65 + ((liveCCC - 0.30) / 0.40) * 0.35;
+  else if (liveCCC < 0.85) cccComponent = 1.00 - ((liveCCC - 0.70) / 0.15) * 0.15;
+  else                     cccComponent = 0.85 - ((liveCCC - 0.85) / 0.15) * 0.20;
+
+  var sweComponent;
+  if      (sweInches == null) sweComponent = 0.75;
+  else if (sweInches < 8)     sweComponent = 0.30 + (sweInches / 8) * 0.35;
+  else if (sweInches < 24)    sweComponent = 0.65 + ((sweInches - 8) / 16) * 0.35;
+  else                        sweComponent = 1.00;
+
+  var collapseAdj = packRipeness > 0.75
+    ? -((packRipeness - 0.75) / 0.25) * 0.30
+    : 0;
+
+  return Math.max(0.10, Math.min(1.0,
+    0.65 * cccComponent + 0.35 * sweComponent + collapseAdj
+  ));
 }
 
 // ── Dual-endpoint fetch: archive (season) + forecast (16-day forward) ──
@@ -1762,6 +1828,9 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     }
   }
 
+  // Recency-weighted freeze-thaw cycles for grainQuality
+  var recentCyclesValue = computeRecentCycles(allDays, targetDate);
+
   // Resolve current SNWD depth from SNOTEL data for CCC depth-dependent depletion
   currentSNWDInches = null; // reset module-level var for this fetch
   if (snwdData && snwdData.days) {
@@ -1778,7 +1847,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
   if(!archiveFailed) {
     surfaceRipeness = computeSurfaceRipeness(histDays14, month);
     columnColdContent = computeColumnColdContent(seasonDaysForCCC, swePct, month, currentSNWDInches);
-    // 5D — Apply SWE trend to surfaceRipeness before effectiveIsoPrb is computed
+    // 5D — Apply SWE trend to surfaceRipeness before packRipeness is computed
     if (currentSWEData && currentSWEData.sweTrend != null && !isNaN(currentSWEData.sweTrend)) {
       var st5d = currentSWEData.sweTrend;
       if (st5d < -8) {
@@ -1789,7 +1858,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
         surfaceRipeness = Math.max(0.03, surfaceRipeness * 0.95);
       }
     }
-    effIsoPrb = effectiveIsoPrbFn(surfaceRipeness, columnColdContent);
+    effIsoPrb = computePackRipeness(surfaceRipeness, columnColdContent);
   } else {
     // Archive failed: surface-only mode using forecast backfill (graceful fallback)
     surfaceRipeness = computeSurfaceRipeness(histDays14, month);
@@ -1954,7 +2023,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     var ccc, eip;
     if(!archiveFailed) {
       ccc = computeColumnColdContent(sDays, swePct, dm, currentSNWDInches);
-      eip = effectiveIsoPrbFn(sr, ccc);
+      eip = computePackRipeness(sr, ccc);
     } else {
       var SB2 = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
       ccc = SB2[dm] || 0.35;
@@ -2086,7 +2155,9 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     ftCycles: ftCycles,
     ftCyclesTotal: ftCyclesTotal,
     freezeHours: freezeHours > 0 ? freezeHours : null,
+    recentCycles: recentCyclesValue,
     packRipeness: effIsoPrb,
+    packRipenessIsLive: !archiveFailed,
     days: allDays,
     histDays: histDays14,
     histDays14: histDays14,
@@ -2153,7 +2224,7 @@ function renderWeatherStrip(wd, targetDate) {
   var labelEl = document.getElementById('wx-strip-label');
   var sr = wd.surfaceRipeness;
   var ccc = wd.columnColdContent;
-  var eip = wd.effectiveIsoPrb;
+  var eip = wd.packRipeness;
   var archiveNote = wd.archiveFailed ? ' · archive unavailable' : '';
   // Display as pack health: high = good conditions (inverted from internal ripeness score)
   var sfqPct = Math.round((1 - sr) * 100);
@@ -2438,19 +2509,19 @@ function computeDailyCornScores(traj, marchFirstIdx, pk, asp, swePct) {
       sl:    false                    // skip wind slab alert for trajectory
     };
 
-    // Temporarily override weatherData.effectiveIsoPrb with this day's value
-    // so cornWindow() picks up the correct isothermal probability for the day
-    var savedIsoPrb = null;
+    // Temporarily override weatherData.packRipeness with this day's value
+    // so cornWindow() picks up the correct pack ripeness for the day
+    var savedPackRipeness = null;
     if(window.weatherData) {
-      savedIsoPrb = window.weatherData.effectiveIsoPrb;
-      window.weatherData.effectiveIsoPrb = t.effectiveIsoPrb;
+      savedPackRipeness = window.weatherData.packRipeness;
+      window.weatherData.packRipeness = t.effectiveIsoPrb;
     }
 
     var result = cornWindow(pk, asp, f, month);
 
     // Restore
-    if(window.weatherData && savedIsoPrb !== null) {
-      window.weatherData.effectiveIsoPrb = savedIsoPrb;
+    if(window.weatherData && savedPackRipeness !== null) {
+      window.weatherData.packRipeness = savedPackRipeness;
     }
 
     scores.push({
@@ -2511,7 +2582,7 @@ function drawRipenessChart(canvasId, wd, month, cornWin) {
   // Metric accessors
   function sfq(t)  { return 1.0 - t.surfaceRipeness; }
   function ccr(t)  { return t.columnColdContent; }
-  function comb(t) { return 1.0 - t.effectiveIsoPrb; }
+  function comb(t) { return 1.0 - (t.effectiveIsoPrb != null ? t.effectiveIsoPrb : t.packRipeness); }
 
   // Find today and target indices
   var todayIdx = -1, tgtIdx = -1;
@@ -3034,14 +3105,14 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
       var band = bandByDate[cs.date];
       if (!band || band.loP10 === null || band.loP90 === null) continue;
       // Run cornWindow with P10 and P90 overnight lows to get score range
-      // Save/restore weatherData.effectiveIsoPrb for the synthetic call
-      var savedIsoPrb2 = null;
+      // Save/restore weatherData.packRipeness for the synthetic call
+      var savedPackRipeness2 = null;
       if (window.weatherData) {
-        savedIsoPrb2 = window.weatherData.effectiveIsoPrb;
-        // Find matching trajectory entry for isoPrb
+        savedPackRipeness2 = window.weatherData.packRipeness;
+        // Find matching trajectory entry for packRipeness
         var trajIdx2 = wd.marchFirstIdx + ci;
         if (wd.ripenessTrajectory[trajIdx2]) {
-          window.weatherData.effectiveIsoPrb = wd.ripenessTrajectory[trajIdx2].effectiveIsoPrb;
+          window.weatherData.packRipeness = wd.ripenessTrajectory[trajIdx2].effectiveIsoPrb;
         }
       }
       var tEntry = wd.ripenessTrajectory[wd.marchFirstIdx + ci] || {};
@@ -3064,8 +3135,8 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
       var month2 = new Date(cs.date + 'T12:00:00').getMonth() + 1;
       var rP10 = cornWindow(pk, asp, fP10, month2);
       var rP90 = cornWindow(pk, asp, fP90, month2);
-      if (window.weatherData && savedIsoPrb2 !== null) {
-        window.weatherData.effectiveIsoPrb = savedIsoPrb2;
+      if (window.weatherData && savedPackRipeness2 !== null) {
+        window.weatherData.packRipeness = savedPackRipeness2;
       }
       if (!rP10 || !rP90) continue;
       // Score bounds: P10 lo = colder = higher score; P90 lo = warmer = lower score
@@ -3178,16 +3249,16 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
 // is mature, daily cycling is reliable, and cold reserve is in functional range.
 // Literature: Colbeck (1987) grain metamorphism cumulative; frontrangeskimo
 // "April, May, and June" = corn season; OpenSnow "teens-20s°F = optimal"
-function computePackReadiness(liveCCC, liveFTCTotal, isoPrb) {
+function computePackReadiness(liveCCC, liveFTCTotal, packRipeness) {
   // 1. Grain maturity: cumulative melt-freeze cycles from March 1
   //    Irreversible — cold snap in May does not un-round mature polycrystals
   //    Full maturity at 8+ total season cycles (typical mid-April onward)
   var ftMat = Math.min(1.0, liveFTCTotal / 8);
-  // 2. Cycling reliability: bell curve peaking at isoPrb=0.35
-  //    Too cold (early March isoPrb≈0.05): pack not yet cycling reliably
-  //    Optimal (mid-April to early May isoPrb≈0.30–0.40): daily cycle predictable
-  //    Too warm (June isoPrb≈0.70+): near-isothermal collapse, window unreliable
-  var cycleDist = Math.abs(isoPrb - 0.35);
+  // 2. Cycling reliability: bell curve peaking at packRipeness=0.35
+  //    Too cold (early March packRipeness≈0.05): pack not yet cycling reliably
+  //    Optimal (mid-April to early May packRipeness≈0.30–0.40): daily cycle predictable
+  //    Too warm (June packRipeness≈0.70+): near-isothermal collapse, window unreliable
+  var cycleDist = Math.abs(packRipeness - 0.35);
   var cycleScore = Math.max(0, 1.0 - cycleDist * 2.5);
   // 3. CCC threshold model: reward functional corn range, penalize extremes
   //    Below 0.35: cold reserve depleted, refreeze unreliable
@@ -3237,7 +3308,8 @@ function cornWindow(pk,asp,f,month){
   // Used exclusively by computePackReadiness — matPen still uses 14-day ftCycles
   var liveFTCTotal = (weatherData && weatherData.ftCyclesTotal != null)
     ? weatherData.ftCyclesTotal : liveFTC;
-  var matPen = Math.max(0, Math.min(0.20, (1 - liveCCC) * 0.22 - liveFTC * 0.015));
+  // matPen placeholder — will be replaced after packRipeness is computed below
+  var liveRecentCycles, liveGrainQuality, liveThermalMass, matPen;
   // ccFreezeBonus: capped at CCC=0.65 — excess cold reserve signals a pre-corn
   // winter pack, not better corn quality. Functional range 0.40–0.65 gets a
   // gentle bonus; above 0.65 no further benefit; below 0.40 a mild penalty.
@@ -3265,12 +3337,12 @@ function cornWindow(pk,asp,f,month){
     windScour = windScour * Math.max(0.5, 1 + windAdvFactor * 0.5);
   }
   var effFQ=Math.max(0.03,freezeQ-windScour);
-  var baseIsoPrb = (weatherData && weatherData.effectiveIsoPrb != null)
-    ? weatherData.effectiveIsoPrb
-    : (ma.isothermProb || 0);
+  var basePackRipeness = (weatherData && weatherData.packRipeness != null)
+    ? weatherData.packRipeness
+    : (ma.packRipenessBaseline || 0);
   // Depth adjustment: thin packs advance effective season; deep packs retard it
-  // At 18" SNWD: +0.10 isothermal probability (pack acts older than calendar)
-  // At 54" SNWD: -0.07 isothermal probability (pack acts younger than calendar)
+  // At 18" SNWD: +0.10 pack ripeness (pack acts older than calendar)
+  // At 54" SNWD: -0.07 pack ripeness (pack acts younger than calendar)
   // Face-specific depth: elevation gradient → SR modifier → fallback chain
   // 1. Elevation gradient (SNOTEL + Open-Meteo grid point)
   // 2. Open-Meteo snow_depth at grid elevation
@@ -3293,12 +3365,20 @@ function cornWindow(pk,asp,f,month){
   var faceSnwdInches = Math.max(1, baseSnwdInches * srDepthMult);
   var snwdIn = faceSnwdInches;
   var depthIsoPrbAdj = (36 - snwdIn) / 36 * 0.15;
-  var isoPrb = Math.max(0, Math.min(0.95, baseIsoPrb + depthIsoPrbAdj));
+  var packRipeness = Math.max(0, Math.min(0.95, basePackRipeness + depthIsoPrbAdj));
   // Elevation season offset: high terrain stays cold-core longer than calendar implies
-  // Each 1,000' above 11,500' retards isothermal progression by ~0.04 isoPrb units
+  // Each 1,000' above 11,500' retards pack ripeness by ~0.04 units
   // Clamped: max -0.12 benefit (terrain above 14,500'), no penalty below 11,500'
   var elevSeasonAdj = Math.max(-0.12, Math.min(0, (ad.ez - 11500) / 1000 * -0.04));
-  isoPrb = Math.max(0, Math.min(0.95, isoPrb + elevSeasonAdj));
+  packRipeness = Math.max(0, Math.min(0.95, packRipeness + elevSeasonAdj));
+  // Compute grainQuality + thermalMass now that packRipeness is finalized
+  liveRecentCycles = (weatherData && weatherData.recentCycles != null)
+    ? weatherData.recentCycles
+    : Math.min(1.0, liveFTC / 4); // fallback: raw 14-day count / 4
+  liveGrainQuality = grainQuality(packRipeness, liveRecentCycles, liveFTCTotal);
+  liveThermalMass  = thermalMass(liveCCC, f.sweInches, packRipeness);
+  // matPen derived for backward compatibility with return object and driver refs
+  matPen = Math.max(0, Math.min(0.20, (1 - liveGrainQuality) * 0.20));
   effFQ=Math.max(0.03,effFQ*(1-matPen));
   // Freezing level gate: if the overnight freezing level did not descend
   // to ski zone elevation, no structural crust formed regardless of what
@@ -3331,11 +3411,11 @@ function cornWindow(pk,asp,f,month){
   // dth/6 (was /8) + minDenom 1.0 (was 0.8) make denominator more responsive
   // to morning temperature rise.
   var meltDelay=effFQ>0.20?Math.min(2.0,(effFQ*Math.max(0,33-f_da))/(effRad*Math.max(1.0,dth/6)+0.01)):0.25;
-  // isoPrb melt factor only activates above 0.50
+  // ripenMeltFactor only activates above 0.50
   // Literature: isothermal pack IS the corn pack (frontrangeskimo); penalizing
-  // isoPrb=0.30 was treating April prime conditions as degraded
-  var isoMeltFactor = Math.max(0, isoPrb - 0.50) * 0.80;
-  meltDelay = meltDelay * (1 - isoMeltFactor);
+  // packRipeness=0.30 was treating April prime conditions as degraded
+  var ripenMeltFactor = Math.max(0, packRipeness - 0.50) * 0.80;
+  meltDelay = meltDelay * (1 - ripenMeltFactor);
   // Dust-on-snow: lower albedo accelerates melt onset and compresses window
   if(f.dust) meltDelay = Math.max(0, meltDelay - 0.42);
   var ws=Math.max(sunHit,sunHit+Math.min(4.2,meltDelay*1.05));
@@ -3343,15 +3423,23 @@ function cornWindow(pk,asp,f,month){
   // ── CRUST QUALITY: two-mode model ───────────────────────────────────────
   var depthFactor=f.sdp>0?Math.min(1.0,f.sdp/8.0):0.5;
   var ageFactor=Math.exp(-f.ds*0.10);
-  var matScale=1-matPen*0.80;
+  var matScale = 0.70 + liveGrainQuality * 0.30;
   var stormCrustQ=depthFactor*ageFactor*matScale;
   // packFloor: consolidated spring pack — full snowpack depth is the
   // correct depth input here, not storm snow. A 40" consolidated pack
   // has real refreeze potential regardless of days since last storm.
   // Anchored at 36" (normal Indian Peaks spring ski zone depth).
   var packFloorDepth=Math.min(1.0,faceSnwdInches/36);
-  var packFloor=0.35*packFloorDepth*(1-matPen*0.90)*(1-isoPrb*0.40);
+  // grainQuality correctly peaks in mid-April — the pack floor now rewards
+  // prime corn conditions instead of penalizing them.
+  var packFloor = 0.35 * packFloorDepth * (0.60 + liveGrainQuality * 0.40);
   var crustQ=Math.max(stormCrustQ,packFloor,0.05);
+  // sr surface patchiness: separate from srDepthMult depth effect
+  // sr=3 (clean continuous snow): no discount
+  // sr=2 (minor patchiness): -8% crustQ
+  // sr=1 (rocky or wind-scoured): -18% crustQ
+  var srPatchFactor = tData.sr === 3 ? 1.00 : tData.sr === 2 ? 0.92 : 0.82;
+  crustQ = Math.min(1.0, crustQ * srPatchFactor);
 
   // SWE modifier — absolute thresholds (primary) with % of median fallback
   var sweAdj = 0, sweDurBonus = 0;
@@ -3376,12 +3464,7 @@ function cornWindow(pk,asp,f,month){
     crustQ = Math.max(0.05, Math.min(1.0, crustQ + sweAdj));
   }
 
-  // Freeze-thaw cycle bonus: well-developed polycrystal structure
-  // Up to +0.12 on crustQ for 4+ clean cycles in the past 14 days
-  if (weatherData && weatherData.ftCycles != null) {
-    var ftBonus = Math.min(0.12, weatherData.ftCycles * 0.03);
-    crustQ = Math.min(1.0, crustQ + ftBonus);
-  }
+  // ftBonus removed — absorbed into grainQuality via recentCycles
 
   // Pack density modifier: SWE / depth ratio indicates crystal structure and saturation.
   // Ideal spring corn density 0.28–0.45 → large polycrystals, excellent refreeze bonding.
@@ -3400,12 +3483,16 @@ function cornWindow(pk,asp,f,month){
   // Steeper coefficient above threshold — window collapses faster in heat
   var hiPenalty = Math.max(0, (f_hi - 46) * 0.085);
   var rawDur=(crustQ*1.6)+(effRad*1.4)-hiPenalty-windDurPen+sweDurBonus;
-  // packReadiness replaces packWinFactor: mature cycling pack produces longer
-  // windows than pre-corn March pack or collapsing June pack on same conditions
-  // Range: PR=0.95 (early May) → ×1.18, PR=0.56 (mid-March) → ×0.99, PR=0.65 (June) → ×1.03
-  var prDur = computePackReadiness(liveCCC, liveFTCTotal, isoPrb);
-  rawDur *= (0.72 + prDur * 0.48);
-  rawDur*=(1-isoPrb*0.25); // isothermal pack collapses window faster
+  // thermalMass rewards the prime corn range (CCC 0.30–0.70, adequate SWE)
+  // and only penalizes genuine column exhaustion (packRipeness > 0.75).
+  // Range: thermalMass 0.10 → ×0.72, thermalMass 1.0 → ×1.20
+  rawDur *= (0.72 + liveThermalMass * 0.48);
+  // Aspect purity effect on duration
+  // ap=3 (pure aspect): uniform melt, no discount
+  // ap=2 (minor variation): -5% reliable window duration
+  // ap=1 (mixed aspect): -12% reliable window
+  var apDurFactor = tData.ap === 3 ? 1.00 : tData.ap === 2 ? 0.95 : 0.88;
+  rawDur *= apDurFactor;
   if(f.dust) rawDur = Math.max(0.20, rawDur - 0.25); // dust accelerates slush transition
   var dur=Math.max(0.20,Math.min(4.0,rawDur));
   var we=ws+dur;
@@ -3431,18 +3518,17 @@ function cornWindow(pk,asp,f,month){
   phys += Math.max(1, Math.min(9, cqScore));
   if(dur>=2.0)phys+=4;else if(dur>=1.2)phys+=2;
   phys-=Math.min(15,windScour*25);if(f_lo>30)phys-=8;
-  var tMult=0.50+tData.q*0.50;
-  var rawScore=phys*tMult;
+  var rawScore = phys; // terrain effects already embedded in steps
   rawScore+=(ad.ez-12000)/1600*3;
   rawScore*=((ma.radBoost||{})[asp]||1)*0.85+0.15;
   // Graduated short-window penalty: literature says 1–2h is normal good corn
   // Binary 0.75h cliff was punishing typical May windows of 0.80–0.95h
   if(dur<0.35)rawScore*=0.20;else if(dur<0.60)rawScore*=0.55;else if(dur<0.90)rawScore*=0.80;
   rawScore *= lateOpenPenalty;
-  // packReadiness multiplier: same overnight conditions score higher in April–May
-  // than in March or June because the pack is in the active reliable corn cycling zone
-  // Range: PR=0.95→×1.13, PR=0.91→×1.10, PR=0.56→×0.94, PR=0.65→×0.99
-  rawScore *= (0.68 + computePackReadiness(liveCCC, liveFTCTotal, isoPrb) * 0.47);
+  // Pack Readiness multiplier removed — effects now embedded in grainQuality + thermalMass
+  // v44 calibration: console.log for benchmark verification
+  // Benchmark: SE couloir, March, 22°F low, clear, SWE=28", depth 42", sr=3/ap=3/we=3, no wind
+  if (typeof console !== 'undefined' && rawScore > 45) console.log('v44 rawScore:', rawScore.toFixed(2), 'grainQ:', liveGrainQuality.toFixed(3), 'thermalM:', liveThermalMass.toFixed(3), 'packRip:', packRipeness.toFixed(3));
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
   var inf,qlabel;
   if(f_lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
@@ -3458,15 +3544,18 @@ function cornWindow(pk,asp,f,month){
     windDir:(weatherData&&weatherData.windDir!=null)?weatherData.windDir:null,
     effRad:parseFloat(effRad.toFixed(2)),note:ad.note,crustQ:parseFloat(crustQ.toFixed(2)),sweAdj:parseFloat(sweAdj.toFixed(3)),
     depthFactor:parseFloat(depthFactor.toFixed(2)),ageFactor:parseFloat(ageFactor.toFixed(2)),
-    rawFQ:parseFloat(rawFQ.toFixed(2)),matPen:parseFloat(matPen.toFixed(3)),isoPrb:isoPrb,packRipeness:isoPrb,
+    rawFQ:parseFloat(rawFQ.toFixed(2)),matPen:parseFloat(matPen.toFixed(3)),packRipeness:packRipeness,
     surfaceRipeness:(weatherData&&weatherData.surfaceRipeness!=null)?parseFloat(weatherData.surfaceRipeness.toFixed(2)):null,
     columnColdContent:(weatherData&&weatherData.columnColdContent!=null)?parseFloat(weatherData.columnColdContent.toFixed(2)):null,
-    isoPrbIsLive:!!(weatherData && weatherData.effectiveIsoPrb!=null),
+    packRipenessIsLive:!!(weatherData && weatherData.packRipenessIsLive),
     archiveFailed:!!(weatherData && weatherData.archiveFailed),
     windDurPen:parseFloat(windDurPen.toFixed(2)),sweDurBonus:parseFloat(sweDurBonus.toFixed(2)),
+    grainQuality: parseFloat(liveGrainQuality.toFixed(3)),
+    thermalMass:  parseFloat(liveThermalMass.toFixed(3)),
+    recentCycles: parseFloat(liveRecentCycles.toFixed(3)),
     packDensity: (f.sweInches != null && f.snwdInches != null && f.snwdInches > 0)
       ? parseFloat((f.sweInches / f.snwdInches).toFixed(3)) : null,
-    packReadiness: parseFloat(computePackReadiness(liveCCC, liveFTCTotal, isoPrb).toFixed(3))};
+    packReadiness: parseFloat(computePackReadiness(liveCCC, liveFTCTotal, packRipeness).toFixed(3))};
 }
 
 // ── SCORE DRIVER NARRATIVE ────────────────────────────────────────────────
@@ -3573,8 +3662,8 @@ function buildDrivers(w,f,month,asp){
   // ─────────────────────────────────────────────────────────────────────────
   mod('Snowpack Condition');
 
-  var ip=Math.round(w.isoPrb*100);
-  if(w.isoPrbIsLive){
+  var ip=Math.round(w.packRipeness*100);
+  if(w.packRipenessIsLive){
     var srRaw=w.surfaceRipeness!==null?w.surfaceRipeness:(ip/100);
     var sfqPct=Math.round((1-srRaw)*100);
     var sfqLabel=sfqPct>=80?'cold recent two weeks — surface cold-core, maximum freeze penetration'
@@ -3678,7 +3767,7 @@ function buildDrivers(w,f,month,asp){
   rows.push({icon:'🌅',cls:debtCls,
     text:'<strong>Dawn temp '+f.da+'°F'+_daNote+' → High '+f.hi+'°F ('+dth+'°F morning rise at ski zone).</strong> '+debtNote
     +'. The '+dth+'°F rise rate is '+(dth>=20?'steep — thermal debt clears quickly, corn opens promptly':dth>=12?'moderate — typical spring payoff timing':'shallow — slow debt repayoff; onset may be late or incomplete on low-radiation aspects')+'.'});
-  if(w.isoPrb>0.50) rows.push({icon:'🌡️',cls:'driver-neu',text:'Near-isothermal pack (isoPrb '+Math.round(w.isoPrb*100)+'%) shortens melt delay — thin overnight crust thaws quickly. Corn opens earlier but the window closes sooner for the same reason.'});
+  if(w.packRipeness>0.50) rows.push({icon:'🌡️',cls:'driver-neu',text:'Near-isothermal pack (packRipeness '+Math.round(w.packRipeness*100)+'%) shortens melt delay — thin overnight crust thaws quickly. Corn opens earlier but the window closes sooner for the same reason.'});
   if(_bdLine&&(_bdLine.ez||0)>12500) rows.push({icon:'🏔️',cls:'driver-pos',text:'High ski zone elevation ('+(_bdLine.ez||0).toLocaleString()+'\'): column retains cold reserve longer than the calendar date alone suggests. Effective isothermal probability reduced.'});
   if(f.dust){
     rows.push({icon:'🟤',cls:'driver-neg',text:'<strong>Dust on snow active.</strong> Lower surface albedo accelerates melt onset by ~25 min and compresses window duration by ~15 min. Check <a href="https://avalanche.state.co.us/forecasts/special-reports/dust-on-snow" target="_blank" style="color:var(--teal)">CAIC dust report</a> for layer depth and intensity.'});
@@ -3694,8 +3783,8 @@ function buildDrivers(w,f,month,asp){
   head(5,'Snow Surface — Material to Refreeze');
 
   // Determine which mode dominated: storm crust vs consolidated pack floor
-  var _stormCrustQ=w.depthFactor*w.ageFactor*(1-w.matPen*0.80);
-  var _packFloorBase=0.35; // packFloor anchored at 0.35 × packFloorDepth × maturity × isoFactor
+  var _stormCrustQ=w.depthFactor*w.ageFactor*(0.70+(w.grainQuality||0.5)*0.30);
+  var _packFloorBase=0.35; // packFloor anchored at 0.35 × packFloorDepth × grainQuality
   var _stormDominates=(_stormCrustQ>=_packFloorBase||f.ds<=10);
   var cqPct=Math.round(w.crustQ*100);
 
@@ -3729,9 +3818,8 @@ function buildDrivers(w,f,month,asp){
   // Freeze-thaw cycle bonus
   if(weatherData && weatherData.ftCycles >= 2) {
     var ftC = weatherData.ftCycles;
-    var ftBonus=Math.round(Math.min(0.12,ftC*0.03)*100);
-    if(ftC >= 4) rows.push({icon:'🔄',cls:'driver-pos',text:'<strong>'+ftC+' freeze-thaw cycles in past 14 days (+'+ftBonus+' pts to snow surface).</strong> Well-developed polycrystal structure — best possible corn grain size and bonding.'});
-    else         rows.push({icon:'🔄',cls:'driver-neu',text:'<strong>'+ftC+' freeze-thaw cycles (+'+ftBonus+' pts to snow surface).</strong> Grains developing melt-freeze polycrystal structure.'});
+    if(ftC >= 4) rows.push({icon:'🔄',cls:'driver-pos',text:'<strong>'+ftC+' freeze-thaw cycles in past 14 days.</strong> Well-developed polycrystal structure — best possible corn grain size and bonding. (Effect captured in grainQuality.)'});
+    else         rows.push({icon:'🔄',cls:'driver-neu',text:'<strong>'+ftC+' freeze-thaw cycles in past 14 days.</strong> Grains developing melt-freeze polycrystal structure. (Effect captured in grainQuality.)'});
   }
 
   // Pack density
@@ -3766,7 +3854,7 @@ function buildDrivers(w,f,month,asp){
     text:'<strong>Window duration: '+w.dur+' hrs — '+durNote+'.</strong> '
     +'Crust depth × radiation are the dominant inputs. '
     +'Ski zone high of '+Math.round(_skiHiDur)+'°F '+((_skiHiDur)>=52?'(threshold 46°F well exceeded — rapid slush transition)':(_skiHiDur)>=46?'(above 46°F threshold — window penalty active)':'(below 46°F threshold — minimal slush acceleration)')+'. '
-    +(w.isoPrb>0.25?'Isothermal factor ('+Math.round(w.isoPrb*100)+'%) compresses window by ×'+(1-w.isoPrb*0.25).toFixed(2)+'. ':'')
+    +(w.thermalMass!=null?'Thermal mass '+Math.round(w.thermalMass*100)+'% — duration ×'+(0.72+w.thermalMass*0.48).toFixed(2)+'. ':'')
     +(w.sweDurBonus>0.05?'SWE depth bonus adds +'+w.sweDurBonus.toFixed(2)+'h. ':w.sweDurBonus<-0.05?'Low SWE removes '+Math.abs(w.sweDurBonus).toFixed(2)+'h. ':'')
     +'Column cold reserve '+(w.columnColdContent!==null&&!w.archiveFailed?'('+Math.round(w.columnColdContent*100)+'%) ':'')+'buffers against rapid isothermal collapse.'});
   if(f.wi>=18) rows.push({icon:'💨',cls:'driver-neg',text:'<strong>Wind '+f.wi+' mph shortens the window.</strong> Above 18 mph, wind mechanically disrupts the softened corn surface. Duration penalty: −'+w.windDurPen.toFixed(2)+' hrs.'});
@@ -3783,21 +3871,23 @@ function buildDrivers(w,f,month,asp){
       +'<div class="pr-bar-wrap"><div class="pr-bar" style="width:'+pr+'%;background:linear-gradient(90deg,#1a3a5c,#00d4aa)"></div></div>'
       +'<span style="font-size:.68rem;color:var(--teal);font-weight:700;width:2.2rem;text-align:right">'+pr+'%</span>'
       +'<span style="font-size:.65rem;color:var(--muted)">Peak</span></div>'
-      +'<span style="font-size:.63rem;color:#456a82">Grain maturity 40% · Cycling reliability 35% · Cold reserve range 25% · Multiplies duration and score</span>'});
+      +'<span style="font-size:.63rem;color:#456a82">Grain maturity 40% · Cycling reliability 35% · Cold reserve range 25% · Display only (effects embedded in grainQuality + thermalMass)</span>'});
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // STEP 7 — TERRAIN FACTOR
-  // Scales the physics score — never eliminates it, but poor terrain discounts it
+  // STEP 7 — TERRAIN FACTOR (display only — effects embedded in physics steps)
+  // sr → srDepthMult (Step 5 depth) + srPatchFactor (Step 5 surface)
+  // we → ad.wx inside windScour (Steps 1 + 6)
+  // ap → apDurFactor on rawDur (Step 6)
   // ─────────────────────────────────────────────────────────────────────────
   head(7,'Terrain Factor');
 
   var tPct=Math.round(w.terrainQ*100);
   var tCls=w.terrainQ>=0.85?'driver-pos':w.terrainQ>=0.65?'driver-neu':'driver-neg';
-  var tNote=w.terrainQ>=0.85?'excellent — high snow retention, uniform solar exposure, sheltered from wind. Physics score passes through at full strength.'
-    :w.terrainQ>=0.65?'good — minor limitations in snow retention, aspect uniformity, or wind exposure.'
-    :w.terrainQ>=0.50?'moderate limitations — one or more of snow retention, aspect purity, or wind shelter is compromised. Physics score discounted.'
-    :'significant limitations — thin or patchy snowpack, inconsistent solar exposure, or exposed position. Physics score meaningfully reduced.';
+  var tNote=w.terrainQ>=0.85?'excellent terrain — high snow retention, uniform aspect, sheltered from wind.'
+    :w.terrainQ>=0.65?'good terrain — minor limitations in snow retention, aspect uniformity, or wind exposure.'
+    :w.terrainQ>=0.50?'moderate terrain limitations — one or more of snow retention, aspect purity, or wind shelter is compromised.'
+    :'significant terrain limitations — thin or patchy snowpack, inconsistent solar exposure, or exposed position.';
   var rbHtml='';
   if(w.terrainRubric){
     var rb=w.terrainRubric;
@@ -3808,7 +3898,7 @@ function buildDrivers(w,f,month,asp){
       +'<div>'+ss(rb.we)+'<div style="color:var(--muted);font-size:.62rem">Wind Shelter</div></div>'
       +'</div>';
   }
-  rows.push({icon:'⛰️',cls:tCls,text:'<strong>Terrain factor: '+tPct+'% — '+tNote+'</strong>'+rbHtml});
+  rows.push({icon:'⛰️',cls:tCls,text:'<strong>Terrain: '+tPct+'% — '+tNote+'</strong> <span style="font-size:.63rem;color:#456a82">(Display only — effects embedded in Steps 1, 5, 6 via srDepthMult, srPatchFactor, windScour, apDurFactor)</span>'+rbHtml});
 
   return rows;
 }
