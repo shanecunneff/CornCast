@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v44b 2026-03-20</title>
+<title>CornCast 🌽 v45 2026-03-20</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -306,7 +306,7 @@ input[type=date]:focus{border-color:var(--teal)}
         There is a second effect: the <em>thermal state</em> of the full snowpack column also degrades through the season. A March snowpack at 12,000' is cold all the way to the bottom — the overnight freeze can penetrate 30–50cm, creating a deep structural crust. By late May or June, the entire column is often <em>isothermal</em> — uniformly at 32°F with no cold reserve. The overnight freeze can now only penetrate 5–10cm into the surface, creating a thin veneer regardless of how cold it got. The corn window still opens, but it opens faster and closes sooner.<br><br>
         CornCast applies both effects as graduated monthly penalties.
       </div>
-      <div class="formula-box">When live Open-Meteo archive is available (primary model):<br>packRipeness = surfaceRipeness × 0.60 + columnRipeness × 0.40 + depthAdj<br>grainQuality = 0.50 × packRipenessGrainCurve(pr) + 0.30 × recentCycles + 0.20 × min(1, ftCyclesTotal/8)<br>thermalMass  = 0.65 × cccComponent + 0.35 × sweComponent + collapseAdj<br>matPen = max(0, min(0.20, (1 − grainQuality) × 0.20))  [derived]<br><br>Fallback when archive fails (calendar defaults only):<br>         March  April  May    June<br>packRipeness:  5%    15%    40%    70%</div>
+      <div class="formula-box">When live Open-Meteo archive is available (primary model):<br>packRipeness = surfaceRipeness × 0.60 + columnRipeness × 0.40 + depthAdj<br>grainQuality = 0.50 × packRipenessGrainCurve(pr) + 0.30 × recentCycles + 0.20 × min(1, ftCyclesTotal/8)<br>thermalMass  = 0.65 × cccComponent + 0.35 × sweComponent + collapseAdj<br>matPen = max(0, min(0.20, (1 − grainQuality) × 0.20))  [derived]<br><br>Aspect-specific solar pack state (v45) — energy balance model:<br>  solarAbsorbed = solarMorning[W/m²] × BASE_RAD[asp] × radBoost × (1 − 0.55 albedo)<br>  Solar melt fires when solarAbsorbed &gt; 180 W/m²  [Male &amp; Granger 1981]<br>  Ambient melt fires when tmax &gt; 36°F  [same as global model]<br>  Cycle counted when (solar melt OR ambient melt) AND tmin &lt; 28°F<br>  Surface ripeness solar heat load = max(0, solarAbsorbed − 180) ÷ 500 per day<br>  SE clear April: absorbed ≈ 280 W/m² → solar melt, heat load 0.20/day<br>  NW any month: absorbed ≈ 68–91 W/m² → no solar melt, 0 solar heat load<br>  NE June clear (radBoost ×1.50): absorbed ≈ 186 W/m² → solar melt begins<br>  Clouds suppress solar loading naturally via measured solarMorning — no separate cloud term<br>  columnColdContent stays shared — deep column is not aspect-specific<br><br>Fallback when archive fails (calendar defaults only):<br>         March  April  May    June<br>packRipeness:  5%    15%    40%    70%</div>
       <div class="pipe-ref">Colbeck (1987), IAHS 162 — crystal metamorphism in seasonal snow; Armstrong &amp; Brun (2008), Snow and Climate, Cambridge; Clow et al. (2012), JGR Atmospheres — Front Range snowpack trends at elevation</div>
     </div>
 
@@ -494,6 +494,16 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v45 — Aspect-specific solar pack state, energy balance model (2026-03-22)</h3>
+    <p>Pack state parameters — surface ripeness, freeze-thaw cycles, grain quality — are now computed per-aspect using a direct snow surface energy balance rather than treating all faces identically from a single grid-point temperature record.</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>Two melt mechanisms, physically separated:</strong> Solar melt (solarAbsorbed &gt; 180 W/m², from Male &amp; Granger 1981) and ambient melt (tmax &gt; 36°F) are counted independently. A freeze-thaw cycle fires when either mechanism was active and the following tmin &lt; 28°F.</li>
+      <li><strong>Direct energy balance:</strong> solarAbsorbed = solarMorning[W/m²] × BASE_RAD[asp] × radBoost × 0.45. Snow albedo 0.55 (spring corn snow). No temperature conversion — solar and ambient are kept as distinct physics.</li>
+      <li><strong>Clouds handled correctly:</strong> solarMorning is measured attenuation from Open-Meteo — a 75% cloud day produces ~25% of clear-sky solar. Cloud suppression of cycling flows through naturally with no separate term.</li>
+      <li><strong>Natural seasonal arc from data:</strong> SE crosses the solar melt threshold from March onward on any reasonably clear day. NE crosses it only in June when radBoost ×1.50 finally compensates for the low BASE_RAD. NW/N never cross it — they cycle only via ambient temperature, which reaches 36°F reliably only in late May. This produces the correct field-observed seasonal arc without any calendar forcing.</li>
+      <li><strong>Surface ripeness heat load:</strong> max(0, solarAbsorbed − 180) / 500 per day — accumulated solar excess above the melt threshold, normalised. SE clear April: +0.20 heat load units/day. NW: zero solar heat load all season.</li>
+      <li><strong>Safe architecture:</strong> Pre-computed before cb({}) with try/catch. Exceptions silently set aspectPackState to null; cornWindow falls back to global values.</li>
+    </ul>
     <h3>v44b — fqScore grain quality + melt match gates (2026-03-19)</h3>
     <p>Two physical gates added to fqScore so that a cold overnight freeze only scores fully as corn quality when the snowpack history and radiation balance both support it:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -1494,6 +1504,65 @@ function computeRecentCycles(allDays, targetDate) {
   return Math.min(1.0, score / 4.0);
 }
 
+// ── Absorbed solar energy on a given aspect (W/m²) ───────────────────────
+// solarMorning: measured global horizontal irradiance 6AM–noon from Open-Meteo.
+// Already cloud-attenuated — no separate cloud term needed.
+// aspFactor = BASE_RAD[asp] × radBoost[asp][month] encodes geometry.
+// snowAlbedo = 0.55 (spring corn snow — coarse rounded grains, partially wet).
+// Ref: Male & Granger (1981) Water Resources Research 17(3).
+function computeAspectSolarAbsorbed(solarMorning, asp, month) {
+  if (!solarMorning || solarMorning <= 0) return 0;
+  var ma = MONTH_ADJ[month] || MONTH_ADJ[4];
+  var aspFactor = (BASE_RAD[asp] || 0.5)
+    * (((ma.radBoost) && ma.radBoost[asp]) ? ma.radBoost[asp] : 1.0);
+  var snowAlbedo = 0.55;
+  return solarMorning * aspFactor * (1 - snowAlbedo);
+}
+
+// ── Aspect-specific surface ripeness using direct energy balance ──────────
+// Two distinct melt mechanisms operate on different faces:
+//   Solar melt:   solarAbsorbed > SOLAR_MELT_THRESHOLD (180 W/m²)
+//                 Can occur below freezing. Drives SE cycling from March onward.
+//   Ambient melt: aspTmax > 38°F (same as global computeSurfaceRipeness)
+//                 Only mechanism available to NW/N faces all season.
+// Heat load from solar: max(0, solarAbsorbed − 180) / 500 per day.
+//   Excess above 180 W/m² normalised over 500 W/m² reference range.
+//   SE clear April: +0.20 heat load/day. NW clear April: 0 (below threshold).
+// Clouds naturally suppress solar load via measured solarMorning — no
+// separate cloud correction needed.
+var SOLAR_MELT_THRESHOLD = 180; // W/m² absorbed — Male & Granger (1981)
+function computeAspectSurfaceRipeness(histDays14, asp, month) {
+  if (!histDays14 || !histDays14.length) return 0.12;
+  var ripeness = 0.12;
+  var N = histDays14.length;
+  histDays14.forEach(function(d, i) {
+    var weight = (i + 1) / N;
+    // Solar heat load: energy above melt threshold, normalised
+    var absorbed = computeAspectSolarAbsorbed(d.solarMorning || 0, asp, month);
+    var solarHeatLoad = Math.max(0, absorbed - SOLAR_MELT_THRESHOLD) / 500;
+    // Ambient heat load (same as global model)
+    var ambientHeatLoad = Math.max(0, d.tmax - 38) * 0.018;
+    // Take whichever is larger — two independent melt mechanisms,
+    // not additive (the same snow surface doesn't melt twice)
+    var heatLoad = Math.max(solarHeatLoad, ambientHeatLoad);
+    ripeness += heatLoad * weight;
+    if (d.tmin > 32) ripeness += 0.08 * weight;
+    if (d.snowfall && d.snowfall > 0.5) {
+      var nextDay = histDays14[i + 1] || null;
+      // Solar-assisted rain proxy: absorbed > 100 W/m² at any temp can wet surface
+      var isSolarWet = absorbed > 100;
+      var isRain = (d.tmax > 34) || isSolarWet;
+      if (isRain) {
+        var postRainLow = nextDay ? nextDay.tmin : d.tmin;
+        ripeness -= (postRainLow < 28) ? 0.04 * weight : 0.10 * weight;
+      }
+    }
+    var coldRecovery = Math.max(0, 28 - d.tmin) * 0.006 * weight;
+    ripeness -= coldRecovery;
+  });
+  return Math.max(0.03, Math.min(0.95, ripeness));
+}
+
 // ── Grain quality — replaces matPen everywhere ──
 // How well the snowpack crystal structure will produce and sustain corn bonds.
 function grainQuality(packRipeness, recentCycles, ftCyclesTotal) {
@@ -2157,6 +2226,57 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
       ensembleBands = null; // fail silently
     }
   }
+  // v45: aspect-specific pack state using direct absorbed solar energy.
+  // Pre-computed before cb({}) with try/catch — any exception silently sets
+  // null so cornWindow falls back to global values. Never place this inside
+  // cb({}) — exceptions there make wd=null and break the weather strip.
+  var aspectPackState = null;
+  if (!archiveFailed) {
+    try {
+      var ASP_LIST = ['N','NE','E','SE','S','SW','W','NW'];
+      var tDtAsp = new Date(targetDate + 'T12:00:00');
+      aspectPackState = {};
+      ASP_LIST.forEach(function(a) {
+        // Aspect-specific ftCyclesTotal:
+        // cycle fires when solar melt OR ambient melt occurred AND tmin < 28°F
+        var ftTotal = 0;
+        for (var ftj2 = 1; ftj2 < allDays.length && allDays[ftj2].date <= targetDate; ftj2++) {
+          if (allDays[ftj2].date >= marchFirst) {
+            var prevD = allDays[ftj2 - 1];
+            var prevMo = new Date(prevD.date + 'T12:00:00').getMonth() + 1;
+            var absorbed = computeAspectSolarAbsorbed(prevD.solarMorning || 0, a, prevMo);
+            var solarMelt   = absorbed > SOLAR_MELT_THRESHOLD;
+            var ambientMelt = prevD.tmax > 36;
+            if ((solarMelt || ambientMelt) && allDays[ftj2].tmin < 28) ftTotal++;
+          }
+        }
+        // Aspect-specific recentCycles: recency-weighted, 14-day half-life
+        var rcScore = 0;
+        for (var rj = allDays.length - 1; rj >= 1; rj--) {
+          if (allDays[rj].date > targetDate) continue;
+          var dAgo = Math.round(
+            (tDtAsp - new Date(allDays[rj].date + 'T12:00:00')) / 86400000
+          );
+          if (dAgo > 60) break;
+          var prev2 = allDays[rj - 1];
+          var m2 = new Date(prev2.date + 'T12:00:00').getMonth() + 1;
+          var abs2 = computeAspectSolarAbsorbed(prev2.solarMorning || 0, a, m2);
+          var sol2 = abs2 > SOLAR_MELT_THRESHOLD;
+          var amb2 = prev2.tmax > 36;
+          if ((sol2 || amb2) && allDays[rj].tmin < 28) {
+            rcScore += Math.pow(0.5, dAgo / 14);
+          }
+        }
+        aspectPackState[a] = {
+          surfaceRipeness: computeAspectSurfaceRipeness(histDays14, a, month),
+          ftCyclesTotal:   ftTotal,
+          recentCycles:    Math.min(1.0, rcScore / 4.0)
+        };
+      });
+    } catch(e) {
+      aspectPackState = null; // fail silently — cornWindow uses global values
+    }
+  }
   cb({
     surfaceRipeness: surfaceRipeness,
     columnColdContent: columnColdContent,
@@ -2165,6 +2285,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     ftCyclesTotal: ftCyclesTotal,
     freezeHours: freezeHours > 0 ? freezeHours : null,
     recentCycles: recentCyclesValue,
+    aspectPackState: aspectPackState,
     packRipeness: effIsoPrb,
     packRipenessIsLive: !archiveFailed,
     days: allDays,
@@ -3384,6 +3505,20 @@ function cornWindow(pk,asp,f,month){
   liveRecentCycles = (weatherData && weatherData.recentCycles != null)
     ? weatherData.recentCycles
     : Math.min(1.0, liveFTC / 4); // fallback: raw 14-day count / 4
+  // v45: use aspect-specific pack state when available.
+  // Surface layer (60% of packRipeness) is aspect-specific via solar energy balance.
+  // Column cold content stays shared — deep column is not aspect-specific.
+  // Falls back to global values silently if aspectPackState is null.
+  if (weatherData && weatherData.aspectPackState && weatherData.aspectPackState[asp]) {
+    var aps = weatherData.aspectPackState[asp];
+    var aspColumnRipeness = 1.0 - liveCCC;
+    var aspPackRipenessBase = aps.surfaceRipeness * 0.60 + aspColumnRipeness * 0.40;
+    packRipeness = Math.max(0, Math.min(0.95,
+      aspPackRipenessBase + depthIsoPrbAdj + elevSeasonAdj
+    ));
+    liveRecentCycles = aps.recentCycles;
+    liveFTCTotal     = aps.ftCyclesTotal;
+  }
   liveGrainQuality = grainQuality(packRipeness, liveRecentCycles, liveFTCTotal);
   liveThermalMass  = thermalMass(liveCCC, f.sweInches, packRipeness);
   // matPen derived for backward compatibility with return object and driver refs
@@ -3551,7 +3686,6 @@ function cornWindow(pk,asp,f,month){
   rawScore+=(ad.ez-12000)/1600*3;
   if(dur<0.35)rawScore*=0.20;else if(dur<0.60)rawScore*=0.55;else if(dur<0.90)rawScore*=0.80;
   rawScore *= lateOpenPenalty;
-  if(typeof console!=='undefined') console.log('v44b rawScore:',rawScore.toFixed(2),'grainGate:',grainGateFactor.toFixed(3),'meltMatch:',meltMatchFactor.toFixed(3));
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
   var inf,qlabel;
   if(f_lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
