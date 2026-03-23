@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v46 2026-03-20</title>
+<title>CornCast 🌽 v47 2026-03-20</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -139,6 +139,15 @@ input[type=date]:focus{border-color:var(--teal)}
 .pack-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,#1a3a5c,var(--teal))}
 .pr-bar-wrap{flex:1;background:var(--navy3);border-radius:4px;height:7px;overflow:hidden;margin:0 .3rem;display:inline-block;min-width:60px;vertical-align:middle}
 .pr-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,#1a5c9c,#ff6040)}
+.dc-card{background:rgba(0,0,0,0.18);border-radius:8px;padding:.55rem .7rem;margin:.45rem 0;border-left:2px solid rgba(0,212,170,0.30)}
+.dc-step-lbl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(0,212,170,0.65);display:flex;align-items:center;justify-content:space-between;margin-bottom:.22rem}
+.dc-weight{font-size:.6rem;color:#456a82;font-weight:400;text-transform:none;letter-spacing:0}
+.dc-verdict{font-size:.81rem;font-weight:700;color:var(--text);margin-bottom:.28rem;line-height:1.35}
+.dc-why{font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.28rem}
+.dc-bar-row{display:flex;align-items:center;gap:.45rem;margin:.18rem 0 .28rem;font-size:.64rem;color:var(--muted)}
+.dc-bar-track{flex:1;background:rgba(255,255,255,0.07);border-radius:3px;height:5px;min-width:50px}
+.dc-bar-fill{height:5px;border-radius:3px;background:#00d4aa}
+.dc-feeds{font-size:.64rem;color:#456a82;border-top:1px solid rgba(36,59,85,.4);padding-top:.22rem;margin-top:.15rem;line-height:1.5}
 /* Ripeness chart */
 .ripeness-chart-wrap{margin-top:.75rem;padding-top:.65rem;border-top:1px solid rgba(36,59,85,.4);max-width:960px}
 .ripeness-chart-wrap h3{font-size:.7rem;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
@@ -417,8 +426,8 @@ input[type=date]:focus{border-color:var(--teal)}
       <div class="pipe-explain">
         Once corn opens, how long does it last? The window closes when free water content in the surface layer exceeds roughly 8–12% by volume — at that point every grain is floating in liquid rather than lightly bonded to its neighbors, and the surface becomes saturated slush. The crust must melt completely through before this happens.<br><br>
         <strong>Crust thickness is the dominant term.</strong> A deep, hard freeze from a very cold night takes far longer to fully melt through than a thin veneer. This is why a 5°F night produces a longer skiing window than a 28°F night, even when corn opens at the same time — there is simply more crust thickness to sustain the condition.<br><br>
-        <strong>A counterintuitive result:</strong> higher-radiation aspects (SE, S) tend to produce slightly longer windows than lower-radiation aspects for the same crust quality. Intense, uniform solar loading melts the surface consistently across the whole face — every square meter enters the corn state at the same time. Low-radiation faces melt patchily, creating inconsistent micro-conditions across the slope even though the aggregate window technically hasn't closed.<br><br>
-        A warm afternoon high accelerates the transition to slush: a 55°F day burns through a corn window faster than a 42°F day. Wind above about 18 mph mechanically disrupts the softened surface and shortens the window.
+        <strong>Two independent mechanisms close the window.</strong> Solar melt rate — absorbed shortwave radiation on this specific aspect — and sensible melt rate — warm air conducting heat into the surface above 36°F — both contribute. A warm clear afternoon combines both and closes the window fastest. A warm overcast afternoon has only sensible heat and closes more slowly. This is why cloud cover meaningfully extends the window even when temperatures are unchanged.<br><br>
+        Shaded faces (NW, N) have near-zero solar melt rate — they are driven entirely by ambient air temperature. A NW face on a cold afternoon stays in corn longer than an SE face in the same afternoon because the SE face receives direct solar energy the NW face does not. Wind above about 18 mph mechanically disrupts the softened corn surface and shortens the window independently of the energy balance.
       </div>
       <div class="formula-box">Energy balance close time (v46):<br>  solarMeltRate    = effRad × 1.0          [solar absorbed at this aspect; cloud-attenuated]<br>  sensibleMeltRate = max(0, f_hi − 36) × 0.04  [warm air conduction; only mechanism for shaded faces]<br>  totalMeltRate    = solarMeltRate + sensibleMeltRate<br>  cornBudget       = (crustQ × 5.0 + effFQ × 10.0) × (0.72 + thermalMass × 0.48)<br>  rawDur = cornBudget ÷ totalMeltRate + sweDurBonus − windDurPenalty<br>  rawDur × apDurFactor   [ap=3: 1.00, ap=2: 0.95, ap=1: 0.88]<br>→ Clamped 0.2 – 4.0 hours · Ref: Male &amp; Granger (1981)<br><br>SE clear warm day: high solar + high sensible → fast close<br>NW shaded face:   near-zero solar → sensible only → slow ambient close<br>Any face overcast: effRad suppressed by cloud → window extends naturally<br>→ cornCloses = cornOpens + duration</div>
       <div class="pipe-output">📍 OUTPUT B: Corn Closes = corn opens + duration</div>
@@ -3740,7 +3749,11 @@ function cornWindow(pk,asp,f,month){
     meltMatch:    parseFloat(meltMatchFactor.toFixed(3)),
     packDensity: (f.sweInches != null && f.snwdInches != null && f.snwdInches > 0)
       ? parseFloat((f.sweInches / f.snwdInches).toFixed(3)) : null,
-    packReadiness: parseFloat(computePackReadiness(liveCCC, liveFTCTotal, packRipeness).toFixed(3))};
+    packReadiness: parseFloat(computePackReadiness(liveCCC, liveFTCTotal, packRipeness).toFixed(3)),
+    fqPts:       Math.round(Math.max(1, Math.min(28, fqScore))),
+    radPts:      Math.round(Math.min(18, effRad * 14)),
+    cqPts:       Math.round(Math.max(1, Math.min(9,  cqScore))),
+    durBonusPts: dur>=2.0?4:dur>=1.2?2:0};
 }
 
 // ── SCORE DRIVER NARRATIVE ────────────────────────────────────────────────
@@ -3753,98 +3766,49 @@ function buildDrivers(w,f,month,asp){
   var peakElStr=skiFtStr;
   function head(num,title){ rows.push({type:'head',text:'Step '+num+' · '+title}); }
   function mod(title){  rows.push({type:'head',text:'Modifier · '+title}); }
+  function card(num,title,weightPct,verdict,why,scorePts,scoreMax,feedsInto,subRows){
+    rows.push({type:'card',num:num,title:title,weightPct:weightPct,
+      verdict:verdict,why:why,scorePts:scorePts||0,scoreMax:scoreMax||0,
+      feedsInto:feedsInto||'',rows:subRows||[]});
+  }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STEP 1 — OVERNIGHT FREEZE QUALITY
-  // Inputs: overnight low → sky clarity amplifies → wind scour degrades
-  // Output: effectiveFQ — the thermal debt solar energy must repay
-  // ─────────────────────────────────────────────────────────────────────────
   if(_bdLine){
     rows.push({icon:'📍',cls:'driver-neu',text:'<strong>'+_bdLine.n+'</strong> · '+_bdLine.pk+' · '+_bdLine.asp+'-facing'
       +(_bdLine.ez?' · ski zone '+_bdLine.ez.toLocaleString()+"'":'')+(_bdLine.sl?' · '+_bdLine.sl+'° slope':'')});
   }
-  head(1,'Overnight Freeze Quality');
 
+  // ── STEP 1 ── Overnight Freeze Quality
   var _lapseAdj=_bdLine?Math.round((_bdPk.el-(_bdLine.ez||_bdPk.el))/1000*3.5):0;
   var _skiLo=f.lo+_lapseAdj;
-  var _lapseNote=_lapseAdj>0?' ('+_skiLo+'°F at ski zone after +'+_lapseAdj+'° lapse correction)':(_lapseAdj<0?' ('+_skiLo+'°F at ski zone)':'');
-  if(f.lo<=18)       rows.push({icon:'🧊',cls:'driver-pos',text:'<strong>Overnight low '+f.lo+'°F — excellent freeze'+_lapseNote+'.</strong> This cold builds a deep, reinforced ice matrix at the surface. The thicker the crust, the longer the corn window lasts before collapsing to slush.'});
-  else if(f.lo<=24)  rows.push({icon:'❄️',cls:'driver-pos',text:'<strong>Overnight low '+f.lo+'°F — good freeze'+_lapseNote+'.</strong> Solid refreeze. A reliable crust will form, though not as deep as a sub-20° night.'});
-  else if(f.lo<=29)  rows.push({icon:'🌡️',cls:'driver-neu',text:'<strong>Overnight low '+f.lo+'°F — marginal freeze'+_lapseNote+'.</strong> The crust will be thin and the window shorter than ideal. A few degrees colder makes a meaningful difference here.'});
-  else               rows.push({icon:'⚠️',cls:'driver-neg',text:'<strong>Overnight low '+f.lo+'°F — weak or no freeze'+_lapseNote+'.</strong> Near or above 32°F overnight. Little to no ice crust will form — the essential first step for corn is absent.'});
-  if(w.columnColdContent!==null&&!w.archiveFailed){
-    var ccb=w.columnColdContent>=0.65?'+0.02 to +0.05 bonus (cold-core pack amplifies refreeze)':w.columnColdContent<=0.35?'−0.05 to −0.09 penalty (depleted pack absorbs cold before building crust)':null;
-    if(ccb) rows.push({icon:'🏔️',cls:w.columnColdContent>=0.65?'driver-pos':'driver-neg',text:'<strong>Cold reserve (CCC '+Math.round(w.columnColdContent*100)+'%)</strong> applies a freeze quality modifier: '+ccb+'.'});
-  }
-  if(w.matPen>0.04) rows.push({icon:'📅',cls:w.matPen>0.10?'driver-neg':'driver-neu',text:'<strong>Seasonal maturity penalty ('+Math.round(w.matPen*100)+'%)</strong> reduces effective freeze quality after cloud and wind — grain rounding weakens ice bonds regardless of how cold it got.'});
+  var _s1verdict = f.lo<=18 ? _skiLo+'°F at ski zone — deep freeze, thick crust. Best raw material.'
+    : f.lo<=24 ? _skiLo+'°F at ski zone — solid freeze, reliable crust.'
+    : f.lo<=29 ? _skiLo+'°F at ski zone — marginal freeze, thin crust. Short window expected.'
+    : _skiLo+'°F at ski zone — weak or no freeze. Corn unlikely.';
+  var _s1why = (f.lo<=24
+    ? 'The overnight cold built a bonded ice matrix at the surface. '
+    : f.lo<=29
+    ? 'The freeze penetrated only a thin surface veneer. '
+    : 'Near or above freezing overnight — little to no structural crust formed. ')
+    + (w.grainGate!=null
+      ? 'Grain gate ×'+w.grainGate.toFixed(2)+': this '+asp+' face has '+(w.grainGate>=0.80?'well-developed polycrystal grain structure — bonds form fully when frozen.':w.grainGate>=0.55?'developing grain structure — bonds form moderately when frozen.':'primarily angular grains — the freeze produces hard crust rather than classic corn bonds. Even a deep freeze scores partial credit here.')
+      : '')
+    + (w.grainGate!=null&&w.meltMatch!=null&&w.meltMatch<0.95?' Melt match ×'+w.meltMatch.toFixed(2)+': solar energy at this aspect is '+(w.meltMatch<0.50?'insufficient to drive a clean melt-through on this face.':'reduced relative to freeze depth.'):'');
+  var _s1subs = [];
+  if(f.cn<=15) _s1subs.push({icon:'🌟',cls:'driver-pos',text:'<strong>Clear overnight sky ('+f.cn+'%).</strong> Radiative cooling makes the surface 2–5°F colder than the air thermometer — deeper freeze than the low suggests.'});
+  else if(f.cn<=40) _s1subs.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partly cloudy overnight ('+f.cn+'%).</strong> Partial cloud moderates radiative cooling — freeze slightly shallower than a clear night at the same temperature.'});
+  else _s1subs.push({icon:'☁️',cls:'driver-neg',text:'<strong>Cloudy overnight ('+f.cn+'%).</strong> Cloud acts as a thermal blanket, limiting freeze depth.'});
+  if(f.wi>=22) _s1subs.push({icon:'💨',cls:'driver-neg',text:'<strong>High wind ('+f.wi+' mph) — crust scour.</strong> Wind erodes developing ice bonds. '+asp+' aspect: '+Math.round((WIND_ASP[asp]||0.5)*100)+'% wind exposure. Freeze quality −'+Math.round(w.windScour*100)+' pts.'});
+  else if(f.wi>=14) _s1subs.push({icon:'💨',cls:'driver-neu',text:'<strong>Moderate wind ('+f.wi+' mph).</strong> Some scour on exposed terrain.'});
+  else _s1subs.push({icon:'🍃',cls:'driver-pos',text:'<strong>Light wind ('+f.wi+' mph).</strong> Overnight freeze builds undisturbed.'});
+  if(w.windDir!=null){var wdDirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];var wdLabel=wdDirs[Math.round(w.windDir/22.5)%16];var windTo=(w.windDir+180)%360;var angDiff=(windTo-(AZ[asp]||0)+360)%360;if(angDiff>180)angDiff-=360;var advFactor=Math.cos(angDiff*Math.PI/180);if(advFactor>0.5)_s1subs.push({icon:'💨',cls:'driver-neg',text:'Wind from '+wdLabel+' — blowing directly onto this '+asp+' face. Scour amplified.'});else if(advFactor<-0.5)_s1subs.push({icon:'🛡️',cls:'driver-pos',text:'Wind from '+wdLabel+' — this '+asp+' face is in the lee. Scour reduced.'});}
+  if(weatherData&&weatherData.freezeHours!=null){var fh=weatherData.freezeHours;if(fh>=7)_s1subs.push({icon:'🧊',cls:'driver-pos',text:'<strong>'+fh+' hours below 28°F</strong> — sustained cold builds a deep, reinforced crust.'});else if(fh>=3)_s1subs.push({icon:'❄️',cls:'driver-neu',text:'<strong>'+fh+' hours below 28°F</strong> — moderate freeze duration.'});}
+  if(weatherData&&weatherData.snotelTminUsed)_s1subs.push({icon:'🌡️',cls:'driver-pos',text:'Overnight low blended with SNOTEL observation ('+weatherData.snotelTminRaw+'°F at station) — inversion bias corrected.'});
+  if(weatherData&&weatherData.freezeLevelFt!=null){var flFt=weatherData.freezeLevelFt;var skiFt=selectedLineIdx>=0?LINES[selectedLineIdx].ez:null;if(skiFt&&flFt>skiFt+300)_s1subs.push({icon:'⚠️',cls:'driver-neg',text:'<strong>Freezing level '+flFt.toLocaleString()+'\\' — above ski zone ('+skiFt.toLocaleString()+'\\').</strong> Freeze did not physically reach this face.'});else if(skiFt&&flFt<skiFt-500)_s1subs.push({icon:'🧊',cls:'driver-pos',text:'<strong>Freezing level well below ski zone ('+flFt.toLocaleString()+'\\').</strong> Confirmed freeze reached this face.'});}
+  if(weatherData&&weatherData.overnightCloud!==null&&weatherData.morningCloud!==null&&Math.abs(weatherData.morningCloud-weatherData.overnightCloud)>15){var diff=weatherData.morningCloud>weatherData.overnightCloud?'clouding up by morning':'clearing by morning';_s1subs.push({icon:'🌥️',cls:'driver-neu',text:'<strong>Cloud split: '+weatherData.overnightCloud+'% overnight → '+weatherData.morningCloud+'% morning ('+diff+').</strong> '+(weatherData.morningCloud>weatherData.overnightCloud?'Freeze quality higher than morning solar suggests — crust may be better than melt window implies.':'Morning clearing accelerates melt despite overnight clouds.')});}
+  card(1,'Overnight Freeze Quality',47,_s1verdict,_s1why,w.fqPts||0,28,
+    'Step 4: deeper freeze = larger thermal debt = later open but longer window. Step 6: larger freeze budget = slower close.',_s1subs);
 
-  if(f.cn<=15)       rows.push({icon:'🌟',cls:'driver-pos',text:'<strong>Clear overnight sky ('+f.cn+'% cloud).</strong> The snow surface radiates heat directly to the cold sky and receives almost nothing back — the surface can be 2–5°F colder than the air thermometer reads. Strong amplifier on top of the low temperature.'});
-  else if(f.cn<=40)  rows.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partly cloudy overnight ('+f.cn+'% cloud).</strong> Partial cloud moderates radiative cooling. The freeze will not penetrate quite as deep as a clear night at the same temperature.'});
-  else               rows.push({icon:'☁️',cls:'driver-neg',text:'<strong>Cloudy overnight ('+f.cn+'% cloud).</strong> Cloud radiates heat back to the surface, acting as a thermal blanket. Noticeably limits how deep the overnight freeze can penetrate.'});
-
-  if (weatherData && weatherData.overnightCloud !== null &&
-      weatherData.morningCloud !== null &&
-      Math.abs(weatherData.morningCloud - weatherData.overnightCloud) > 15) {
-    var diff = weatherData.morningCloud > weatherData.overnightCloud
-      ? 'clouding up by morning'
-      : 'clearing by morning';
-    rows.push({icon:'🌥️', cls:'driver-neu',
-      text:'<strong>Cloud split: ' + weatherData.overnightCloud + '% overnight → '
-        + weatherData.morningCloud + '% morning (' + diff + ').</strong> '
-        + (weatherData.morningCloud > weatherData.overnightCloud
-          ? 'Freeze quality higher than morning solar input suggests — crust may be better than the melt window implies.'
-          : 'Morning clearing will accelerate melt onset despite overnight clouds.')});
-  }
-
-  if(f.wi>=22)       rows.push({icon:'💨',cls:'driver-neg',text:'<strong>High wind ('+f.wi+' mph) — crust scour.</strong> Wind physically erodes developing ice bonds before they consolidate. The '+asp+' aspect has '+Math.round((WIND_ASP[asp]||0.5)*100)+'% wind exposure. Freeze quality reduced by '+Math.round(w.windScour*100)+' pts.'});
-  else if(f.wi>=14)  rows.push({icon:'💨',cls:'driver-neu',text:'<strong>Moderate wind ('+f.wi+' mph).</strong> Some scour effect on crust formation, more significant on exposed ridge or summit terrain.'});
-  else               rows.push({icon:'🍃',cls:'driver-pos',text:'<strong>Light wind ('+f.wi+' mph).</strong> Negligible scour — overnight freeze builds undisturbed.'});
-  // v40: wind direction advection note
-  if (w.windDir != null) {
-    var wdDirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-    var wdLabel = wdDirs[Math.round(w.windDir / 22.5) % 16];
-    var windTo = (w.windDir + 180) % 360;
-    var angDiff = (windTo - (AZ[asp]||0) + 360) % 360;
-    if (angDiff > 180) angDiff -= 360;
-    var advFactor = Math.cos(angDiff * Math.PI / 180);
-    if (advFactor > 0.5) {
-      rows.push({icon:'💨',cls:'driver-neg',text:'Wind from '+wdLabel+' — blowing <strong>directly onto</strong> this '+asp+' face. Windward exposure amplifies crust scour.'});
-    } else if (advFactor < -0.5) {
-      rows.push({icon:'🛡️',cls:'driver-pos',text:'Wind from '+wdLabel+' — this '+asp+' face is in the <strong>lee</strong>. Reduced scour; wind-loaded snow may be deeper here.'});
-    } else {
-      rows.push({icon:'💨',cls:'driver-neu',text:'Wind from '+wdLabel+' — <strong>crosswind</strong> relative to this '+asp+' face. Minimal direct loading or scour effect.'});
-    }
-  }
-
-  if (weatherData && weatherData.freezeHours != null) {
-    var fh = weatherData.freezeHours;
-    if (fh >= 7) rows.push({icon:'🧊',cls:'driver-pos',text:'<strong>'+fh+' hours below 28°F overnight — sustained cold builds a deep, reinforced crust.</strong>'});
-    else if (fh >= 3) rows.push({icon:'❄️',cls:'driver-neu',text:'<strong>'+fh+' hours below 28°F — moderate freeze duration.</strong>'});
-  }
-
-  if (weatherData && weatherData.snotelTminUsed) {
-    rows.push({icon:'🌡️',cls:'driver-pos',text:'Overnight low blended with SNOTEL observation ('+weatherData.snotelTminRaw+'°F at station) — corrects for inversion bias on clear, calm nights.'});
-  }
-  if (weatherData && weatherData.freezeLevelFt != null) {
-    var flFt = weatherData.freezeLevelFt;
-    var skiFt = selectedLineIdx>=0 ? LINES[selectedLineIdx].ez : null;
-    if (skiFt && flFt > skiFt + 300) {
-      rows.push({icon:'⚠️',cls:'driver-neg',
-        text:'<strong>Freezing level ' + flFt.toLocaleString() + '\' — above ski zone ('
-          + skiFt.toLocaleString() + '\')</strong>. The overnight freeze did not physically '
-          + 'reach this face. Crust formation suppressed regardless of air temperature reading.'});
-    } else if (skiFt && flFt < skiFt - 500) {
-      rows.push({icon:'🧊',cls:'driver-pos',
-        text:'<strong>Freezing level well below ski zone (' + flFt.toLocaleString() + '\').</strong> '
-          + 'Confirmed freeze reached this face — solid crust foundation.'});
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // MODIFIER — SNOWPACK CONDITION
-  // 14-day surface history + full-season column cold content
-  // These shape how deeply the overnight freeze penetrates and how long the window holds
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── MODIFIER — Snowpack Condition
   mod('Snowpack Condition');
 
   var ip=Math.round(w.packRipeness*100);
@@ -3899,6 +3863,21 @@ function buildDrivers(w,f,month,asp){
     } else if(w.archiveFailed){
       rows.push({icon:'🏔️',cls:'driver-neu',text:'<strong>Column cold reserve: unavailable</strong> — archive fetch failed; column defaults to seasonal baseline.'});
     }
+    // v45: aspect-specific cycling
+    if(weatherData&&weatherData.aspectPackState&&weatherData.aspectPackState[asp]){
+      var aspState=weatherData.aspectPackState[asp];
+      var aspFtc=aspState.ftCyclesTotal||0;
+      var aspGrainNote=aspFtc>=12?'well-developed polycrystal structure':aspFtc>=6?'grains rounding toward polycrystal':aspFtc>=2?'limited cycling — angular grains present':'minimal cycling — angular grains dominate';
+      var aspGrainCls=aspFtc>=6?'driver-pos':aspFtc>=2?'driver-neu':'driver-neg';
+      var ma2=MONTH_ADJ[month]||MONTH_ADJ[4];
+      var aspFactor2=(BASE_RAD[asp]||0.5)*((ma2.radBoost&&ma2.radBoost[asp])?ma2.radBoost[asp]:1.0);
+      var clearDayAbsorbed=480*aspFactor2*0.45;
+      var solarCapable=clearDayAbsorbed>180;
+      rows.push({icon:'🔄',cls:aspGrainCls,
+        text:'<strong>'+aspFtc+' freeze-thaw cycles on this '+asp+' face since March 1</strong> — '+aspGrainNote+'. '
+          +(solarCapable?'Solar cycling active ('+Math.round(clearDayAbsorbed)+' W/m² absorbed on clear days — above 180 W/m² threshold).':'Ambient-only cycling ('+Math.round(clearDayAbsorbed)+' W/m² absorbed — below 180 W/m² solar melt threshold; cycles only when air temp exceeds 36°F).')
+          +(w.grainGate!=null?' Grain gate ×'+w.grainGate.toFixed(2)+'.':'')});
+    }
   } else if(month>=5){
     rows.push({icon:'📅',cls:'driver-neg',text:'<strong>'+mnames[month]+' seasonal maturity (default):</strong> Months of freeze-thaw cycles have rounded snow grains — bonds form weakly when refrozen. ~'+ip+'% probability the column is fully isothermal; if so, the overnight freeze can only penetrate a thin surface veneer.'});
   } else if(month===4){
@@ -3907,71 +3886,54 @@ function buildDrivers(w,f,month,asp){
     rows.push({icon:'📅',cls:'driver-pos',text:'<strong>March seasonal state (default):</strong> Early-season cold-core snow with fine angular grains — ideal structure for deep refreeze. Low isothermal probability.'});
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STEPS 2–3 — SOLAR INPUT & SUN-HIT TIME
-  // Aspect radiation multiplier × morning cloud attenuation
-  // Determines how fast the thermal debt (Step 1) is repaid
-  // ─────────────────────────────────────────────────────────────────────────
-  head('2–3','Solar Input & Sun-Hit Time');
-
+  // ── STEPS 2–3 ── Solar Input & Sun-Hit Time
   var aspRad=BASE_RAD[asp]||0.5;
   var radBoostMult=((ma.radBoost||{})[asp]||1);
   var aspRadPct=Math.round(aspRad*radBoostMult*100);
   var effRadPct=Math.round(w.effRad*100);
-  var aspCls=aspRadPct>=120?'driver-pos':aspRadPct>=80?'driver-neu':aspRadPct>=45?'driver-neu':'driver-neg';
   var isLiveSolar=(f.solarMorning!=null&&f.solarMorning>0);
-  var solarSrc = isLiveSolar?' <span style="font-size:.65rem;color:var(--teal)">[📡 live solar]</span>':'';
-  var cloudNote=isLiveSolar?'Live shortwave radiation from Open-Meteo already incorporates actual cloud cover — no separate attenuation step. Effective radiation: <strong>'+effRadPct+'%</strong> of benchmark.':'After '+f.cm+'% morning cloud attenuation: <strong>'+effRadPct+'% effective</strong>.';
-  rows.push({icon:'☀️',cls:aspCls,
-    text:'<strong>'+asp+'-facing aspect: '+aspRadPct+'% of flat-ground radiation in '+mnames[month]+'.'+solarSrc+'</strong> '
-    +(aspRadPct>=120?'Direct, near-perpendicular solar loading — maximum melt energy per square foot.'
-     :aspRadPct>=80?'Good angled solar input — effective melt energy for this time of year.'
-     :aspRadPct>=45?'Oblique solar angle — slower melt rate; timing is tighter.'
-     :'Low radiation aspect — sun strikes at a shallow angle, minimal melt energy. Corn onset is sensitive to any cloud cover.')
-    +' '+cloudNote});
+  var _s23verdict = asp+'-facing · '+aspRadPct+'% radiation in '+mnames[month]
+    +(isLiveSolar?' · '+f.solarMorning+' W/m² measured':'')
+    +' · sun hits at '+(function(){var ma2=MONTH_ADJ[month]||MONTH_ADJ[4];var sh=BASE_SUN[asp]||8;sh+=((ma2.sunShift||{})[asp]||0);var h=Math.floor(sh),m=Math.round((sh-h)*60);if(m===60){h++;m=0;}return h+':'+(m<10?'0':'')+m+(h<12?' AM':' PM');}());
+  var _s23why = (aspRadPct>=120?'Near-perpendicular solar loading — maximum energy delivered per square foot. ':aspRadPct>=80?'Good solar input for this time of year. ':aspRadPct>=45?'Oblique angle — slower melt, tighter timing. ':'Low radiation aspect — shallow sun angle, sensitive to any cloud cover. ')
+    +(isLiveSolar?'Live shortwave from Open-Meteo already incorporates cloud cover. Effective radiation '+effRadPct+'% of clear-sky benchmark. ':'After '+f.cm+'% morning cloud attenuation: '+effRadPct+'% effective. ')
+    +'Solar drives both melt onset (Step 4) and the primary close mechanism (Step 6).';
+  var _s23subs=[];
+  if(f.cm<=15)_s23subs.push({icon:'🌞',cls:'driver-pos',text:'<strong>Clear morning sky ('+f.cm+'%).</strong> Full solar loading — rapid, uniform corn onset across the slope.'});
+  else if(f.cm<=40)_s23subs.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partial morning clouds ('+f.cm+'%).</strong> Some attenuation — onset slightly delayed.'});
+  else _s23subs.push({icon:'☁️',cls:'driver-neg',text:'<strong>Heavy morning clouds ('+f.cm+'%).</strong> Significantly reduced solar energy. Window extends but opens later.'});
+  card('2–3','Solar Input & Sun-Hit Time',31,_s23verdict,_s23why,w.radPts||0,18,
+    'Step 4: solar melt rate drives how fast the freeze debt is repaid → open time. Step 6: solar melt rate is primary close driver on sun-exposed faces.',_s23subs);
 
-  if(f.cm<=15)      rows.push({icon:'🌞',cls:'driver-pos',text:'<strong>Clear morning sky ('+f.cm+'% cloud).</strong> Full solar loading reaches the face — rapid, predictable corn onset and uniform melt across the slope.'});
-  else if(f.cm<=40) rows.push({icon:'🌤️',cls:'driver-neu',text:'<strong>Partial morning clouds ('+f.cm+'%).</strong> Some solar attenuation. Onset slightly delayed; melt may be less consistent across the face.'});
-  else              rows.push({icon:'☁️',cls:'driver-neg',text:'<strong>Heavy morning clouds ('+f.cm+'%).</strong> Significantly reduced solar energy. On lower-radiation aspects, a cloudy morning can prevent the window from opening at reliably skiable conditions.'});
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // STEP 4 — MELT ONSET → CORN OPENS
-  // Dawn temp sets the thermal debt size; temp rise rate determines payoff speed
-  // ─────────────────────────────────────────────────────────────────────────
-  head(4,'Melt Onset → Corn Opens');
-
+  // ── STEP 4 ── Melt Onset → Corn Opens
   var _skiDa=f.da+_lapseAdj;
   var _skiHi=f.hi+_lapseAdj;
   var dth=_skiHi-_skiDa;
-  var debtCls=_skiDa<=28?'driver-neu':_skiDa<=33?'driver-neu':'driver-neg';
-  var debtNote=_skiDa<=20?'very cold at dawn at ski zone — large thermal debt, delayed onset; but freeze was correspondingly deep'
-    :_skiDa<=28?'cool at dawn at ski zone — moderate thermal debt, typical spring timing'
-    :_skiDa<=32?'near-freezing at dawn at ski zone — small thermal debt, corn opens earlier; the overnight crust was likely thin'
-    :'above freezing at dawn at ski zone — no thermal debt; surface opens immediately but the overnight freeze was already compromised';
-  var _daNote=_lapseAdj>0?' ('+_skiDa+'°F at ski zone)':'';
-  rows.push({icon:'🌅',cls:debtCls,
-    text:'<strong>Dawn temp '+f.da+'°F'+_daNote+' → High '+f.hi+'°F ('+dth+'°F morning rise at ski zone).</strong> '+debtNote
-    +'. The '+dth+'°F rise rate is '+(dth>=20?'steep — thermal debt clears quickly, corn opens promptly':dth>=12?'moderate — typical spring payoff timing':'shallow — slow debt repayoff; onset may be late or incomplete on low-radiation aspects')+'.'});
-  if(w.packRipeness>0.50) rows.push({icon:'🌡️',cls:'driver-neu',text:'Near-isothermal pack (packRipeness '+Math.round(w.packRipeness*100)+'%) shortens melt delay — thin overnight crust thaws quickly. Corn opens earlier but the window closes sooner for the same reason.'});
-  if(_bdLine&&(_bdLine.ez||0)>12500) rows.push({icon:'🏔️',cls:'driver-pos',text:'High ski zone elevation ('+(_bdLine.ez||0).toLocaleString()+'\'): column retains cold reserve longer than the calendar date alone suggests. Effective isothermal probability reduced.'});
-  if(f.dust){
-    rows.push({icon:'🟤',cls:'driver-neg',text:'<strong>Dust on snow active.</strong> Lower surface albedo accelerates melt onset by ~25 min and compresses window duration by ~15 min. Check <a href="https://avalanche.state.co.us/forecasts/special-reports/dust-on-snow" target="_blank" style="color:var(--teal)">CAIC dust report</a> for layer depth and intensity.'});
-  }
-  if(w.ws > 13.0) rows.push({icon:'⚠️',cls:'driver-neg',text:'Window opens at '+ht(w.ws)+' — afternoon opening increases exposure to heat buildup and convective risk.'});
-  else if(w.ws > 11.5) rows.push({icon:'🕐',cls:'driver-neu',text:'Window opens late morning — plan approach accordingly.'});
+  var _s4verdict='Corn opens at '+ht(w.ws)
+    +(_lapseAdj>0?' · '+_skiDa+'°F dawn at ski zone':'')
+    +' · '+dth+'°F morning rise.';
+  var _s4why = (_skiDa<=20?'Very cold at dawn — large thermal debt before melt can begin. ':_skiDa<=28?'Cool dawn — moderate thermal debt, typical spring timing. ':_skiDa<=32?'Near-freezing at dawn — small debt, opens earlier. ':'Above freezing at dawn — no thermal debt; surface opens at sun-hit. ')
+    +'Temperature rise rate '+(dth>=20?'steep — debt clears quickly, on-time opening. ':dth>=12?'moderate — typical spring payoff. ':'shallow — debt repayment slow, onset may run late on low-radiation aspects. ')
+    +(w.packRipeness>0.50?'Near-isothermal pack (packRipeness '+Math.round(w.packRipeness*100)+'%) — thin crust thaws fast, early open but earlier close too. ':'');
+  var _s4subs=[];
+  if(f.dust)_s4subs.push({icon:'🟤',cls:'driver-neg',text:'<strong>Dust on snow.</strong> Lower albedo accelerates onset by ~25 min. Check <a href="https://avalanche.state.co.us/forecasts/special-reports/dust-on-snow" target="_blank" style="color:var(--teal)">CAIC dust report</a>.'});
+  if(w.ws>13.0)_s4subs.push({icon:'🕐',cls:'driver-neu',text:'Opens at '+ht(w.ws)+' — afternoon timing. Plan approach to arrive before corn-open. Check CAPE warning if present.'});
+  else if(w.ws>11.5)_s4subs.push({icon:'🕐',cls:'driver-neu',text:'Late morning open ('+ht(w.ws)+') — plan approach accordingly.'});
+  if(_bdLine&&(_bdLine.ez||0)>12500)_s4subs.push({icon:'🏔️',cls:'driver-pos',text:'High ski zone ('+(_bdLine.ez||0).toLocaleString()+'\\') — column retains cold reserve longer than calendar implies.'});
+  card(4,'Melt Onset → Corn Opens',0,_s4verdict,_s4why,0,0,
+    'Step 6: open time anchors the window; later opens into warmer afternoons increase the sensible melt rate.',_s4subs);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STEP 5 — SNOW SURFACE QUALITY
-  // Depth + age of storm snow, or consolidated pack floor
-  // Sets how much material is available to refreeze into a skiable crust
-  // ─────────────────────────────────────────────────────────────────────────
-  head(5,'Snow Surface — Material to Refreeze');
-
-  // Determine which mode dominated: storm crust vs consolidated pack floor
+  // ── STEP 5 ── Snow Surface Quality
   var _stormCrustQ=w.depthFactor*w.ageFactor*(0.70+(w.grainQuality||0.5)*0.30);
-  var _packFloorBase=0.35; // packFloor anchored at 0.35 × packFloorDepth × grainQuality
+  var _packFloorBase=0.35;
   var _stormDominates=(_stormCrustQ>=_packFloorBase||f.ds<=10);
   var cqPct=Math.round(w.crustQ*100);
+  var _s5mode=_stormDominates?'Storm crust mode':'Consolidated pack floor mode';
+  var _s5verdict=_s5mode+' · Snow Surface '+cqPct+'%'+(w.sweAdj&&Math.abs(w.sweAdj)>0.01?' · SWE adj '+(w.sweAdj>0?'+':'')+Math.round(w.sweAdj*100)+'%':'');
+  var _s5why=(_stormDominates
+    ?(f.sdp>=8&&f.ds<=3?'Fresh deep storm snow ('+f.sdp+'" · '+f.ds+' days). Fine angular grains bond tightly — best raw material for deep crust.':f.sdp>=4&&f.ds<=7?'Recent storm snow ('+f.sdp+'" · '+f.ds+' days). Partly rounded grains, solid bonding.':'Shallow or aged storm snow ('+f.sdp+'" · '+f.ds+' days). Thin material — pack floor provides the real refreeze base.')
+    :'Consolidated spring pack floor. Depth at ski zone drives crustQ — no recent storm needed.')
+    +' crustQ '+w.crustQ.toFixed(2)+' × 5.0 = '+Math.round(w.crustQ*5.0).toFixed(1)+' pts budget contribution to window duration.';
 
   if(_stormDominates){
     if(f.sdp>=8&&f.ds<=3)      rows.push({icon:'🌨️',cls:'driver-pos',text:'<strong>Deep fresh storm snow ('+f.sdp+'" · '+f.ds+' day'+(f.ds===1?'':'s')+' old)</strong> dominates the snow surface score ('+cqPct+'%). Fine angular grains bond tightly when frozen — best raw material for a deep, reliable crust.'});
@@ -4000,90 +3962,42 @@ function buildDrivers(w,f,month,asp){
     rows.push({icon:'📡',cls:'driver-neu',text:'<strong>Basin SWE: unavailable.</strong> Running without live snowpack data. Check NRCS SNOTEL manually.'});
   }
 
-  // Freeze-thaw cycle bonus
-  if(weatherData && weatherData.ftCycles >= 2) {
-    var ftC = weatherData.ftCycles;
-    if(ftC >= 4) rows.push({icon:'🔄',cls:'driver-pos',text:'<strong>'+ftC+' freeze-thaw cycles in past 14 days.</strong> Well-developed polycrystal structure — best possible corn grain size and bonding. (Effect captured in grainQuality.)'});
-    else         rows.push({icon:'🔄',cls:'driver-neu',text:'<strong>'+ftC+' freeze-thaw cycles in past 14 days.</strong> Grains developing melt-freeze polycrystal structure. (Effect captured in grainQuality.)'});
-  }
+  var _s5subs=[];
+  if(w.sweAdj&&Math.abs(w.sweAdj)>0.01)_s5subs.push({icon:'💧',cls:w.sweAdj>0?'driver-pos':'driver-neg',text:'<strong>SWE adjustment: '+(w.sweAdj>0?'+':'')+Math.round(w.sweAdj*100)+'% to crustQ.</strong> '+(w.sweAdj>0?'Above-normal snowpack depth — extra cold reserve.':'Below-normal SWE — thinner pack, less material.')});
+  if(w.packDensity!=null){var pd=w.packDensity;var densLabel=pd>=0.28&&pd<=0.45?'ideal corn density (×1.08)':pd>0.50?'saturated (×0.90)':pd<0.18?'unconsolidated (×0.85)':'near-normal';var densCls=pd>=0.28&&pd<=0.45?'driver-pos':pd>0.50||pd<0.18?'driver-neg':'driver-neu';_s5subs.push({icon:'⚖️',cls:densCls,text:'<strong>Pack density '+pd.toFixed(2)+' — '+densLabel+'.</strong> Ideal range 0.28–0.45 = large polycrystals, reliable bonding.'});}
+  if(weatherData&&(weatherData.depthGradient||weatherData.snwdOmInches!=null)){var depthNote='';if(weatherData.depthGradient){var g=weatherData.depthGradient;depthNote='Depth from '+g.n+'-point elevation gradient (SNOTEL + Open-Meteo).';}else if(weatherData.snwdOmInches!=null){depthNote='Depth from Open-Meteo grid ('+weatherData.snwdOmInches+'" at grid) — single-point estimate.';}if(depthNote)_s5subs.push({icon:'📏',cls:'driver-neu',text:depthNote});}
+  card(5,'Snow Surface — Material to Refreeze',15,_s5verdict,_s5why,w.cqPts||0,9,
+    'Step 6: crustQ × 5.0 is the dominant term in the energy budget. Deeper crust = longer window.',_s5subs);
 
-  // Pack density
-  if (w.packDensity != null) {
-    var pd = w.packDensity;
-    var densLabel=pd>=0.28&&pd<=0.45?'ideal corn density (×1.08)':pd>0.50?'saturated (×0.90 — isothermal risk)':pd<0.18?'unconsolidated (×0.85 — weak bonds)':'near-normal';
-    var densCls=pd>=0.28&&pd<=0.45?'driver-pos':pd>0.50||pd<0.18?'driver-neg':'driver-neu';
-    rows.push({icon:'⚖️',cls:densCls,text:'<strong>Pack density '+pd.toFixed(2)+' — '+densLabel+'.</strong> SWE÷depth ratio reflects crystal structure and free water content. Ideal range 0.28–0.45 = large polycrystals, strong refreeze bonding.'});
-  }
+  // ── STEP 6 ── Window Duration → Corn Closes
+  var _solarRate=parseFloat(w.effRad.toFixed(2));
+  var _sensibleRate=parseFloat(Math.max(0,_skiHi-36).toFixed(1))*0.04;
+  var _totalRate=parseFloat((_solarRate+_sensibleRate).toFixed(2));
+  var _solarPct=_totalRate>0?Math.round(_solarRate/_totalRate*100):0;
+  var _durNote=w.dur>=2.5?'wide window':'solid window (1.5–2.5h)';if(w.dur<1.5)_durNote='short window';if(w.dur<0.75)_durNote='very short window';
+  var _s6verdict=ht(w.ws)+' → '+ht(w.we)+' · '+w.dur+'h · '+_durNote+' · '+_solarPct+'% solar / '+(100-_solarPct)+'% sensible.';
+  var _s6why='Energy budget (crustQ×5 + effFQ×10) × thermalMass ÷ (solar rate + sensible rate) = duration. '
+    +(_solarPct>=70?'Solar-dominated: face geometry and sky clarity drive the close time. Overcast would significantly extend this window. ':'')
+    +(_solarPct<40?'Sensible-heat-dominated: shaded face — warm air is the primary close driver. Solar contributes little regardless of sky. ':'')
+    +((_solarPct>=40&&_solarPct<70)?'Mixed: both sun and warm air contributing. ':'')
+    +(w.thermalMass!=null?'Thermal mass '+Math.round(w.thermalMass*100)+'% — cold deep pack takes more energy to exhaust → longer budget. ':'')
+    +(w.sweDurBonus>0.05?'SWE bonus +'+w.sweDurBonus.toFixed(2)+'h. ':w.sweDurBonus<-0.05?'Low SWE −'+Math.abs(w.sweDurBonus).toFixed(2)+'h. ':'');
+  var _s6subs=[];
+  if(f.wi>=18)_s6subs.push({icon:'💨',cls:'driver-neg',text:'<strong>Wind '+f.wi+' mph mechanically shortens window.</strong> Duration penalty −'+w.windDurPen.toFixed(2)+'h.'});
+  if(w.packReadiness!=null){var pr=Math.round(w.packReadiness*100);var prCls=pr>=85?'driver-pos':pr>=65?'driver-neu':'driver-neg';_s6subs.push({icon:'🌽',cls:prCls,text:'<strong>Pack Readiness: '+pr+'%</strong> — '+(pr>=85?'peak cycling zone — optimal grain state.':pr>=65?'good cycling range.':pr>=45?'outside optimal range — pre-corn or near-isothermal.':'low readiness — duration reduced.')+' <span style="font-size:.63rem;color:#456a82">(Display only — effects embedded in grainQuality + thermalMass)</span>'});}
+  card(6,'Window Duration → Corn Closes',7,_s6verdict,_s6why,w.durBonusPts||0,4,'',_s6subs);
 
-  // Depth source note
-  if (weatherData && (weatherData.depthGradient || weatherData.snwdOmInches != null)) {
-    var depthNote='';
-    if(weatherData.depthGradient){var g=weatherData.depthGradient;depthNote='Ski zone depth from '+g.n+'-point elevation gradient (SNOTEL + Open-Meteo). Thin packs advance effective isothermal state; deep packs retard it.';}
-    else if(weatherData.snwdOmInches!=null){depthNote='Snow depth from Open-Meteo grid ('+weatherData.snwdOmInches+'" at grid elev) — no elevation gradient available. Depth adjustment to isothermal probability uses this single-point estimate.';}
-    if(depthNote) rows.push({icon:'📏',cls:'driver-neu',text:depthNote});
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // STEP 6 — WINDOW DURATION → CORN CLOSES
-  // Crust depth is the dominant term; wind + afternoon temp collapse it
-  // ─────────────────────────────────────────────────────────────────────────
-  head(6,'Window Duration → Corn Closes');
-
-  var durCls=w.dur>=2.0?'driver-pos':w.dur>=1.0?'driver-neu':'driver-neg';
-  var durNote=w.dur>=2.5?'wide window — deep crust with strong radiation; the surface holds the corn state well'
-    :w.dur>=1.5?'solid window — reliable timing margin for most approaches'
-    :w.dur>=0.75?'short window — thin crust or limited solar loading; timing precision matters'
-    :'very short window — marginal conditions; difficult to reliably hit on the mountain';
-  var _skiHiDur=_skiHi;
-  rows.push({icon:'⏱️',cls:durCls,
-    text:'<strong>Window duration: '+w.dur+' hrs — '+durNote+'.</strong> '
-    +'Crust depth × radiation are the dominant inputs. '
-    +'Ski zone high of '+Math.round(_skiHiDur)+'°F '+((_skiHiDur)>=52?'(threshold 46°F well exceeded — rapid slush transition)':(_skiHiDur)>=46?'(above 46°F threshold — window penalty active)':'(below 46°F threshold — minimal slush acceleration)')+'. '
-    +(w.thermalMass!=null?'Thermal mass '+Math.round(w.thermalMass*100)+'% — duration ×'+(0.72+w.thermalMass*0.48).toFixed(2)+'. ':'')
-    +(w.sweDurBonus>0.05?'SWE depth bonus adds +'+w.sweDurBonus.toFixed(2)+'h. ':w.sweDurBonus<-0.05?'Low SWE removes '+Math.abs(w.sweDurBonus).toFixed(2)+'h. ':'')
-    +'Column cold reserve '+(w.columnColdContent!==null&&!w.archiveFailed?'('+Math.round(w.columnColdContent*100)+'%) ':'')+'buffers against rapid isothermal collapse.'});
-  if(f.wi>=18) rows.push({icon:'💨',cls:'driver-neg',text:'<strong>Wind '+f.wi+' mph shortens the window.</strong> Above 18 mph, wind mechanically disrupts the softened corn surface. Duration penalty: −'+w.windDurPen.toFixed(2)+' hrs.'});
-  if(w.packReadiness!=null){
-    var pr=Math.round(w.packReadiness*100);
-    var prCls=pr>=85?'driver-pos':pr>=65?'driver-neu':'driver-neg';
-    var prNote=pr>=85?'Peak cycling zone — pack in optimal melt-freeze state. Duration boosted.'
-      :pr>=65?'Good cycling range — reliable windows expected.'
-      :pr>=45?'Outside optimal range — pack either pre-corn (March) or near-isothermal (late June).'
-      :'Low pack readiness — window duration reduced.';
-    rows.push({icon:'🌽',cls:prCls,text:'<strong>Pack Readiness: '+pr+'% — '+prNote+'</strong>'
-      +'<br><div style="display:flex;align-items:center;gap:.4rem;margin-top:.22rem">'
-      +'<span style="font-size:.65rem;color:var(--muted);flex-shrink:0">Low</span>'
-      +'<div class="pr-bar-wrap"><div class="pr-bar" style="width:'+pr+'%;background:linear-gradient(90deg,#1a3a5c,#00d4aa)"></div></div>'
-      +'<span style="font-size:.68rem;color:var(--teal);font-weight:700;width:2.2rem;text-align:right">'+pr+'%</span>'
-      +'<span style="font-size:.65rem;color:var(--muted)">Peak</span></div>'
-      +'<span style="font-size:.63rem;color:#456a82">Grain maturity 40% · Cycling reliability 35% · Cold reserve range 25% · Display only (effects embedded in grainQuality + thermalMass)</span>'});
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // STEP 7 — TERRAIN FACTOR (display only — effects embedded in physics steps)
-  // sr → srDepthMult (Step 5 depth) + srPatchFactor (Step 5 surface)
-  // we → ad.wx inside windScour (Steps 1 + 6)
-  // ap → apDurFactor on rawDur (Step 6)
-  // ─────────────────────────────────────────────────────────────────────────
-  head(7,'Terrain Factor');
-
+  // ── STEP 7 ── Terrain Factor
   var tPct=Math.round(w.terrainQ*100);
-  var tCls=w.terrainQ>=0.85?'driver-pos':w.terrainQ>=0.65?'driver-neu':'driver-neg';
-  var tNote=w.terrainQ>=0.85?'excellent terrain — high snow retention, uniform aspect, sheltered from wind.'
-    :w.terrainQ>=0.65?'good terrain — minor limitations in snow retention, aspect uniformity, or wind exposure.'
-    :w.terrainQ>=0.50?'moderate terrain limitations — one or more of snow retention, aspect purity, or wind shelter is compromised.'
-    :'significant terrain limitations — thin or patchy snowpack, inconsistent solar exposure, or exposed position.';
-  var rbHtml='';
-  if(w.terrainRubric){
-    var rb=w.terrainRubric;
-    var ss=function(v){return[1,2,3].map(function(i){return'<span style="color:'+(i<=v?'#ffd166':'#2e4a60')+'">★</span>';}).join('');};
-    rbHtml='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem;margin-top:.32rem;text-align:center;font-size:.68rem">'
-      +'<div>'+ss(rb.sr)+'<div style="color:var(--muted);font-size:.62rem">Snow Retention</div></div>'
-      +'<div>'+ss(rb.ap)+'<div style="color:var(--muted);font-size:.62rem">Aspect Purity</div></div>'
-      +'<div>'+ss(rb.we)+'<div style="color:var(--muted);font-size:.62rem">Wind Shelter</div></div>'
-      +'</div>';
-  }
-  rows.push({icon:'⛰️',cls:tCls,text:'<strong>Terrain: '+tPct+'% — '+tNote+'</strong> <span style="font-size:.63rem;color:#456a82">(Display only — effects embedded in Steps 1, 5, 6 via srDepthMult, srPatchFactor, windScour, apDurFactor)</span>'+rbHtml});
+  var tNote=w.terrainQ>=0.85?'excellent — deep continuous snow, uniform sun, sheltered.'
+    :w.terrainQ>=0.65?'good — minor limitations in retention, aspect, or wind.'
+    :w.terrainQ>=0.50?'moderate limitations — patchy cover, partial shadow, or wind exposure.'
+    :'significant limitations — thin pack, icy ribs, or exposed position.';
+  var _t7verdict='Terrain '+tPct+'% — '+tNote;
+  var _t7why='Effects are embedded directly in physics steps: Snow Retention → ski-zone depth (Step 5) + surface patchiness (Step 5). Aspect Purity → window consistency (Step 6 apDurFactor). Wind Shelter → overnight scour (Step 1). No separate multiplier — double-counting eliminated.';
+  var _t7subs=[];
+  if(w.terrainRubric){var rb=w.terrainRubric;var ss=function(v){return[1,2,3].map(function(i){return'<span style="color:'+(i<=v?'#ffd166':'#2e4a60')+'">★</span>';}).join('');};_t7subs.push({icon:'⛰️',cls:w.terrainQ>=0.65?'driver-pos':'driver-neu',text:'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem;text-align:center;font-size:.68rem"><div>'+ss(rb.sr)+'<div style="color:var(--muted);font-size:.62rem">Snow Retention</div></div><div>'+ss(rb.ap)+'<div style="color:var(--muted);font-size:.62rem">Aspect Purity</div></div><div>'+ss(rb.we)+'<div style="color:var(--muted);font-size:.62rem">Wind Shelter</div></div></div>'});}
+  card(7,'Terrain Factor',0,_t7verdict,_t7why,0,0,'',_t7subs);
 
   return rows;
 }
@@ -4292,7 +4206,28 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
   var drivers=buildDrivers(w,f,month,asp);
   h+='<div class="driver-card"><h2 style="margin-bottom:.45rem">What\'s Driving the Score</h2>';
   drivers.forEach(function(d){
-    if(d.type==='head'){
+    if(d.type==='card'){
+      var barPct = d.scoreMax>0 ? Math.round((d.scorePts/d.scoreMax)*100) : 0;
+      h+='<div class="dc-card">';
+      h+='<div class="dc-step-lbl"><span>Step '+d.num+' · '+d.title+'</span>'
+        +(d.weightPct?'<span class="dc-weight">'+d.weightPct+'% of score</span>':'')+'</div>';
+      h+='<div class="dc-verdict">'+d.verdict+'</div>';
+      if(d.why) h+='<div class="dc-why">'+d.why+'</div>';
+      if(d.scoreMax>0){
+        h+='<div class="dc-bar-row">'
+          +'<span style="min-width:3.5rem">+'+d.scorePts+' / '+d.scoreMax+' pts</span>'
+          +'<div class="dc-bar-track"><div class="dc-bar-fill" style="width:'+barPct+'%"></div></div>'
+          +'</div>';
+      }
+      if(d.feedsInto) h+='<div class="dc-feeds">→ '+d.feedsInto+'</div>';
+      // Sub-rows (modifier details within this step)
+      if(d.rows && d.rows.length){
+        d.rows.forEach(function(r){
+          h+='<div class="driver-row" style="margin-top:.18rem"><div class="driver-icon">'+r.icon+'</div><div class="'+r.cls+'">'+r.text+'</div></div>';
+        });
+      }
+      h+='</div>';
+    } else if(d.type==='head'){
       h+='<div class="driver-step-head">'+d.text+'</div>';
     } else {
       h+='<div class="driver-row"><div class="driver-icon">'+d.icon+'</div><div class="'+d.cls+'">'+d.text+'</div></div>';
