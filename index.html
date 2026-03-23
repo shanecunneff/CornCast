@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v45 2026-03-20</title>
+<title>CornCast 🌽 v45b 2026-03-20</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -494,6 +494,12 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v45b — Remove lateOpenPenalty, RAW_MAX 58 (2026-03-22)</h3>
+    <p>Two corrections following v45 benchmarking:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>lateOpenPenalty removed:</strong> The ×0.80/×0.90 multiplier for windows opening after 11:30 AM has been removed. Clock time is not a snow quality metric. A NW couloir opening at 2:30 PM after a cold night produces the same quality corn as an SE face opening at 8:30 AM — the hiPenalty and short-window multipliers already account for warm afternoon temperature compressing the window. The late-open penalty was an implicit SE-face-centric bias against geometrically shaded aspects. v46 will replace hiPenalty with a direct solar+sensible energy balance close-time calculation.</li>
+      <li><strong>RAW_MAX updated to 58:</strong> v45 aspect-solar cycling gives SE/S faces 28+ accumulated cycles by April, pushing grainQuality to 0.98 — higher than the pre-v45 ceiling assumed. Ceiling scenario is S face April 8°F summit on prime pack.</li>
+    </ul>
     <h3>v45 — Aspect-specific solar pack state, energy balance model (2026-03-22)</h3>
     <p>Pack state parameters — surface ripeness, freeze-thaw cycles, grain quality — are now computed per-aspect using a direct snow surface energy balance rather than treating all faces identically from a single grid-point temperature record.</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -606,7 +612,7 @@ input[type=date]:focus{border-color:var(--teal)}
 <script>
 (function(){
 "use strict";
-var RAW_MAX=55; // v44b: recalibrated after grainGateFactor + meltMatchFactor
+var RAW_MAX=58; // v45b: recalibrated after v45 aspect-solar — SE/S with 28+ solar cycles                 // reach higher grainQuality ceiling than pre-v45. Ceiling = S face April 8°F.
                          // ceiling = April/May S face ~7°F summit, clear, prime pack
                          // console.log for verification left active — remove after confirming
 function tq(sr,ap,we){return{sr:sr,ap:ap,we:we,q:(sr+ap+we)/9};}
@@ -3640,11 +3646,12 @@ function cornWindow(pk,asp,f,month){
   if(f.dust) rawDur = Math.max(0.20, rawDur - 0.25); // dust accelerates slush transition
   var dur=Math.max(0.20,Math.min(4.0,rawDur));
   var we=ws+dur;
-  // Late-opening penalty: windows opening after 11:30am carry higher risk
-  // (afternoon heat buildup, thunderstorm probability, approach conditions)
-  var lateOpenPenalty = ws > 13.0 ? 0.80
-                      : ws > 11.5 ? 0.90
-                      : 1.0;
+  // lateOpenPenalty removed v45b — clock time is not a snow quality metric.
+  // Opening at 2 PM on a NW face is geometrically normal, not a failure mode.
+  // hiPenalty already handles warm afternoon temperature compressing duration.
+  // CAPE flag handles convective risk separately in driver narrative.
+  // v46 will replace hiPenalty with a direct solar+sensible energy balance.
+  var lateOpenPenalty = 1.0;
   var phys=0;
   // FQ bell curve: peaks at effFQ=0.55 (~15–20°F overnight = optimal per OpenSnow)
   // Sub-5°F nights build thick crusts that open late and inconsistently (too cold)
