@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v45b 2026-03-20</title>
+<title>CornCast 🌽 v46 2026-03-20</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -420,7 +420,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>A counterintuitive result:</strong> higher-radiation aspects (SE, S) tend to produce slightly longer windows than lower-radiation aspects for the same crust quality. Intense, uniform solar loading melts the surface consistently across the whole face — every square meter enters the corn state at the same time. Low-radiation faces melt patchily, creating inconsistent micro-conditions across the slope even though the aggregate window technically hasn't closed.<br><br>
         A warm afternoon high accelerates the transition to slush: a 55°F day burns through a corn window faster than a 42°F day. Wind above about 18 mph mechanically disrupts the softened surface and shortens the window.
       </div>
-      <div class="formula-box">rawDur = crustQ × 1.6 + effRad × 1.4<br>       − max(0, (f_hi_skizone − 46) × 0.085)   [penalty starts at 46°F, not 32°F]<br>       − windDurPenalty                          [above 18 mph; scaled by aspect + per-line exposure]<br>       + sweDurBonus                             [−0.30 to +0.18 h from SWE inches]<br>rawDur × (0.72 + thermalMass × 0.48)             [CCC + SWE cold reserve; collapse above packRipeness 0.75]<br>rawDur × apDurFactor                             [ap=3: 1.00, ap=2: 0.95, ap=1: 0.88]<br>→ Clamped 0.2 – 4.0 hours<br>→ cornCloses = cornOpens + duration</div>
+      <div class="formula-box">Energy balance close time (v46):<br>  solarMeltRate    = effRad × 1.0          [solar absorbed at this aspect; cloud-attenuated]<br>  sensibleMeltRate = max(0, f_hi − 36) × 0.04  [warm air conduction; only mechanism for shaded faces]<br>  totalMeltRate    = solarMeltRate + sensibleMeltRate<br>  cornBudget       = (crustQ × 5.0 + effFQ × 10.0) × (0.72 + thermalMass × 0.48)<br>  rawDur = cornBudget ÷ totalMeltRate + sweDurBonus − windDurPenalty<br>  rawDur × apDurFactor   [ap=3: 1.00, ap=2: 0.95, ap=1: 0.88]<br>→ Clamped 0.2 – 4.0 hours · Ref: Male &amp; Granger (1981)<br><br>SE clear warm day: high solar + high sensible → fast close<br>NW shaded face:   near-zero solar → sensible only → slow ambient close<br>Any face overcast: effRad suppressed by cloud → window extends naturally<br>→ cornCloses = cornOpens + duration</div>
       <div class="pipe-output">📍 OUTPUT B: Corn Closes = corn opens + duration</div>
       <div class="pipe-feeds">↓ Corn Opens and Corn Closes together define the window; your arrival must fall between them</div>
     </div>
@@ -494,6 +494,14 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v46 — Energy balance close time (2026-03-22)</h3>
+    <p>Window duration is now derived from a direct energy balance rather than an empirical formula with a temperature penalty. The corn window closes when cumulative absorbed energy exhausts the surface layer's energy budget.</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>Two independent melt mechanisms:</strong> Solar melt rate (effRad × 1.0) and sensible melt rate (max(0, f_hi − 36) × 0.04) are additive but physically distinct. Solar dominates SE/S/E faces. Sensible heat is the only mechanism for NW/N faces and for any face on overcast days.</li>
+      <li><strong>hiPenalty removed:</strong> The temperature-only penalty (f_hi − 46) × 0.085 is gone. A warm overcast afternoon and a warm clear afternoon are no longer treated identically — cloud cover suppresses effRad naturally, extending the window on overcast days.</li>
+      <li><strong>Crust energy budget:</strong> (crustQ × 5.0 + effFQ × 10.0) × thermalMassMult. Deep freezes (high effFQ) produce larger budgets and longer windows. thermalMass multiplies the budget: cold deep packs take more energy to exhaust. Ref: Male &amp; Granger (1981).</li>
+      <li><strong>NW/N face windows:</strong> With near-zero solar melt rate, shaded faces are driven entirely by sensible heat. On a cold night + warm afternoon (18°F/48°F), a NW face can produce a genuine 3h window — physically correct, score bounded by grain quality and thermalMass.</li>
+    </ul>
     <h3>v45b — Remove lateOpenPenalty, RAW_MAX 58 (2026-03-22)</h3>
     <p>Two corrections following v45 benchmarking:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -3629,28 +3637,39 @@ function cornWindow(pk,asp,f,month){
   }
 
   var windDurPen=Math.max(0,(f.wi-18)*0.055*ad.wx);
-  // Afternoon high penalty: zero below 46°F ski-zone (OpenSnow: 30s–low 40s°F = optimal)
-  // Steeper coefficient above threshold — window collapses faster in heat
-  var hiPenalty = Math.max(0, (f_hi - 46) * 0.085);
-  var rawDur=(crustQ*1.6)+(effRad*1.4)-hiPenalty-windDurPen+sweDurBonus;
-  // thermalMass rewards the prime corn range (CCC 0.30–0.70, adequate SWE)
-  // and only penalizes genuine column exhaustion (packRipeness > 0.75).
-  // Range: thermalMass 0.10 → ×0.72, thermalMass 1.0 → ×1.20
-  rawDur *= (0.72 + liveThermalMass * 0.48);
-  // Aspect purity effect on duration
-  // ap=3 (pure aspect): uniform melt, no discount
-  // ap=2 (minor variation): -5% reliable window duration
-  // ap=1 (mixed aspect): -12% reliable window
+  // v46: Energy balance close time — replaces hiPenalty and empirical rawDur formula.
+  // The window closes when cumulative absorbed energy exhausts the surface layer.
+  // Two independent melt mechanisms, each physically distinct:
+  //
+  // Solar melt rate: effRad × 1.0
+  //   effRad already encodes aspect geometry, radBoost, and cloud attenuation.
+  //   NW faces: effRad ≈ 0.33 → low solar rate → ambient drives the close time.
+  //   SE faces: effRad ≈ 1.25-1.38 → solar dominates.
+  //   Overcast day: cloud suppresses effRad → window extends naturally.
+  //
+  // Sensible melt rate: max(0, f_hi − 36) × 0.04
+  //   Warm air conducts heat into snow above 36°F. Only mechanism for shaded faces.
+  //   Operates on all faces regardless of solar geometry.
+  //
+  // Crust energy budget: (crustQ × 5.0 + effFQ × 10.0) × thermalMassMult
+  //   crustQ: surface material available. effFQ: freeze depth (deeper = larger budget).
+  //   thermalMass multiplies budget: cold deep pack takes more energy to exhaust.
+  //   Ref: Male & Granger (1981) — snow surface energy balance.
+  var solarMeltRate    = effRad * 1.0;
+  var sensibleMeltRate = Math.max(0, f_hi - 36) * 0.04;
+  var totalMeltRate    = Math.max(0.05, solarMeltRate + sensibleMeltRate);
+  var cornBudget = (crustQ * 5.0 + effFQ * 10.0) * (0.72 + liveThermalMass * 0.48);
   var apDurFactor = tData.ap === 3 ? 1.00 : tData.ap === 2 ? 0.95 : 0.88;
-  rawDur *= apDurFactor;
+  var rawDur = cornBudget / totalMeltRate;
+  rawDur += sweDurBonus;                              // SWE cold reserve adjusts duration
+  rawDur -= windDurPen;                               // wind mechanically shortens window
+  rawDur *= apDurFactor;                              // aspect purity consistency factor
   if(f.dust) rawDur = Math.max(0.20, rawDur - 0.25); // dust accelerates slush transition
   var dur=Math.max(0.20,Math.min(4.0,rawDur));
   var we=ws+dur;
   // lateOpenPenalty removed v45b — clock time is not a snow quality metric.
   // Opening at 2 PM on a NW face is geometrically normal, not a failure mode.
-  // hiPenalty already handles warm afternoon temperature compressing duration.
   // CAPE flag handles convective risk separately in driver narrative.
-  // v46 will replace hiPenalty with a direct solar+sensible energy balance.
   var lateOpenPenalty = 1.0;
   var phys=0;
   // FQ bell curve: peaks at effFQ=0.55 (~15–20°F overnight = optimal per OpenSnow)
