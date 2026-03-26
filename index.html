@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v48 </title>
+<title>CornCast 🌽 v49</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -199,7 +199,7 @@ input[type=date]:focus{border-color:var(--teal)}
     <div class="field full" id="wx-strip-container" style="display:none">
       <div class="wx-strip-wrap">
         <div class="wx-strip-head">
-          <span>📡 Season Archive + Forecast</span>
+          <span id="wx-strip-title">📡 Season Archive + Forecast</span>
           <span id="wx-strip-label" style="color:var(--teal)"></span>
         </div>
         <div id="wx-strip-tiles" class="wx-strip"></div>
@@ -512,6 +512,16 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v49 — Duration fix, auto-compute, chart polish (2026-03-27)</h3>
+    <p>Physics fix and UX polish pass addressing feedback from field use sessions:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>cornBudget effFQ weight 10→5:</strong> Eliminates double-counting of cold reserve (CCC was feeding both effFQ and thermalMass multiplier). Pawnee SE 22°F overnight / 39°F high: 3.7h→2.6h. Removes systematic 4h cap hits on cold-afternoon clear days.</li>
+      <li><strong>Auto-compute on line select:</strong> Selecting a descent line now immediately computes the result when weather data is loaded — no manual button press required. Compute button remains for re-running after changing forecast fields.</li>
+      <li><strong>Weather strip summit label:</strong> Strip header now shows summit elevation so users understand why driver card temperatures differ from tile temperatures.</li>
+      <li><strong>Ripeness chart subtitle:</strong> Added "14-day trailing window · recent days weighted more heavily · pan ← for earlier history" to clarify the surface freeze quality line is a trailing indicator.</li>
+      <li><strong>Warm-day heat ticks:</strong> Orange tick marks at base of ripeness chart on days where tmax > 38°F — makes the causal connection between warm spells and surface freeze quality dips visually obvious.</li>
+      <li><strong>Target date score snap:</strong> Daily corn score chart target bar now uses actual result tab score rather than chart estimate when a line is selected. White dot marks the actual score, eliminating the 8-point apparent discrepancy.</li>
+    </ul>
     <h3>v48 — Driver narrative: Inputs / Reasoning / Result (2026-03-22)</h3>
     <p>Complete rebuild of the driver narrative to communicate physics in plain language rather than model internals.</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -1406,6 +1416,7 @@ window.onPeakChange=function(){
 window.onLineChange=function(){
   var v=document.getElementById('sel-line').value;
   selectedLineIdx=(v==='')?-1:parseInt(v);
+  if(weatherData) window.CA();
 }
 function buildAspGrid_REMOVED(i){}
 function updatePacePreview(){
@@ -2515,6 +2526,8 @@ function renderWeatherStrip(wd, targetDate) {
 
   var _pkName2=document.getElementById('sel-peak').value;
   var pk2=_pkName2?getPKMeta(_pkName2):{n:'',la:40.0,lo:-105.6,el:12000};
+  var _titleEl=document.getElementById('wx-strip-title');
+  if(_titleEl) _titleEl.textContent='📡 Season Archive + Forecast · temps at summit ('+pk2.el.toLocaleString()+"')";
   var omUrl = 'https://open-meteo.com/en/docs'
     + '#latitude=' + pk2.la.toFixed(4)
     + '&longitude=' + pk2.lo.toFixed(4)
@@ -2982,6 +2995,17 @@ function drawRipenessChart(canvasId, wd, month, cornWin) {
 
   
 
+  // ── Warm-day heat ticks (tmax > 38°F) ──
+  for(var hi=0; hi<N; hi++) {
+    var ht2 = traj[hi];
+    if(ht2 && ht2.tmax != null && ht2.tmax > 38) {
+      var htx = xPos(hi);
+      var intensity = Math.min(1.0, (ht2.tmax - 38) / 20);
+      ctx.fillStyle = 'rgba(255,140,0,' + (0.35 + intensity * 0.45) + ')';
+      ctx.fillRect(htx - PX_PER_DAY/2 + 1, snowBot - 4, Math.max(1, PX_PER_DAY - 2), 4);
+    }
+  }
+
   // ── Today vertical line ──
   if(todayIdx >= 0) {
     var tx = xPos(todayIdx);
@@ -3353,14 +3377,32 @@ function drawCornScoreChart(canvasId, wd, pk, asp) {
     ctx.strokeStyle = 'rgba(0,212,170,0.65)'; ctx.lineWidth = 1.5; ctx.setLineDash([4,2]);
     ctx.beginPath(); ctx.moveTo(ttx, PAD.top); ctx.lineTo(ttx, PAD.top + cH); ctx.stroke();
     ctx.setLineDash([]);
+    // Use actual result tab score for target date if available
     var tScore = scores[tgtIdx] ? scores[tgtIdx].score : 0;
-    var tColor = tScore >= 75 ? '#2ed573' : tScore >= 50 ? '#ffd166' : tScore >= 25 ? '#ffa502' : '#ff4757';
+    var actualScore = (selectedLineIdx >= 0 && allResults.length > 0)
+      ? (function(){ for(var ai=0;ai<allResults.length;ai++){if(allResults[ai].lineIdx===selectedLineIdx)return allResults[ai].q;} return null; }())
+      : null;
+    var displayScore = actualScore !== null ? actualScore : tScore;
+    var tColor = displayScore >= 75 ? '#2ed573' : displayScore >= 50 ? '#ffd166' : displayScore >= 25 ? '#ffa502' : '#ff4757';
     ctx.fillStyle = tColor;
     ctx.font = 'bold 9px -apple-system,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(tScore, ttx, PAD.top + cH + 14);
+    ctx.fillText(displayScore, ttx, PAD.top + cH + 14);
     ctx.font = '7px -apple-system,sans-serif';
     ctx.fillStyle = 'rgba(0,212,170,0.65)';
     ctx.fillText('Target', ttx, PAD.top + cH + 23);
+    // If actual score differs from chart estimate, draw the bar at actual height
+    if(actualScore !== null && Math.abs(actualScore - tScore) > 2) {
+      var barColor = actualScore >= 75 ? 'rgba(46,213,115,0.9)' : actualScore >= 50 ? 'rgba(255,209,102,0.9)' : actualScore >= 25 ? 'rgba(255,165,2,0.9)' : 'rgba(255,71,87,0.9)';
+      ctx.fillStyle = barColor;
+      var bx2 = PAD.left + tgtIdx * PX_PER_DAY + 1;
+      var bw2 = Math.max(1, PX_PER_DAY - 2);
+      ctx.fillRect(bx2, yScore(actualScore), bw2, PAD.top + cH - yScore(actualScore));
+      // Overlay dot to distinguish from estimate
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ttx, yScore(actualScore), 2.5, 0, Math.PI*2);
+      ctx.fill();
+    }
   }
 
   // ── X-axis date labels ──
@@ -3685,7 +3727,7 @@ function cornWindow(pk,asp,f,month){
   var solarMeltRate    = effRad * 1.0;
   var sensibleMeltRate = Math.max(0, f_hi - 36) * 0.04;
   var totalMeltRate    = Math.max(0.05, solarMeltRate + sensibleMeltRate);
-  var cornBudget = (crustQ * 5.0 + effFQ * 10.0) * (0.72 + liveThermalMass * 0.48);
+  var cornBudget = (crustQ * 5.0 + effFQ * 5.0) * (0.72 + liveThermalMass * 0.48);
   var apDurFactor = tData.ap === 3 ? 1.00 : tData.ap === 2 ? 0.95 : 0.88;
   var rawDur = cornBudget / totalMeltRate;
   rawDur += sweDurBonus;                              // SWE cold reserve adjusts duration
@@ -4245,7 +4287,7 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
 
     // ── Chart 1: Snowpack coldness ──
     h+='<h3 style="margin-bottom:.25rem">📉 Snowpack Cold Reserve</h3>';
-    h+='<div style="font-size:.68rem;color:var(--muted);margin-bottom:.4rem">Pack capacity to produce corn · high = cold pack = better refreeze potential</div>';
+    h+='<div style="font-size:.68rem;color:var(--muted);margin-bottom:.4rem">Pack capacity to produce corn · high = cold pack = better refreeze potential · 14-day trailing window · recent days weighted more heavily · pan ← for earlier history</div>';
     h+='<div id="ripeness-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px">';
     h+='<canvas id="ripeness-canvas" style="display:block;height:240px"></canvas>';
     h+='</div>';
@@ -4254,7 +4296,7 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
     h+='<span style="color:#fbbf24">●</span> Surface freeze quality &nbsp;&nbsp;';
     h+='<span style="color:rgba(56,189,248,0.85)">■</span> Column cold reserve &nbsp;&nbsp;';
     h+='<span style="color:rgba(255,155,120,0.7)">▬</span> Hi/Lo temp<br>';
-    h+='<span style="opacity:.75">❄</span> Snowfall &nbsp;·&nbsp; Dashed lines = forecast &nbsp;·&nbsp; Tap any day to inspect &nbsp;·&nbsp; Pan ←';
+    h+='<span style="opacity:.75">❄</span> Snowfall &nbsp;·&nbsp; <span style="color:rgba(255,140,0,0.8)">▬</span> Warm day (>38°F) &nbsp;·&nbsp; Dashed lines = forecast &nbsp;·&nbsp; Tap any day to inspect &nbsp;·&nbsp; Pan ←';
     h+='</div>';
 
     // ── Chart 2: Daily corn score ──
