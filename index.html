@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v49</title>
+<title>CornCast 🌽 v50</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -438,7 +438,7 @@ input[type=date]:focus{border-color:var(--teal)}
         <strong>Two independent mechanisms close the window.</strong> Solar melt rate — absorbed shortwave radiation on this specific aspect — and sensible melt rate — warm air conducting heat into the surface above 36°F — both contribute. A warm clear afternoon combines both and closes the window fastest. A warm overcast afternoon has only sensible heat and closes more slowly. This is why cloud cover meaningfully extends the window even when temperatures are unchanged.<br><br>
         Shaded faces (NW, N) have near-zero solar melt rate — they are driven entirely by ambient air temperature. A NW face on a cold afternoon stays in corn longer than an SE face in the same afternoon because the SE face receives direct solar energy the NW face does not. Wind above about 18 mph mechanically disrupts the softened corn surface and shortens the window independently of the energy balance.
       </div>
-      <div class="formula-box">Energy balance close time (v46):<br>  solarMeltRate    = effRad × 1.0          [solar absorbed at this aspect; cloud-attenuated]<br>  sensibleMeltRate = max(0, f_hi − 36) × 0.04  [warm air conduction; only mechanism for shaded faces]<br>  totalMeltRate    = solarMeltRate + sensibleMeltRate<br>  cornBudget       = (crustQ × 5.0 + effFQ × 10.0) × (0.72 + thermalMass × 0.48)<br>  rawDur = cornBudget ÷ totalMeltRate + sweDurBonus − windDurPenalty<br>  rawDur × apDurFactor   [ap=3: 1.00, ap=2: 0.95, ap=1: 0.88]<br>→ Clamped 0.2 – 4.0 hours · Ref: Male &amp; Granger (1981)<br><br>SE clear warm day: high solar + high sensible → fast close<br>NW shaded face:   near-zero solar → sensible only → slow ambient close<br>Any face overcast: effRad suppressed by cloud → window extends naturally<br>→ cornCloses = cornOpens + duration</div>
+      <div class="formula-box">Energy balance close time (v46):<br>  solarMeltRate    = effRad × 1.0          [solar absorbed at this aspect; cloud-attenuated]<br>  sensibleMeltRate = max(0, f_hi − 36) × 0.04  [warm air conduction; only mechanism for shaded faces]<br>  totalMeltRate    = solarMeltRate + sensibleMeltRate<br>  cornBudget       = (crustQ × 5.0 + effFQ × 5.0) × (0.72 + thermalMass × 0.48)<br>  rawDur = cornBudget ÷ totalMeltRate + sweDurBonus − windDurPenalty<br>  rawDur × apDurFactor   [ap=3: 1.00, ap=2: 0.95, ap=1: 0.88]<br>→ Clamped 0.2 – 4.0 hours · Ref: Male &amp; Granger (1981)<br><br>SE clear warm day: high solar + high sensible → fast close<br>NW shaded face:   near-zero solar → sensible only → slow ambient close<br>Any face overcast: effRad suppressed by cloud → window extends naturally<br>→ cornCloses = cornOpens + duration</div>
       <div class="pipe-output">📍 OUTPUT B: Corn Closes = corn opens + duration</div>
       <div class="pipe-feeds">↓ Corn Opens and Corn Closes together define the window; your arrival must fall between them</div>
     </div>
@@ -512,6 +512,15 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v50 — Solar quality gate, ambient duration cap, season arc removed (2026-03-29)</h3>
+    <p>Physics rethink driven by field observations and expert backcountry feedback:</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>Solar quality gate:</strong> Windows now classified by solar fraction of total melt energy. ≥65% solar = 🌽 Solar corn (classic rounded-grain texture, full score). 35–65% = 🌤️ Mixed surface (×0.80 score). &lt;35% = ☁️ Soft surface (×0.55 score). N/NW faces in any condition and NE faces with heavy cloud now correctly show as ambient-driven soft surfaces rather than classic corn.</li>
+      <li><strong>Ambient duration cap:</strong> Soft surface windows (&lt;35% solar) capped at 2.0h. Mixed surface windows (35–65% solar) capped at 2.5h. Eliminates systematic 4h cap hits on N/NE faces — NE 22°F/42°F clear now shows 2.5h Mixed surface (was 4.0h Solar corn).</li>
+      <li><strong>Field validated:</strong> San Juan Mountains NE face March 28 field observation (27°F overnight, opens ~9:30 AM, best 10:30 AM) — model computes 8:52 AM open, 1.5h Solar corn window (81% solar from live irradiance). Within 38 minutes of observed open time.</li>
+      <li><strong>Season Arc removed:</strong> The Season Arc card used estimated inputs, claimed date-range precision that a 15-day forecast can't support, and flagged genuinely good conditions as "not prime" via an arbitrary ≥65 threshold. Removed pending a more robust conditions-trajectory redesign. The daily corn score chart provides the visual trajectory.</li>
+      <li><strong>Driver Step 6:</strong> Corn Closes result line now includes solar gate label (🌽/🌤️/☁️) so users immediately understand the expected surface texture.</li>
+    </ul>
     <h3>v49 — Duration fix, auto-compute, chart polish (2026-03-27)</h3>
     <p>Physics fix and UX polish pass addressing feedback from field use sessions:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -3735,6 +3744,21 @@ function cornWindow(pk,asp,f,month){
   rawDur *= apDurFactor;                              // aspect purity consistency factor
   if(f.dust) rawDur = Math.max(0.20, rawDur - 0.25); // dust accelerates slush transition
   var dur=Math.max(0.20,Math.min(4.0,rawDur));
+
+  // ── Solar quality gate (v50) ─────────────────────────────────────────
+  // Solar and ambient melt produce different snow textures.
+  // Solar corn: direct radiation melts frozen crust top-down → rounded bonded grains.
+  // Ambient/soft: warm air softens surface slowly → softer, patchier, less classic.
+  // solarFraction drives both duration cap and score multiplier.
+  // Calibrated against Indian Peaks field observations and San Juan obs (March 28).
+  var solarFraction = totalMeltRate > 0.05 ? solarMeltRate / totalMeltRate : 0;
+  // Ambient duration cap: warm-air-driven surfaces degrade quality faster than
+  // solar-driven surfaces. Cap prevents unrealistic multi-hour ambient windows.
+  if (solarFraction < 0.35) {
+    dur = Math.min(dur, 2.0); // soft surface: N/NW faces
+  } else if (solarFraction < 0.65) {
+    dur = Math.min(dur, 2.5); // mixed: NE fallback, cloudy SE
+  }
   var we=ws+dur;
   // lateOpenPenalty removed v45b — clock time is not a snow quality metric.
   // Opening at 2 PM on a NW face is geometrically normal, not a failure mode.
@@ -3782,14 +3806,33 @@ function cornWindow(pk,asp,f,month){
   if(dur<0.35)rawScore*=0.20;else if(dur<0.60)rawScore*=0.55;else if(dur<0.90)rawScore*=0.80;
   rawScore *= lateOpenPenalty;
   var q=Math.round(Math.max(0,Math.min(100,(rawScore/RAW_MAX)*100)));
+
+  // Apply solar quality gate score multiplier
+  var solarGateMult  = solarFraction >= 0.65 ? 1.00 : solarFraction >= 0.35 ? 0.80 : 0.55;
+  var solarGateLabel = solarFraction >= 0.65 ? 'Solar corn'
+    : solarFraction >= 0.35 ? 'Mixed surface' : 'Soft surface';
+  var solarGateIcon  = solarFraction >= 0.65 ? '🌽' : solarFraction >= 0.35 ? '🌤️' : '☁️';
+  q = Math.round(Math.max(0, Math.min(100, q * solarGateMult)));
+
   var inf,qlabel;
   if(f_lo>33){inf="⛔ No overnight freeze — corn very unlikely";qlabel="No Window";}
   else if(f_lo>30){inf="⚠️ Marginal freeze — thin crust possible";qlabel="Poor";}
   else if(f.ds>14&&f.sdp<=2){inf="⚠️ Old shallow snow ("+f.ds+" days, "+f.sdp+'") — weak crust';qlabel=q>=50?"Good":"Marginal";}
   else if(windScour>0.35){inf="⚠️ Wind scour likely — crust may be stripped";qlabel="Marginal";}
-  else if(q>=75){inf="✅ Excellent corn — "+ad.note;qlabel="Excellent";}
-  else if(q>=50){inf="🟡 Good window — "+ad.note;qlabel="Good";}
-  else if(q>=28){inf="🟠 Marginal — "+ad.note;qlabel="Marginal";}
+  else if(q>=75){
+    if(solarFraction<0.35){inf="☁️ Soft surface — ambient-driven, not classic corn. "+ad.note;qlabel="Soft";}
+    else if(solarFraction<0.65){inf="🌤️ Mixed surface — real window, softer texture. "+ad.note;qlabel="Mixed";}
+    else{inf="✅ Excellent corn — "+ad.note;qlabel="Excellent";}
+  }
+  else if(q>=50){
+    if(solarFraction<0.35){inf="☁️ Soft surface — ambient-driven. "+ad.note;qlabel="Soft";}
+    else if(solarFraction<0.65){inf="🌤️ Mixed surface — "+ad.note;qlabel="Mixed";}
+    else{inf="🟡 Good window — "+ad.note;qlabel="Good";}
+  }
+  else if(q>=28){
+    if(solarFraction<0.35){inf="☁️ Soft surface — marginal ambient conditions. "+ad.note;qlabel="Soft";}
+    else{inf="🟠 Marginal — "+ad.note;qlabel="Marginal";}
+  }
   else{inf="🔴 Poor — "+ad.note;qlabel="Poor";}
   return{ws:parseFloat(ws.toFixed(2)),we:parseFloat(we.toFixed(2)),dur:parseFloat(dur.toFixed(1)),q:q,qlabel:qlabel,inf:inf,
     terrainQ:tData.q,terrainRubric:tData,freezeQ:parseFloat(effFQ.toFixed(2)),windScour:parseFloat(windScour.toFixed(2)),
@@ -3813,7 +3856,11 @@ function cornWindow(pk,asp,f,month){
     fqPts:       Math.round(Math.max(1, Math.min(28, fqScore))),
     radPts:      Math.round(Math.min(18, effRad * 14)),
     cqPts:       Math.round(Math.max(1, Math.min(9,  cqScore))),
-    durBonusPts: dur>=2.0?4:dur>=1.2?2:0};
+    durBonusPts:   dur>=2.0?4:dur>=1.2?2:0,
+    solarFraction: parseFloat(solarFraction.toFixed(3)),
+    solarGateLabel: solarGateLabel,
+    solarGateIcon:  solarGateIcon,
+    solarGateMult:  solarGateMult};
 }
 
 // ── SCORE DRIVER NARRATIVE ────────────────────────────────────────────────
@@ -4002,13 +4049,16 @@ function buildDrivers(w,f,month,asp){
     : _solarPct<=30
     ? 'Warm air is doing almost all of the closing work — only '+_solarPct+'% solar contribution. This is typical for shaded faces: air-driven melt is slower and more gradual than direct solar, which is why this face holds corn later into the afternoon than a south-facing line in the same conditions.'
     : 'Roughly equal contribution from solar radiation and warm air. Cloud cover will extend the window; a warmer afternoon will shorten it — both variables matter here.';
+  var _s6gateStr = w.solarGateIcon
+    ? ' '+w.solarGateIcon+' '+(w.solarGateLabel||'')+'.'
+    : '';
   var _s6result = w.dur>=2.5
-    ? '<strong>'+ht(w.ws)+' – '+ht(w.we)+'</strong> — '+w.dur+'h window. Wide margin — most approach scenarios will work. Don\'t linger, but no need to sprint.'
+    ? '<strong>'+ht(w.ws)+' – '+ht(w.we)+'</strong> — '+w.dur+'h window.'+_s6gateStr+' Wide margin — most approach scenarios will work. Don\'t linger, but no need to sprint.'
     : w.dur>=1.2
-    ? '<strong>'+ht(w.ws)+' – '+ht(w.we)+'</strong> — '+w.dur+'h window. Solid window — plan to be on the face at opening and ski efficiently.'
+    ? '<strong>'+ht(w.ws)+' – '+ht(w.we)+'</strong> — '+w.dur+'h window.'+_s6gateStr+' Plan to be on the face at opening and ski efficiently.'
     : w.dur>=0.6
-    ? '<strong>'+ht(w.ws)+' – '+ht(w.we)+'</strong> — '+w.dur+'h window. Short window — precision timing required. Be on the face at opening, not still on approach.'
-    : '<strong>'+ht(w.ws)+' – '+ht(w.we)+'</strong> — '+w.dur+'h window. Very short — this is a narrow target. Any delay on the approach likely erases the window.';
+    ? '<strong>'+ht(w.ws)+' – '+ht(w.we)+'</strong> — '+w.dur+'h window.'+_s6gateStr+' Short window — precision timing required. Be on the face at opening.'
+    : '<strong>'+ht(w.ws)+' – '+ht(w.we)+'</strong> — '+w.dur+'h window.'+_s6gateStr+' Very short — any delay on approach likely erases the window.';
   card('Corn Closes',7,_s6inputs,_s6reasoning,_s6result,w.durBonusPts||0,4,_s6tone);
 
   // ── STEP 7 — Terrain ──────────────────────────────────────────────────
@@ -4308,35 +4358,6 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
     h+='<div style="font-size:.68rem;color:#456a82;margin-top:.3rem">Faded = forecast &nbsp;·&nbsp; White range = uncertainty (days 5–15) &nbsp;·&nbsp; Aspect: <span style="color:var(--teal);font-weight:600">'+(asp||'?')+'</span></div>';
   }
   h+='</div>';
-
-  // Aspect comparison
-  // Season arc summary — only when trajectory data is available
-  if(weatherData && weatherData.ripenessTrajectory && weatherData.ripenessTrajectory.length) {
-    var _selLine = selectedLineIdx >= 0 ? LINES[selectedLineIdx] : null;
-    var _arcScores = window._lastCornScores || null;
-    if(_arcScores) {
-      var arc = buildSeasonArcSummary(_arcScores, weatherData.targetDate, asp, _selLine?_selLine.n:'');
-      if(arc) {
-        var trendIcon = arc.trendDir==='rising'?'↗':arc.trendDir==='falling'?'↘':'→';
-        var trendColor = arc.trendDir==='rising'?'var(--teal)':arc.trendDir==='falling'?'var(--red)':'var(--muted)';
-        var primeStr = arc.primeStart
-          ? fmtDateShort(arc.primeStart) + (arc.primeEnd && arc.primeEnd!==arc.primeStart ? ' – '+fmtDateShort(arc.primeEnd) : '')
-          : 'Not detected in current forecast window';
-        var inPrimeNow = arc.tgtScore != null && arc.tgtScore >= 65;
-        h+='<div class="result-card" style="border-color:rgba(0,212,170,0.35)">';
-        h+='<h2 style="margin-bottom:.38rem">📅 Season Arc</h2>';
-        h+='<div style="font-size:.8rem;color:var(--text);margin-bottom:.3rem"><strong>'+(line?line.n:asp+' face')+'</strong></div>';
-        h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.76rem">';
-        h+='<div style="background:var(--navy3);border-radius:7px;padding:.45rem .6rem"><div style="color:var(--muted);font-size:.64rem;text-transform:uppercase;margin-bottom:.18rem">Prime Window</div><div style="color:var(--teal);font-weight:700">'+primeStr+'</div></div>';
-        h+='<div style="background:var(--navy3);border-radius:7px;padding:.45rem .6rem"><div style="color:var(--muted);font-size:.64rem;text-transform:uppercase;margin-bottom:.18rem">7-Day Trend</div><div style="color:'+trendColor+';font-weight:700">'+trendIcon+(arc.trendPts!=null?' '+(arc.trendPts>0?'+':'')+arc.trendPts+' pts':'')+'</div></div>';
-        h+='<div style="background:var(--navy3);border-radius:7px;padding:.45rem .6rem"><div style="color:var(--muted);font-size:.64rem;text-transform:uppercase;margin-bottom:.18rem">Season Peak</div><div style="color:var(--gold);font-weight:700">'+(arc.peakDate?fmtDateShort(arc.peakDate)+' · '+arc.peakScore:'—')+'</div></div>';
-        h+='<div style="background:var(--navy3);border-radius:7px;padding:.45rem .6rem"><div style="color:var(--muted);font-size:.64rem;text-transform:uppercase;margin-bottom:.18rem">Target Date</div><div style="color:'+(inPrimeNow?'var(--teal)':'var(--muted)')+';font-weight:700">'+(arc.tgtScore!=null?arc.tgtScore+(inPrimeNow?' — in prime window':''):'—')+'</div></div>';
-        h+='</div>';
-        h+='<div style="font-size:.63rem;color:#456a82;margin-top:.3rem">Prime window = days scoring ≥65 · Based on current weather trajectory · Forecast uncertainty grows beyond 7 days</div>';
-        h+='</div>';
-      }
-    }
-  }
 
   var peakLines=allResults.filter(function(r){return r.pk===pk.n;}).sort(function(a,b){return b.q-a.q;});
   if(peakLines.length>1){
