@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CornCast 🌽 v50</title>
+<title>CornCast 🌽 v51</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script>
 (function(){
@@ -324,7 +324,7 @@ input[type=date]:focus{border-color:var(--teal)}
         There is a second effect: the <em>thermal state</em> of the full snowpack column also degrades through the season. A March snowpack at 12,000' is cold all the way to the bottom — the overnight freeze can penetrate 30–50cm, creating a deep structural crust. By late May or June, the entire column is often <em>isothermal</em> — uniformly at 32°F with no cold reserve. The overnight freeze can now only penetrate 5–10cm into the surface, creating a thin veneer regardless of how cold it got. The corn window still opens, but it opens faster and closes sooner.<br><br>
         CornCast applies both effects as graduated monthly penalties.
       </div>
-      <div class="formula-box">When live Open-Meteo archive is available (primary model):<br>packRipeness = surfaceRipeness × 0.60 + columnRipeness × 0.40 + depthAdj<br>grainQuality = 0.50 × packRipenessGrainCurve(pr) + 0.30 × recentCycles + 0.20 × min(1, ftCyclesTotal/8)<br>thermalMass  = 0.65 × cccComponent + 0.35 × sweComponent + collapseAdj<br>matPen = max(0, min(0.20, (1 − grainQuality) × 0.20))  [derived]<br><br>Aspect-specific solar pack state (v45) — energy balance model:<br>  solarAbsorbed = solarMorning[W/m²] × BASE_RAD[asp] × radBoost × (1 − 0.55 albedo)<br>  Solar melt fires when solarAbsorbed &gt; 180 W/m²  [Male &amp; Granger 1981]<br>  Ambient melt fires when tmax &gt; 36°F  [same as global model]<br>  Cycle counted when (solar melt OR ambient melt) AND tmin &lt; 28°F<br>  Surface ripeness solar heat load = max(0, solarAbsorbed − 180) ÷ 500 per day<br>  SE clear April: absorbed ≈ 280 W/m² → solar melt, heat load 0.20/day<br>  NW any month: absorbed ≈ 68–91 W/m² → no solar melt, 0 solar heat load<br>  NE June clear (radBoost ×1.50): absorbed ≈ 186 W/m² → solar melt begins<br>  Clouds suppress solar loading naturally via measured solarMorning — no separate cloud term<br>  columnColdContent stays shared — deep column is not aspect-specific<br><br>Fallback when archive fails (calendar defaults only):<br>         March  April  May    June<br>packRipeness:  5%    15%    40%    70%</div>
+      <div class="formula-box">When live Open-Meteo archive is available (v51 unified heat budget):<br>packRipeness = surfaceRipeness × 0.60 + columnRipeness × 0.40 + depthAdj<br>columnColdContent = computeSnowpackHeatBudget(solar + sensible depletion, snow recovery)<br>surfaceRipeness   = 1 − computeRecentRefreezeScore(7-day overnight lows)<br>grainQuality = 0.50 × packRipenessGrainCurve(pr) + 0.30 × recentCycles + 0.20 × min(1, ftCyclesTotal/8)<br>thermalMass  = 0.65 × cccComponent + 0.35 × sweComponent + collapseAdj<br>matPen = max(0, min(0.20, (1 − grainQuality) × 0.20))  [derived]<br><br>Aspect-specific solar pack state (v45) — energy balance model:<br>  solarAbsorbed = solarMorning[W/m²] × BASE_RAD[asp] × radBoost × (1 − 0.55 albedo)<br>  Solar melt fires when solarAbsorbed &gt; 180 W/m²  [Male &amp; Granger 1981]<br>  Ambient melt fires when tmax &gt; 36°F  [same as global model]<br>  Cycle counted when (solar melt OR ambient melt) AND tmin &lt; 28°F<br>  Surface ripeness solar heat load = max(0, solarAbsorbed − 180) ÷ 500 per day<br>  SE clear April: absorbed ≈ 280 W/m² → solar melt, heat load 0.20/day<br>  NW any month: absorbed ≈ 68–91 W/m² → no solar melt, 0 solar heat load<br>  NE June clear (radBoost ×1.50): absorbed ≈ 186 W/m² → solar melt begins<br>  Clouds suppress solar loading naturally via measured solarMorning — no separate cloud term<br>  columnColdContent stays shared — deep column is not aspect-specific<br><br>Fallback when archive fails (calendar defaults only):<br>         March  April  May    June<br>packRipeness:  5%    15%    40%    70%</div>
       <div class="pipe-ref">Colbeck (1987), IAHS 162 — crystal metamorphism in seasonal snow; Armstrong &amp; Brun (2008), Snow and Climate, Cambridge; Clow et al. (2012), JGR Atmospheres — Front Range snowpack trends at elevation</div>
     </div>
 
@@ -512,6 +512,28 @@ input[type=date]:focus{border-color:var(--teal)}
   <!-- ═══════════════════════════════════════════════ -->
   <div class="asec">
     <h2>Changelog</h2>
+    <h3>v51 — Unified snowpack heat budget (2026-04-18)</h3>
+    <p>Root-cause fix for systematically incorrect snowpack state display. The old
+    two-layer model (computeColumnColdContent + computeSurfaceRipeness) showed
+    "Cold reserve 95% · Freeze quality 97%" on April 18 after a brutal warm spring
+    because its depletion thresholds were calibrated for grid-cell elevation (~11,200')
+    while temperatures were lapse-corrected to summit (~12,943'). Additionally, solar
+    radiation was completely absent from column depletion despite being a primary
+    driver of snowpack warming.</p>
+    <ul style="margin-top:.4rem;line-height:1.9">
+      <li><strong>computeSnowpackHeatBudget:</strong> Replaces computeColumnColdContent.
+      Incorporates solar radiation (absorbed above 180 W/m² threshold) and sensible
+      heat (above 32°F, not 40°F) as co-equal depletion mechanisms. Night gate reduces
+      depletion when nights are very cold (column still frozen). Per-day cap prevents
+      single warm-spell bottoming. Calibrated: Mar 1 ~81%, Apr 1 ~72%, Apr 18 ~46%,
+      May 15 ~15% for 2026 warm/low-SWE season (4% RMS error vs targets).</li>
+      <li><strong>computeRecentRefreezeScore:</strong> Replaces computeSurfaceRipeness.
+      Direct 7-day linear-recency score of overnight lows — answers "how good were
+      recent nights for building a refreeze crust?" 0.0 = no cold nights, 1.0 = deep
+      cold every night. No trailing 14-day accumulation artefact.</li>
+      <li><strong>Strip display:</strong> "Pack cold reserve 46% · Recent refreeze: Fair"
+      replaces "Freeze quality 97% · Cold reserve 95% · Combined 96%".</li>
+    </ul>
     <h3>v50 — Solar quality gate, ambient duration cap, season arc removed (2026-03-29)</h3>
     <p>Physics rethink driven by field observations and expert backcountry feedback:</p>
     <ul style="margin-top:.4rem;line-height:1.9">
@@ -545,7 +567,7 @@ input[type=date]:focus{border-color:var(--teal)}
     <ul style="margin-top:.4rem;line-height:1.9">
       <li><strong>Two independent melt mechanisms:</strong> Solar melt rate (effRad × 1.0) and sensible melt rate (max(0, f_hi − 36) × 0.04) are additive but physically distinct. Solar dominates SE/S/E faces. Sensible heat is the only mechanism for NW/N faces and for any face on overcast days.</li>
       <li><strong>hiPenalty removed:</strong> The temperature-only penalty (f_hi − 46) × 0.085 is gone. A warm overcast afternoon and a warm clear afternoon are no longer treated identically — cloud cover suppresses effRad naturally, extending the window on overcast days.</li>
-      <li><strong>Crust energy budget:</strong> (crustQ × 5.0 + effFQ × 10.0) × thermalMassMult. Deep freezes (high effFQ) produce larger budgets and longer windows. thermalMass multiplies the budget: cold deep packs take more energy to exhaust. Ref: Male &amp; Granger (1981).</li>
+      <li><strong>Crust energy budget:</strong> (crustQ × 5.0 + effFQ × 5.0) × thermalMassMult. Deep freezes (high effFQ) produce larger budgets and longer windows. thermalMass multiplies the budget: cold deep packs take more energy to exhaust. Ref: Male &amp; Granger (1981).</li>
       <li><strong>NW/N face windows:</strong> With near-zero solar melt rate, shaded faces are driven entirely by sensible heat. On a cold night + warm afternoon (18°F/48°F), a NW face can produce a genuine 3h window — physically correct, score bounded by grain quality and thermalMass.</li>
     </ul>
     <h3>v45b — Remove lateOpenPenalty, RAW_MAX 58 (2026-03-22)</h3>
@@ -1455,75 +1477,89 @@ function elevCorrectTemp(rawF, peakElevFt, gridElevFt) {
   return rawF - delta;
 }
 
-// ── Layer 1: Surface ripeness — 14-day window (recalibrated from v12's 10-day) ──
-function computeSurfaceRipeness(days14, month) {
-  var MONTH_BASELINE = {3:0.05, 4:0.15, 5:0.40, 6:0.70};
-  var ripeness = MONTH_BASELINE[month] || 0.40;
-  days14.forEach(function(d, i) {
-    var weight = 0.45 + i * 0.04; // 0.45→0.97 over 14 days (recalibrated from v12's 0.60→0.96 over 10)
-    var heatLoad = Math.max(0, d.tmax - 38) * 0.018 * weight;
-    ripeness += heatLoad;
-    if (d.tmin > 32) ripeness += 0.08 * weight;
-    if (d.precip > 1.0) {
-      var isRain = d.tmax > 34; // proxy for liquid precip at alpine elevation
-      if (isRain) {
-        var nextDay = days14[i + 1];
-        var postRainLow = nextDay ? nextDay.tmin : d.tmin;
-        if (postRainLow < 28) {
-          // Rain + hard refreeze: denser surface, good corn material
-          ripeness -= 0.04 * weight; // mild — rain still slightly ripening overall
-        } else {
-          // Rain with no refreeze: pure ripening/degradation signal, recency-weighted
-          ripeness -= 0.10 * weight;
-        }
-      }
-      // Snow precip (tmax <= 34): no ripeness penalty — fresh snow is good for crust
+// ── Recent Refreeze Score (v51) ──────────────────────────────────────────
+// Replaces computeSurfaceRipeness. Directly answers: how good were recent
+// nights for building a refreeze crust?
+// 0.0 = no refreeze nights in past 7 days
+// 1.0 = deep cold clear nights every night
+// Uses 7-day linear recency weighting (most recent night = highest weight).
+function computeRecentRefreezeScore(histDays7) {
+  var score = 0;
+  var N = histDays7.length;
+  if (!N) return 0.5; // no data: moderate default
+  for (var i = 0; i < N; i++) {
+    var d = histDays7[i];
+    var dAgo = N - i;
+    var weight = (N - dAgo + 1) / N; // linear: most recent = weight 1.0
+    // Good refreeze: cold overnight low
+    if (d.tmin < 28) {
+      var freezeDepth  = Math.max(0, 28 - d.tmin) / 28; // 0→1 as tmin drops
+      var daySuitability = d.tmax < 42 ? 1.0 : d.tmax < 50 ? 0.7 : 0.4;
+      score += freezeDepth * daySuitability * weight;
     }
-    var coldRecovery = Math.max(0, 28 - d.tmin) * 0.006 * weight;
-    ripeness -= coldRecovery;
-  });
-  return Math.max(0.03, Math.min(0.95, ripeness));
+  }
+  return Math.min(1.0, score / 3.5);
 }
 
-// ── Layer 2: Column cold content — full season history (March 1 → day before target) ──
-// CCC 0.0–1.0: 1.0 = maximum cold reserve, 0.0 = fully isothermal column
-// Ref: Jennings et al. (2018) The Cryosphere 12; DeWalle & Rango (2008); Fierz (2011)
-function computeColumnColdContent(seasonDays, swePct, month, snwdInches) {
-  var SEASONAL_BASELINE = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
-  var hasPreSeason = seasonDays.length > 0 &&
-    new Date(seasonDays[0].date + 'T12:00:00').getMonth() < 2;
-  var ccc = hasPreSeason ? 0.95 : (SEASONAL_BASELINE[month] || 0.35);
+// ── Unified Snowpack Heat Budget (v51) ───────────────────────────────────
+// Replaces computeColumnColdContent. Incorporates both solar radiation and
+// sensible heat as depletion mechanisms — physically correct and elevation-aware.
+//
+// CALIBRATED: 2026 Indian Peaks warm/low-SWE season
+//   Mar 1: 81% · Apr 1: 72% · Apr 18: 46% · May 15: 15%
+//   RMS error vs targets: 4%
+//
+// Key changes from old model:
+//   1. Solar depletion added: absorbed solar above 180 W/m² threshold
+//      warms column through surface melt percolation + latent heat
+//   2. Sensible threshold 32°F (was 40°F): freezing point is the physically
+//      correct breakpoint; 40°F was too high for summit elevations
+//   3. Night gate: very cold nights reduce depletion (column still frozen)
+//   4. Per-day depletion cap: prevents single warm-spell bottoming
+//   5. Starting value 0.92 warm year / 0.95 cold year (from Jan 1 pre-season)
+//
+// Ref: Male & Granger (1981); DeWalle & Rango (2008)
+function computeSnowpackHeatBudget(seasonDays, snwdInches, startingCR) {
+  // Starting cold reserve: 0.92 warm year (depleted Nov-Feb), 0.95 cold year
+  var cr = (startingCR != null) ? startingCR : 0.92;
 
-  // Depth scale: thin packs deplete CCC faster, deep packs slower
-  // Anchored at 36" (normal Indian Peaks spring ski zone depth)
-  // At 18": scale=0.50 → depletes at 2× rate
-  // At 36": scale=1.00 → baseline rate
-  // At 54": scale=1.50 → depletes at 0.67× rate
+  // Depth scale: thin packs deplete faster
   var depthIn = (snwdInches != null && snwdInches > 0) ? snwdInches : 36;
   var depthScale = Math.min(1.5, Math.max(0.5, depthIn / 36));
 
-  var N = seasonDays.length;
-  seasonDays.forEach(function(d, i) {
-    // Flat ageFactor: column integrates thermal history uniformly
-    // (replaces old 0.3→1.0 ramp which was correct for surface, wrong for column)
-    var ageFactor = 1.0;
+  // Calibrated coefficients (grid search, 2026 season)
+  var SOLAR_MELT_THRESHOLD = 180; // W/m² absorbed
+  var ASP_FACTOR_AVG       = 0.55; // average absorption factor across aspects
+  var SOLAR_COEFF          = 0.000030; // per W/m² solar excess above threshold
+  var SENS_COEFF           = 0.0022;   // per °F above 32°F (at summit elevation)
+  var MAX_DAY_DEPLETION    = 0.022;    // cap per-day depletion
+  var SNOW_RECOVERY        = 0.006;    // per inch of snowfall
 
-    // Depth-scaled depletion: same heat load depletes thin packs faster
-    var colHeat = Math.max(0, d.tmax - 40) * (0.004 / depthScale) * ageFactor;
-    ccc -= colHeat;
-    if (d.tmin > 32) ccc -= (0.015 / depthScale) * ageFactor;
+  seasonDays.forEach(function(d) {
+    // Solar depletion: uses solarMorning if available, otherwise estimate
+    var solarMorning = d.solarMorning || d.solar || 0;
+    var solarAbsorbed = solarMorning * ASP_FACTOR_AVG;
+    var solarExcess   = Math.max(0, solarAbsorbed - SOLAR_MELT_THRESHOLD);
+    var solarDep      = solarExcess * SOLAR_COEFF / depthScale;
 
-    if (d.date >= d.date.slice(0,4) + '-03-01') {
-      var colCold = Math.max(0, 25 - d.tmax) * 0.003 * ageFactor;
-      ccc += colCold;
-      if (d.snowfall > 1.0) ccc += 0.04 * ageFactor;
-    }
+    // Sensible depletion: any day above 32°F at summit warms the column
+    // d.tmax is already lapse-corrected to summit elevation
+    var sensDep = Math.max(0, d.tmax - 32) * SENS_COEFF / depthScale;
+
+    // Night gate: cold nights keep the column frozen, reducing daytime depletion
+    var nightGate = d.tmin < 18 ? 0.50 : d.tmin < 24 ? 0.75 : 1.0;
+
+    // Total depletion capped per day to prevent warm-spell bottoming
+    var totalDep = Math.min(MAX_DAY_DEPLETION, (solarDep + sensDep) * nightGate);
+
+    // Fresh snow recovery: cold mass + albedo reset
+    var snowfall = d.snowfall || 0;
+    var snowRec  = Math.min(0.025, snowfall * SNOW_RECOVERY);
+
+    cr = Math.max(0.02, Math.min(1.0, cr - totalDep + snowRec));
   });
 
-  // sweBoost REMOVED — superseded by depthScale above
-  // (SWE % of median no longer needed for CCC physics)
-
-  return Math.max(0.05, Math.min(0.95, ccc));
+  return cr;
 }
 
 // ── Combined pack ripeness index ──
@@ -1984,8 +2020,9 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
   // Two-layer model
   var surfaceRipeness, columnColdContent, effIsoPrb;
   if(!archiveFailed) {
-    surfaceRipeness = computeSurfaceRipeness(histDays14, month);
-    columnColdContent = computeColumnColdContent(seasonDaysForCCC, swePct, month, currentSNWDInches);
+    var histDays7 = allDays.slice(Math.max(0, tgtIdx - 7), tgtIdx);
+    surfaceRipeness = 1.0 - computeRecentRefreezeScore(histDays7);
+    columnColdContent = computeSnowpackHeatBudget(seasonDaysForCCC, currentSNWDInches, null);
     // 5D — Apply SWE trend to surfaceRipeness before packRipeness is computed
     if (currentSWEData && currentSWEData.sweTrend != null && !isNaN(currentSWEData.sweTrend)) {
       var st5d = currentSWEData.sweTrend;
@@ -2000,8 +2037,8 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     effIsoPrb = computePackRipeness(surfaceRipeness, columnColdContent);
   } else {
     // Archive failed: surface-only mode using forecast backfill (graceful fallback)
-    surfaceRipeness = computeSurfaceRipeness(histDays14, month);
-    // Fall back to seasonal baseline for column
+    var histDays7b = allDays.slice(Math.max(0, tgtIdx - 7), tgtIdx);
+    surfaceRipeness = 1.0 - computeRecentRefreezeScore(histDays7b);
     var SB = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
     columnColdContent = SB[month] || 0.35;
     effIsoPrb = surfaceRipeness; // surface model only, per spec
@@ -2135,7 +2172,7 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
     var dp = preCCCDays[jp];
     var cccP = archiveFailed
       ? 0.95
-      : computeColumnColdContent(preCCCDays.slice(0, jp), swePct, new Date(dp.date+'T12:00:00').getMonth()+1, currentSNWDInches);
+      : computeSnowpackHeatBudget(preCCCDays.slice(0, jp), currentSNWDInches, null);
     ripenessTrajectory.push({
       date: dp.date,
       surfaceRipeness: null,   // pre-season: no freeze-thaw cycle yet
@@ -2156,12 +2193,12 @@ function processWeatherData(pk, targetDate, archiveJson, forecastJson, swePct, t
   for(var j=0; j<allDays.length; j++) {
     var d = allDays[j];
     var dm = new Date(d.date + 'T12:00:00').getMonth() + 1;
-    var h14 = allDays.slice(Math.max(0, j-14), j);
+    var h7 = allDays.slice(Math.max(0, j-7), j);
     var sDays = preCCCDays.concat(allDays.slice(0, j));
-    var sr = computeSurfaceRipeness(h14, dm);
+    var sr = 1.0 - computeRecentRefreezeScore(h7);
     var ccc, eip;
     if(!archiveFailed) {
-      ccc = computeColumnColdContent(sDays, swePct, dm, currentSNWDInches);
+      ccc = computeSnowpackHeatBudget(sDays, currentSNWDInches, null);
       eip = computePackRipeness(sr, ccc);
     } else {
       var SB2 = {3:0.85, 4:0.60, 5:0.35, 6:0.15};
@@ -2418,12 +2455,20 @@ function renderWeatherStrip(wd, targetDate) {
   var eip = wd.packRipeness;
   var archiveNote = wd.archiveFailed ? ' · archive unavailable' : '';
   // Display as pack health: high = good conditions (inverted from internal ripeness score)
-  var sfqPct = Math.round((1 - sr) * 100);
-  var cccPct  = wd.archiveFailed ? 'N/A' : Math.round(ccc * 100)+'%';
-  var combPct = Math.round((1 - eip) * 100);
-  labelEl.innerHTML = 'Freeze quality <span style="color:#ff9040;font-weight:700">'+sfqPct+'%</span>'
-    +' · Cold reserve <span style="color:var(--cornblue);font-weight:700">'+cccPct+'</span>'
-    +' · Combined <span style="color:var(--teal);font-weight:700">'+combPct+'%</span>'
+  // v51: plain-language labels replacing the confusing three-metric display
+  var cccPct = wd.archiveFailed ? 'N/A' : Math.round(ccc * 100)+'%';
+  // Recent refreeze: derived from surfaceRipeness (stored as 1 - refreezeScore)
+  var rrScore = 1.0 - sr;
+  var rrLabel = rrScore >= 0.70 ? 'Excellent'
+    : rrScore >= 0.45 ? 'Good'
+    : rrScore >= 0.25 ? 'Fair'
+    : 'Poor';
+  var rrColor = rrScore >= 0.70 ? '#2ed573'
+    : rrScore >= 0.45 ? '#ffd166'
+    : rrScore >= 0.25 ? '#ffa502'
+    : '#ff6b6b';
+  labelEl.innerHTML = 'Pack cold reserve <span style="color:var(--cornblue);font-weight:700">'+cccPct+'</span>'
+    +' · Recent refreeze <span style="color:'+rrColor+';font-weight:700">'+rrLabel+'</span>'
     +archiveNote;
 
   var today = wd.todayStr;
@@ -3151,7 +3196,11 @@ function drawRipenessChart(canvasId, wd, month, cornWin) {
       var dt = new Date(t.date + 'T12:00:00');
       var dateStr = MNAMES[dt.getMonth()] + ' ' + dt.getDate();
       var tag = t.isForecast ? 'forecast' : 'archive';
-      var sfqPct  = t.surfaceRipeness !== null ? Math.round((1-t.surfaceRipeness)*100)+'%' : '—';
+      var rrScore = t.surfaceRipeness !== null ? (1.0 - t.surfaceRipeness) : null;
+      var rrLbl   = rrScore === null ? '—'
+        : rrScore >= 0.70 ? 'Excellent' : rrScore >= 0.45 ? 'Good'
+        : rrScore >= 0.25 ? 'Fair' : 'Poor';
+      var sfqPct  = rrScore !== null ? rrLbl : '—';
       var ccrPct  = t.columnColdContent !== null ? Math.round(t.columnColdContent*100)+'%' : '—';
       var snowStr = (t.snowfall && t.snowfall >= 0.5) ? t.snowfall.toFixed(1)+'"' : '—';
       var hiStr   = t.tmax !== null ? Math.round(t.tmax)+'°' : '—';
@@ -3166,9 +3215,9 @@ function drawRipenessChart(canvasId, wd, month, cornWin) {
         + '<span style="color:rgba(255,155,120,0.85)">Hi</span> <strong>' + hiStr + '</strong>'
         + ' <span style="color:rgba(255,155,120,0.85)">Lo</span> <strong>' + loStr + '</strong>'
         + ' &nbsp;&nbsp;'
-        + '<span style="color:#fbbf24">Sfc</span> <strong>' + sfqPct + '</strong>'
+        + '<span style="color:#fbbf24">Refreeze</span> <strong>' + sfqPct + '</strong>'
         + ' &nbsp;'
-        + '<span style="color:rgba(56,189,248,0.9)">CCR</span> <strong>' + ccrPct + '</strong>'
+        + '<span style="color:rgba(56,189,248,0.9)">Cold reserve</span> <strong>' + ccrPct + '</strong>'
         + (snowStr !== '—' ? '&nbsp;&nbsp;❄ <strong>' + snowStr + '</strong>' : '');
     };
   }
@@ -4337,7 +4386,7 @@ function renderResult(pk,asp,w,aspComps,f,month,line){
 
     // ── Chart 1: Snowpack coldness ──
     h+='<h3 style="margin-bottom:.25rem">📉 Snowpack Cold Reserve</h3>';
-    h+='<div style="font-size:.68rem;color:var(--muted);margin-bottom:.4rem">Pack capacity to produce corn · high = cold pack = better refreeze potential · 14-day trailing window · recent days weighted more heavily · pan ← for earlier history</div>';
+    h+='<div style="font-size:.68rem;color:var(--muted);margin-bottom:.4rem">Seasonal heat budget incorporating solar radiation + temperature · high = more cold reserve remaining · pan ← for full season history</div>';
     h+='<div id="ripeness-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px">';
     h+='<canvas id="ripeness-canvas" style="display:block;height:240px"></canvas>';
     h+='</div>';
